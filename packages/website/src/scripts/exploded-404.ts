@@ -12,9 +12,7 @@ const clamp = (value: number, min: number, max: number) => Math.min(max, Math.ma
 
 export function enableExploded404(stage: HTMLElement) {
   const scene = stage.querySelector<HTMLElement>('.not-found-scene');
-  const hint = document.getElementById('not-found-hint');
-
-  if (!scene || !hint) {
+  if (!scene) {
     return;
   }
 
@@ -50,10 +48,9 @@ export function enableExploded404(stage: HTMLElement) {
   };
 
   stage.tabIndex = 0;
-  stage.setAttribute('aria-describedby', hint.id);
+  stage.setAttribute('aria-description', 'Use the arrow keys to turn the view.');
   stage.setAttribute('aria-keyshortcuts', 'ArrowLeft ArrowRight ArrowUp ArrowDown');
   stage.classList.add('is-interactive');
-  hint.hidden = false;
 
   const reducedMotion = matchMedia('(prefers-reduced-motion: reduce)');
 

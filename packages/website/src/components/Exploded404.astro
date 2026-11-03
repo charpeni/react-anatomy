@@ -36,10 +36,6 @@
       </div>
     </div>
   </div>
-  <p class="not-found-hint" id="not-found-hint" hidden>
-    <span class="hint-drag">Drag to turn</span>
-    <span class="hint-keys">Arrow keys turn the view</span>
-  </p>
 </main>
 
 <script>
@@ -189,24 +185,6 @@
 
   .layer a {
     position: relative;
-  }
-
-  .not-found-hint {
-    margin-top: 6px;
-    font-size: 12px;
-    color: var(--muted);
-  }
-
-  .hint-keys {
-    display: none;
-  }
-
-  .not-found-stage:focus-visible + .not-found-hint .hint-drag {
-    display: none;
-  }
-
-  .not-found-stage:focus-visible + .not-found-hint .hint-keys {
-    display: inline;
   }
 
   /* Animate each plane's transform directly, without inheriting an animated property. */

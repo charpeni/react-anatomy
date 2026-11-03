@@ -46,9 +46,7 @@ export async function checkNotFound(browser: Browser, base: string, shots: strin
         problems.push('Horizontal overflow');
       }
 
-      for (const element of document.querySelectorAll(
-        '.layer > *, .site-header a, .not-found-hint',
-      )) {
+      for (const element of document.querySelectorAll('.layer > *, .site-header a')) {
         const rect = element.getBoundingClientRect();
 
         if (rect.width && (rect.left < -1 || rect.right > innerWidth + 1)) {
@@ -89,7 +87,11 @@ export async function checkNotFound(browser: Browser, base: string, shots: strin
         .locator('.not-found-stage')
         .evaluate((stage) => stage === document.activeElement),
     );
-    assert(await desktop.locator('.hint-keys').isVisible());
+    assert.equal(await desktop.getByText('Drag to turn', { exact: true }).count(), 0);
+    assert.match(
+      (await desktop.locator('.not-found-stage').getAttribute('aria-description')) ?? '',
+      /arrow keys/,
+    );
     assert.equal(await desktop.evaluate(() => document.getAnimations().length), 0);
 
     const beforeKeyboard = await transform(desktop);
@@ -200,7 +202,7 @@ export async function checkNotFound(browser: Browser, base: string, shots: strin
 
       if (options.javaScriptEnabled === false) {
         assert.equal(await page.locator('.not-found-stage').getAttribute('tabindex'), null);
-        assert(!(await page.locator('.not-found-hint').isVisible()));
+        assert.equal(await page.getByText('Drag to turn', { exact: true }).count(), 0);
       }
 
       await page.getByRole('link', { name: /Back to React Anatomy/ }).click();
