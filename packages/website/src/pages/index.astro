@@ -4,6 +4,11 @@ import '../styles/landing.css';
 import InteractiveDemo from '../components/InteractiveDemo.astro';
 import ImageLightbox from '../components/ImageLightbox.astro';
 import BrandMark from '../components/BrandMark.astro';
+import Seo from '../components/Seo.astro';
+import { site } from '../lib/site.ts';
+import { Image } from 'astro:assets';
+import compositionFront from '../../public/media/composition-front.png';
+import autoDepth from '../../public/media/auto-depth.png';
 ---
 
 <!doctype html>
@@ -11,13 +16,8 @@ import BrandMark from '../components/BrandMark.astro';
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <meta
-      name="description"
-      content="React Anatomy connects a running React page to the components that render it, in DevTools. Understand how a layout is composed, and explain it to someone else. A work in progress."
-    />
+    <Seo title={site.title} description={site.description} />
     <meta name="theme-color" content="#fafaf8" />
-    <title>React Anatomy — See how a React page is composed.</title>
-    <link rel="canonical" href={new URL(Astro.url.pathname, Astro.site)} />
     <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
     <link
       rel="preload"
@@ -62,7 +62,7 @@ import BrandMark from '../components/BrandMark.astro';
               <p>
                 React Anatomy is a browser extension that adds an <strong>Anatomy</strong> panel to
                 your browser’s developer tools. It connects the page in front of you to the
-                components React rendered for it: separate the page into layers, follow the real
+                components React rendered for it: separate the page into 3D layers, follow the real
                 component tree, and read the props behind what you see.
               </p>
               <div class="hero-links">
@@ -152,10 +152,12 @@ import BrandMark from '../components/BrandMark.astro';
             </figure>
             <figure>
               <a href="/media/composition-front.png">
-                <img
-                  src="/media/composition-front.png"
-                  width="2901"
-                  height="1812"
+                <Image
+                  src={compositionFront}
+                  widths={[640, 960, 1440, 1920]}
+                  sizes="(min-width: 1440px) 685px, (min-width: 900px) 50vw, 100vw"
+                  format="webp"
+                  quality={90}
                   loading="lazy"
                   alt="The Orbit page viewed from the front in Anatomy, with separated component layers, labels for the sidebar, cards and activity feed, and the project list outlined in blue."
                 />
@@ -267,10 +269,12 @@ import BrandMark from '../components/BrandMark.astro';
           </div>
           <figure>
             <a href="/media/auto-depth.png">
-              <img
-                src="/media/auto-depth.png"
-                width="1600"
-                height="1000"
+              <Image
+                src={autoDepth}
+                widths={[640, 960, 1440]}
+                sizes="(min-width: 1440px) 749px, (min-width: 900px) 55vw, 100vw"
+                format="webp"
+                quality={90}
                 loading="lazy"
                 alt="The Anatomy panel showing the sidebar, main content, cards and composer as separate layers, with Layer depth set to Auto."
               />
@@ -317,6 +321,12 @@ import BrandMark from '../components/BrandMark.astro';
             <a href="/docs/limitations/">
               <span>
                 What to expect today<small>Capture limits and compatibility</small>
+              </span>
+              <span aria-hidden="true">↗</span>
+            </a>
+            <a href="/docs/faq/">
+              <span>
+                Common questions<small>React DevTools, production builds, and privacy</small>
               </span>
               <span aria-hidden="true">↗</span>
             </a>

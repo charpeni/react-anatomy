@@ -1,9 +1,13 @@
 import { defineConfig } from 'astro/config';
 import starlight from '@astrojs/starlight';
+import { site } from './src/lib/site.ts';
+import { staticHeaders } from './src/integrations/static-headers.ts';
 
 export default defineConfig({
-  site: 'https://react-anatomy.com',
+  site: site.url,
+  trailingSlash: 'always',
   integrations: [
+    staticHeaders(),
     starlight({
       title: 'React Anatomy',
       disable404Route: true,
@@ -24,7 +28,10 @@ export default defineConfig({
         },
       ],
       customCss: ['./src/styles/docs.css'],
-      components: { Footer: './src/components/DocsFooter.astro' },
+      components: {
+        Footer: './src/components/DocsFooter.astro',
+        Head: './src/components/DocsHead.astro',
+      },
       sidebar: [
         { label: 'Overview', slug: 'docs' },
         {
@@ -41,6 +48,7 @@ export default defineConfig({
             { label: 'Layers, focus, and controls', slug: 'docs/explore' },
             { label: 'Props inspector', slug: 'docs/props' },
             { label: 'Compatibility', slug: 'docs/compatibility' },
+            { label: 'Common questions', slug: 'docs/faq' },
             { label: 'Current limitations', slug: 'docs/limitations' },
             { label: 'Local development', slug: 'docs/development' },
           ],

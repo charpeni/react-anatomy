@@ -1,11 +1,14 @@
 ---
 import DefaultFooter from '@astrojs/starlight/components/Footer.astro';
 import ImageLightbox from './ImageLightbox.astro';
+import { documentPath } from '../lib/documentation.ts';
 ---
 
 <DefaultFooter />
 <p class="privacy-link">
   <a href="/privacy/">Privacy policy</a>
+  <span aria-hidden="true"> · </span>
+  <a href={`/${documentPath(Astro.locals.starlightRoute.entry)}.md`}>View as Markdown</a>
 </p>
 <ImageLightbox />
 

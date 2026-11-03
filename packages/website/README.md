@@ -62,6 +62,26 @@ The header GitHub link points to the public repository at `https://github.com/ch
 
 The website and documentation use **Instrument Sans**, self-hosted as variable WOFF2 files in `public/fonts/instrument-sans/`. Shared font faces and the `--font-sans` token live in `src/styles/fonts.css`; Starlight uses the same token. Normal and italic styles cover weights 400–700. The Latin regular face is preloaded, with italic and Latin Extended subsets loaded as needed. Provenance, checksums, and the OFL license are included with the font files. The native inspector and sample app retain their own typography, and the approved outlined logo lockups remain Inter.
 
+## Search and sharing
+
+`src/lib/site.ts` owns the production URL, product description, maintainer identity, and structured metadata. `Seo.astro` provides the landing-page metadata; `DocsHead.astro` extends Starlight's existing head without duplicating its title, description, or canonical URL. Public pages have Open Graph and Twitter previews and JSON-LD describing the website, software, and documentation. Do not add ratings, store URLs, release dates, or availability claims until they are real. Keep supported-version statements in the metadata and FAQ aligned with the compatibility guide.
+
+`/robots.txt` points to Starlight's sitemap. The sitemap contains canonical HTML pages; the bundled example and 404 page stay out of search results. `src/integrations/static-headers.ts` writes Cloudflare's `_headers` file so the demo resources and text equivalents receive `X-Robots-Tag: noindex`. Markdown responses also identify their canonical HTML page with an HTTP `Link` header. Crawling stays allowed so these directives can be read.
+
+`/llms.txt` is an optional documentation index for agents. Every guide and the privacy policy also have a `.md` URL, linked from the documentation footer and head. These files are generated from the same content collection as the HTML, with absolute links and a source URL for citation. There is no separate copy of the docs to maintain. Clear, crawlable content is the foundation of search and AI discovery; these text exports are a convenience, not a ranking mechanism. See [Google's guidance for AI features](https://developers.google.com/search/docs/appearance/ai-features).
+
+The social preview is a 1200×630 PNG composed from the shared logo, Instrument Sans, and the real extension screenshot. To refresh it locally with Playwright Chromium installed:
+
+```sh
+pnpm --filter @react-anatomy/website run generate:social
+```
+
+Review `public/media/react-anatomy-social.png` before committing it. Deployment serves this checked-in image and does not need a browser to render it. Landing-page screenshot thumbnails use responsive WebP variants; image viewers retain the full-resolution originals.
+
+Build checks cover the sitemap, crawl directives, text exports, citation links, and preview dimensions. The website browser suite verifies one canonical URL and description per public page, structured metadata, social previews, and image-viewer behavior.
+
+Once the domain is connected, verify `react-anatomy.com` in Google Search Console and Bing Webmaster Tools and submit `https://react-anatomy.com/sitemap-index.xml`. Those account-level steps are separate from deployment. If Cloudflare bot settings change, verify that search crawlers can still fetch the public pages and robots file.
+
 ## Privacy policy
 
 The extension policy is at `/privacy/`, authored in `src/content/docs/privacy.md`, and linked from the landing and documentation footers. Its production address is `https://react-anatomy.com/privacy/`, with `info@react-anatomy.com` as the contact. Keep the wording aligned with extension behavior, especially persistence, external page assets, and props that may contain sensitive data.

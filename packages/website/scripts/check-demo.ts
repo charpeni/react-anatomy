@@ -401,9 +401,61 @@ try {
     '/docs/generated-code/',
     '/docs/limitations/',
     '/docs/compatibility/',
+    '/docs/faq/',
+    '/docs/development/',
     '/privacy/',
   ]) {
     await page.goto(base + path);
+
+    const metadata = await page.evaluate(() => ({
+      title: document.title,
+      canonical: [...document.querySelectorAll<HTMLLinkElement>('link[rel="canonical"]')].map(
+        (link) => link.href,
+      ),
+      descriptions: [...document.querySelectorAll<HTMLMetaElement>('meta[name="description"]')].map(
+        (meta) => meta.content,
+      ),
+      robots: document.querySelector<HTMLMetaElement>('meta[name="robots"]')?.content,
+      image: document.querySelector<HTMLMetaElement>('meta[property="og:image"]')?.content,
+      twitterImage: document.querySelector<HTMLMetaElement>('meta[name="twitter:image"]')?.content,
+      openGraphUrl: document.querySelector<HTMLMetaElement>('meta[property="og:url"]')?.content,
+      schema: [...document.querySelectorAll('script[type="application/ld+json"]')].map((script) =>
+        JSON.parse(script.textContent ?? ''),
+      ),
+    }));
+
+    assert.deepEqual(metadata.canonical, [`https://react-anatomy.com${path}`]);
+    assert.equal(metadata.openGraphUrl, metadata.canonical[0]);
+    assert.equal(metadata.descriptions.length, 1);
+    assert(metadata.descriptions[0].length > 50);
+    assert(metadata.title.includes('React Anatomy'));
+    assert(metadata.robots?.includes('max-image-preview:large'));
+    assert(!metadata.robots?.includes('noindex'));
+    assert.equal(metadata.image, 'https://react-anatomy.com/media/react-anatomy-social.png');
+    assert.equal(metadata.twitterImage, metadata.image);
+    assert.equal(metadata.schema.length, 1);
+
+    const schema = metadata.schema[0] as {
+      '@context': string;
+      '@graph': { '@type': string; '@id': string; url?: string; name?: string }[];
+    };
+
+    assert.equal(schema['@context'], 'https://schema.org');
+    assert(
+      schema['@graph'].some(
+        (entity) => entity.url === metadata.canonical[0] && entity['@id'].endsWith('#page'),
+      ),
+    );
+    assert(
+      schema['@graph'].some(
+        (entity) => entity['@type'] === 'Person' && entity.name === 'Nicolas Charpentier',
+      ),
+    );
+
+    if (path === '/') {
+      assert(schema['@graph'].some((entity) => entity['@type'] === 'SoftwareApplication'));
+      assert.equal(await page.locator('.origin-compare img[srcset]').count(), 1);
+    }
 
     const links = await page.$$eval('a[href^="/"]', (anchors) =>
       anchors.map((a) => (a as HTMLAnchorElement).href),

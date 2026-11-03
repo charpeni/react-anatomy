@@ -1,5 +1,5 @@
 ---
-title: React Anatomy
+title: React component inspection
 description: Understand how a React page is composed. React Anatomy connects a running page to the components React rendered for it, inside DevTools.
 ---
 

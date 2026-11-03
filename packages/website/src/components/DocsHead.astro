@@ -1,0 +1,13 @@
+---
+import DefaultHead from '@astrojs/starlight/components/Head.astro';
+import Seo from './Seo.astro';
+import { site } from '../lib/site.ts';
+import { documentPath } from '../lib/documentation.ts';
+
+const { entry, head } = Astro.locals.starlightRoute;
+const title = head.find((tag) => tag.tag === 'title')?.content ?? entry.data.title;
+---
+
+<DefaultHead />
+<Seo title={title} description={entry.data.description ?? site.description} core={false} />
+<link rel="alternate" type="text/markdown" href={`/${documentPath(entry)}.md`} title="Markdown" />

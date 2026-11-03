@@ -13,6 +13,7 @@
     "prebuild": "node scripts/build-demo.ts",
     "test": "pnpm run build && node scripts/check-demo.ts",
     "export:diagram": "node scripts/export-diagram.ts",
+    "generate:social": "node scripts/generate-social-card.ts",
     "type-check": "astro check"
   },
   "dependencies": {
