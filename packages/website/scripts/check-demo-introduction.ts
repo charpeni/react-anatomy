@@ -196,7 +196,13 @@ export async function checkDemoIntroduction(browser: Browser, base: string, shot
         }),
       );
       const session = await mobile.context().newCDPSession(mobile);
-      const swipe = async (start: number, end: number, x = width / 2, endX = x) => {
+      const swipe = async (
+        start: number,
+        end: number,
+        x = width / 2,
+        endX = x,
+        positions?: number[],
+      ) => {
         await session.send('Input.dispatchTouchEvent', {
           type: 'touchStart',
           touchPoints: [{ x, y: start, id: 1 }],
@@ -209,6 +215,9 @@ export async function checkDemoIntroduction(browser: Browser, base: string, shot
             ],
           });
           await mobile.waitForTimeout(25);
+          if (positions) {
+            positions.push(await mobile.evaluate(() => scrollY));
+          }
         }
         await session.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
       };
@@ -251,7 +260,7 @@ export async function checkDemoIntroduction(browser: Browser, base: string, shot
       const beforeScroll = await rotation();
       await swipe(heading.y + heading.height / 2, heading.y + heading.height / 2 + 100);
       assert(
-        (await mobile.evaluate(() => scrollY)) < held - 25,
+        (await mobile.evaluate(() => scrollY)) < held - 80,
         'The toolbar must allow page scrolling',
       );
       assert.deepEqual(await rotation(), beforeScroll, 'Page scrolling must not rotate the view');
@@ -260,6 +269,47 @@ export async function checkDemoIntroduction(browser: Browser, base: string, shot
       const outsideScroll = await mobile.evaluate(() => scrollY);
       await swipe(650, 400, 2);
       await mobile.waitForFunction((y) => scrollY > y + 100, outsideScroll);
+
+      // Orbit should scroll like the surrounding page. Measuring just whether
+      // it moves misses the iframe feedback bug: alternating stalls/backward
+      // jumps left the page roughly half a gesture behind the finger.
+      await mobile.locator('[data-view="page"]').tap();
+      for (const [start, end] of [
+        [650, 410],
+        [410, 650],
+      ]) {
+        await mobile.locator('#demo').evaluate((element) =>
+          window.scrollTo({
+            top: scrollY + element.getBoundingClientRect().top - 100,
+            behavior: 'instant',
+          }),
+        );
+        await mobile.waitForTimeout(100);
+        const before = await mobile.evaluate(() => scrollY);
+        const positions: number[] = [];
+        await swipe(start, end, width / 2, width / 2, positions);
+        const direction = Math.sign(start - end);
+        const travel = (positions.at(-1)! - before) * direction;
+        assert(travel >= 200 && travel <= 260, `Orbit must track a 240px swipe; got ${travel}px`);
+        const deltas = positions.map((y, i) => (y - (positions[i - 1] ?? before)) * direction);
+        assert(
+          deltas.every((delta) => delta >= 0),
+          'Orbit scrolling must not jump backward',
+        );
+        assert(
+          deltas.filter((delta) => delta > 0).length >= 9,
+          'Orbit scrolling must not repeatedly stall',
+        );
+        assert.equal(
+          await mobile
+            .frameLocator('#anatomy-source')
+            .locator('html')
+            .evaluate((element) => element.ownerDocument.defaultView!.scrollY),
+          0,
+          'The sample must stay in place while the landing page scrolls',
+        );
+        await mobile.waitForTimeout(300);
+      }
     } finally {
       await mobile.close();
     }
@@ -267,6 +317,6 @@ export async function checkDemoIntroduction(browser: Browser, base: string, shot
 
   assert.deepEqual(errors, []);
   console.log(
-    'Passed: one-time scroll introduction, cursor click, scroll release, session persistence, cancellation, loading timeout, keyboard bypass, reduced motion, canvas touch rotation, and touch scrolling.',
+    'Passed: one-time scroll introduction, cursor click, scroll release, session persistence, cancellation, loading timeout, keyboard bypass, reduced motion, canvas touch rotation, and smooth Orbit touch scrolling.',
   );
 }

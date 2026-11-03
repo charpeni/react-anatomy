@@ -1,6 +1,9 @@
 /* Only the bundled sample uses these viewport adjustments. */
 html {
   color-scheme: light;
+  /* Keep the sample at its initial viewport and let touch scrolling chain to
+     the landing page, with the browser's normal gesture handling. */
+  overflow: clip;
 }
 html body .workspace {
   min-height: 100vh;

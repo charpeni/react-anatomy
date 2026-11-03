@@ -85,53 +85,59 @@ export function mountExample(root: HTMLElement) {
     }
 
     scrollDocuments.add(doc);
-    let touch: { x: number; y: number } | undefined;
+    // Orbit uses native touch scrolling (its root is clipped in source.css).
+    // Only the inspector needs forwarding around its canvas and drag controls.
+    if (frame === panel) {
+      let touch: { x: number; y: number } | undefined;
 
-    doc.addEventListener(
-      'touchstart',
-      (event) => {
-        const point = event.touches.length === 1 ? event.touches[0] : undefined;
-        // Reserve gestures that start on the canvas or a drag control for the
-        // inspector. Its pointer handlers already rotate or resize the view;
-        // forwarding the same touch gesture would also scroll the landing page.
-        const inspectorGesture =
-          frame === panel &&
-          (event.target as Element | null)?.closest('.stage, .splitter, input[type="range"]');
-        touch = point && !inspectorGesture ? { x: point.clientX, y: point.clientY } : undefined;
-      },
-      { passive: true },
-    );
-    doc.addEventListener(
-      'touchmove',
-      (event) => {
-        const point = event.touches.length === 1 ? event.touches[0] : undefined;
-        if (!touch || !point) {
-          touch = undefined;
-          return;
-        }
-        const dx = touch.x - point.clientX;
-        const dy = touch.y - point.clientY;
-        if (Math.abs(dy) <= Math.abs(dx)) {
-          return;
-        }
-
-        event.preventDefault();
-        event.stopPropagation();
-        touch = { x: point.clientX, y: point.clientY };
-        if (!introduction?.holdingScroll) {
-          window.scrollBy({ top: dy, behavior: 'instant' });
-        }
-      },
-      { capture: true, passive: false },
-    );
-    for (const type of ['touchend', 'touchcancel']) {
       doc.addEventListener(
-        type,
-        () => {
-          touch = undefined;
+        'touchstart',
+        (event) => {
+          const point = event.touches.length === 1 ? event.touches[0] : undefined;
+          // Reserve gestures that start on the canvas or a drag control for the
+          // inspector. Its pointer handlers already rotate or resize the view;
+          // forwarding the same touch gesture would also scroll the landing page.
+          const inspectorGesture = (event.target as Element | null)?.closest(
+            '.stage, .splitter, input[type="range"]',
+          );
+          touch = point && !inspectorGesture ? { x: point.screenX, y: point.screenY } : undefined;
         },
         { passive: true },
       );
+      doc.addEventListener(
+        'touchmove',
+        (event) => {
+          const point = event.touches.length === 1 ? event.touches[0] : undefined;
+          if (!touch || !point) {
+            touch = undefined;
+            return;
+          }
+          // Client coordinates move with the iframe when its parent scrolls.
+          // Screen coordinates keep that movement out of the gesture delta.
+          const dx = touch.x - point.screenX;
+          const dy = touch.y - point.screenY;
+          if (Math.abs(dy) <= Math.abs(dx)) {
+            return;
+          }
+
+          event.preventDefault();
+          event.stopPropagation();
+          touch = { x: point.screenX, y: point.screenY };
+          if (!introduction?.holdingScroll) {
+            window.scrollBy({ top: dy, behavior: 'instant' });
+          }
+        },
+        { capture: true, passive: false },
+      );
+      for (const type of ['touchend', 'touchcancel']) {
+        doc.addEventListener(
+          type,
+          () => {
+            touch = undefined;
+          },
+          { passive: true },
+        );
+      }
     }
 
     doc.addEventListener(
