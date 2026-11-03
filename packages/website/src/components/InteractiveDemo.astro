@@ -1,0 +1,125 @@
+---
+import mark from '@react-anatomy/brand/svg/icon-24.svg?url';
+import '../styles/demo.css';
+---
+
+<figure
+  class="demo interactive-demo"
+  id="demo"
+  data-guide="start"
+  aria-label="Interactive React Anatomy example"
+>
+  <div class="demo-window">
+    <div class="demo-chrome">
+      <div class="demo-window-dots" aria-hidden="true">
+        <i></i>
+        <i></i>
+        <i></i>
+      </div>
+      <span class="demo-address">
+        orbit.example <span>/ projects</span>
+      </span>
+      <span class="demo-badge">Example app</span>
+    </div>
+    <div class="demo-tabbar">
+      <div class="demo-tabs" role="group" aria-label="Example view">
+        <button
+          type="button"
+          class="demo-tab"
+          data-view="page"
+          aria-pressed="true"
+          aria-controls="anatomy-source"
+        >
+          <span class="demo-orbit" aria-hidden="true">
+            o
+          </span>{' '}
+          Orbit
+        </button>
+        <button
+          type="button"
+          class="demo-tab"
+          data-view="anatomy"
+          title="Open Anatomy to explore this page in 3D"
+          aria-pressed="false"
+          aria-controls="anatomy-panel"
+          disabled
+        >
+          <img src={mark} width="18" height="18" alt="" /> Anatomy
+        </button>
+        <span class="demo-start-hint" aria-hidden="true">
+          ← Start here
+        </span>
+      </div>
+      <button class="demo-coachmark" type="button" data-open-anatomy disabled>
+        <strong>Click Anatomy</strong>
+        <span>Pull this page apart into its components.</span>
+      </button>
+      <button
+        class="demo-reset"
+        type="button"
+        aria-label="Restart example"
+        title="Restart example"
+        disabled
+      >
+        ↺ <span>Restart</span>
+      </button>
+    </div>
+    <div class="demo-viewport">
+      <iframe
+        id="anatomy-source"
+        class="demo-frame"
+        title="Orbit: a working sample React application"
+        src="/interactive/source.html"
+        loading="lazy"
+        referrerpolicy="no-referrer"
+      ></iframe>
+      <iframe
+        id="anatomy-panel"
+        class="demo-frame"
+        title="Anatomy: interactive component inspector for the sample"
+        hidden
+        referrerpolicy="no-referrer"
+      ></iframe>
+      <p class="demo-loading" role="status">
+        Loading the example…
+      </p>
+    </div>
+    <div class="demo-walkthrough">
+      <div class="demo-steps" role="group" aria-label="Example walkthrough">
+        <button type="button" data-step="page" aria-pressed="true">
+          <span>1</span> The page
+        </button>
+        <button type="button" data-step="explode" aria-pressed="false" disabled>
+          <span>2</span> Explode
+        </button>
+        <button type="button" data-step="props" aria-pressed="false" disabled>
+          <span>3</span> Inspect props
+        </button>
+      </div>
+      <p class="demo-hint" aria-live="polite">
+        Click the Anatomy tab to see how this page is composed.
+      </p>
+    </div>
+  </div>
+  <figcaption>
+    <span>
+      <span class="blue-dot" aria-hidden="true"></span> Interactive example · The real Anatomy
+      panel, running on a sample app
+    </span>
+    <span>Explore it here. No extension needed.</span>
+  </figcaption>
+  <noscript>
+    <p>
+      This interactive example needs JavaScript.{' '}
+      <a href="/docs/understand/">See screenshots and the walkthrough in the docs.</a>
+    </p>
+  </noscript>
+</figure>
+
+<script>
+  import { mountExample } from '../scripts/interactive-demo';
+  const example = document.querySelector<HTMLElement>('.interactive-demo');
+  if (example) {
+    mountExample(example);
+  }
+</script>

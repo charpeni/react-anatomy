@@ -1,0 +1,17 @@
+{
+  "$schema": "./node_modules/oxfmt/configuration_schema.json",
+  "printWidth": 100,
+  "tabWidth": 2,
+  "singleQuote": true,
+  "semi": true,
+  "ignorePatterns": [
+    "**/dist/**",
+    "**/artifacts/**",
+    "**/.astro/**",
+    "**/node_modules/**",
+    "packages/brand/svg/**",
+    "packages/extension/src/fonts.css",
+    "**/pnpm-lock.yaml"
+  ],
+  "astro": true
+}

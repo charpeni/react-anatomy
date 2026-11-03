@@ -1,0 +1,90 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  ci:
+    name: ${{ matrix.name }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - task: lint
+            name: Oxlint
+            command: pnpm run lint
+          - task: format
+            name: Oxfmt
+            command: pnpm run format:check
+          - task: types
+            name: TypeScript
+            command: pnpm run type-check
+          - task: website
+            name: Website
+            browser: chromium
+            command: pnpm run test:website && pnpm exec wrangler deploy --dry-run
+          - task: chrome
+            name: Chrome extension
+            browser: chromium
+            command: pnpm test
+          - task: firefox
+            name: Firefox extension
+            browser: firefox
+            command: pnpm run test:firefox
+          - task: release
+            name: Release tooling
+            command: pnpm run test:release
+    env:
+      ASTRO_TELEMETRY_DISABLED: '1'
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Install pnpm, Node.js, and dependencies
+        uses: pnpm/setup@fbda4c85fc2e1e08721cd8763afea8f48d60f024 # v3.0.0
+        with:
+          node-version-file: .nvmrc
+          cache: true
+          require-lockfile: true
+      - name: Install compatibility fixture dependencies
+        if: matrix.task == 'types'
+        run: pnpm run setup:compatibility
+      - name: Install Chromium
+        if: matrix.browser == 'chromium'
+        run: pnpm --filter @react-anatomy/extension exec playwright install --with-deps chromium
+      - name: Install Firefox
+        if: matrix.browser == 'firefox'
+        id: firefox
+        uses: browser-actions/setup-firefox@8058e910ee76e74bb76b7b2e5b61a55b3a65ed78 # v1.7.2
+        with:
+          firefox-version: latest
+      - name: Select Firefox binary
+        if: matrix.browser == 'firefox'
+        env:
+          FIREFOX_BINARY: ${{ steps.firefox.outputs.firefox-path }}
+        run: echo "FIREFOX_PATH=$FIREFOX_BINARY" >> "$GITHUB_ENV"
+      - name: Run ${{ matrix.name }}
+        run: ${{ matrix.command }}
+      - name: Upload failure diagnostics
+        if: failure() && matrix.browser
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: diagnostics-${{ matrix.task }}
+          path: |
+            packages/extension/artifacts/check-*/
+            packages/extension/artifacts/firefox/
+            packages/website/artifacts/demo-check/
+          if-no-files-found: ignore
+          retention-days: 7

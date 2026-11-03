@@ -1,0 +1,73 @@
+/* Only the bundled sample uses these viewport adjustments. */
+html {
+  color-scheme: light;
+}
+html body .workspace {
+  min-height: 100vh;
+}
+html body .main-content {
+  min-width: 0;
+}
+@media (max-width: 1050px) {
+  html body .sidebar {
+    width: 168px;
+  }
+  html body .content {
+    padding: 22px;
+  }
+  html body .project-list {
+    gap: 10px;
+  }
+  html body .project-card {
+    padding: 13px;
+  }
+  html body .status-badge {
+    font-size: 9px;
+  }
+}
+@media (max-width: 700px) {
+  html body .sidebar {
+    width: 140px;
+  }
+  html body .content {
+    padding: 18px;
+  }
+  html body .project-list {
+    grid-template-columns: 1fr;
+  }
+  html body .project-card {
+    padding: 16px;
+  }
+  html body .sample-note {
+    display: none;
+  }
+  html body .activity-item {
+    flex-wrap: wrap;
+    height: auto;
+    min-height: 42px;
+    gap: 5px;
+    padding: 9px 0;
+  }
+}
+@media (max-width: 480px) {
+  html body .sidebar {
+    display: none;
+  }
+  html body .topbar {
+    padding-inline: 18px;
+  }
+  html body header {
+    gap: 12px;
+  }
+  html body header p {
+    max-width: 190px;
+    font-size: 12px;
+  }
+  html body h1 {
+    font-size: 24px;
+  }
+  html body .new-project {
+    white-space: nowrap;
+    padding: 8px;
+  }
+}

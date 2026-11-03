@@ -1,0 +1,13 @@
+React Anatomy helps you see how a React page is composed. It adds an Anatomy panel to Chrome DevTools, connecting the visible layout to the components React rendered.
+
+• Separate the page into 3D component layers.
+• Pick something on the page to find the component behind it.
+• Follow parents, children, and repeated component instances in the tree.
+• Focus on a subtree to understand one part of a layout.
+• Inspect live props, including nested objects and arrays.
+
+Use it to find your way around an unfamiliar codebase, learn how React composes a page, investigate unexpected behavior, or explain a component's place in a pull request. It also helps you understand the structure of pages written by coding agents.
+
+To begin, open a React page, open Chrome DevTools, and select Anatomy. No package installation or application code changes are needed.
+
+React Anatomy targets React DOM 18.2–19.3 on desktop Chrome 140 and later. Production builds may show shortened or anonymous component names. Inspection covers the current page viewport; server-only components, iframe contents, and shadow DOM are not included.

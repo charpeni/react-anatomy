@@ -1,0 +1,17 @@
+---
+import 'photoswipe/style.css';
+import '../styles/lightbox.css';
+---
+
+<script>
+  import { mountImageLightbox } from '../scripts/image-lightbox';
+
+  let cleanup: (() => void) | undefined;
+  function mount() {
+    cleanup?.();
+    cleanup = mountImageLightbox();
+  }
+  mount();
+  document.addEventListener('astro:page-load', mount);
+  document.addEventListener('astro:before-swap', () => cleanup?.());
+</script>

@@ -1,0 +1,9 @@
+{
+  "voiceName": "Your personal voice name",
+  "voiceId": null,
+  "models": ["eleven_v4", "eleven_multilingual_v2"],
+  "outputFormats": ["pcm_24000", "mp3_44100_128"],
+  "seed": 20261031,
+  "useContext": true,
+  "settings": {}
+}

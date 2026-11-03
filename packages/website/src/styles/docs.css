@@ -1,0 +1,17 @@
+@import './fonts.css';
+
+:root {
+  --sl-color-accent-low: #11274a;
+  --sl-color-accent: #438cef;
+  --sl-color-accent-high: #b8d6ff;
+  --sl-font: var(--font-sans);
+}
+:root[data-theme='light'] {
+  --sl-color-accent-low: #e9f1fe;
+  --sl-color-accent: #1a65cb;
+  --sl-color-accent-high: #184b96;
+}
+.site-title img {
+  width: 2rem;
+  height: 2rem;
+}

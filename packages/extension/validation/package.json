@@ -1,0 +1,32 @@
+{
+  "name": "react-anatomy-validation-apps",
+  "private": true,
+  "license": "MIT",
+  "type": "module",
+  "scripts": {
+    "type-check": "tsc --noEmit"
+  },
+  "dependencies": {
+    "next": "16.4.4",
+    "react": "19.3.1",
+    "react-18-2": "npm:react@18.2.0",
+    "react-18-3": "npm:react@18.3.1",
+    "react-19-0": "npm:react@19.0.9",
+    "react-19-1": "npm:react@19.1.10",
+    "react-19-2": "npm:react@19.2.9",
+    "react-dom": "19.3.1",
+    "react-dom-18-2": "npm:react-dom@18.2.0",
+    "react-dom-18-3": "npm:react-dom@18.3.1",
+    "react-dom-19-0": "npm:react-dom@19.0.9",
+    "react-dom-19-1": "npm:react-dom@19.1.10",
+    "react-dom-19-2": "npm:react-dom@19.2.9",
+    "react-router-dom": "7.18.5"
+  },
+  "devDependencies": {
+    "@types/node": "^26.6.6",
+    "@types/react": "^19.3.0",
+    "@types/react-dom": "^19.3.0",
+    "typescript": "5.9.3"
+  },
+  "packageManager": "pnpm@12.16.1"
+}

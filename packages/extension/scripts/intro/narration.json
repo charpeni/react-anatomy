@@ -1,0 +1,82 @@
+{
+  "model": "gpt-4o-mini-tts",
+  "voice": "cedar",
+  "instructions": "You are a software engineer casually showing coworkers and friends a browser extension you are still building. Sound relaxed, warm and genuinely curious, like a short screen-share walkthrough, not an advert or a movie trailer. Speak at a natural, unhurried pace with clear articulation and light, friendly emphasis. Keep a steady, consistent voice across every line. Say 'React Anatomy' naturally, as two words, and 'DevTools' as dev tools.",
+  "clips": [
+    {
+      "id": "c01",
+      "cues": ["Here's an ordinary React app, running in Chrome."]
+    },
+    {
+      "id": "c02",
+      "cues": ["You can see the page, but not the components that build it."]
+    },
+    {
+      "id": "c03",
+      "cues": ["So let's open DevTools, the way you normally would."]
+    },
+    {
+      "id": "c04",
+      "cues": ["Next to Elements and Console, there's a new tab: Anatomy."]
+    },
+    {
+      "id": "c05",
+      "cues": ["React Anatomy reads the live React tree, and captures what's on screen."]
+    },
+    {
+      "id": "c06",
+      "cues": ["At first, it looks just like the page."]
+    },
+    {
+      "id": "c07",
+      "cues": ["Now, pull it apart."]
+    },
+    {
+      "id": "c08",
+      "cues": ["Every component becomes its own layer,", "stacked by how deep it sits in the tree."]
+    },
+    {
+      "id": "c09",
+      "cues": [
+        "Turn it, and you can see how the page is really built:",
+        "the sidebar, the project list, and each card inside it."
+      ]
+    },
+    {
+      "id": "c10",
+      "cues": ["Click any layer, and the same component is selected in the tree."]
+    },
+    {
+      "id": "c11",
+      "cues": ["Focus on it, to see just that part of the hierarchy."]
+    },
+    {
+      "id": "c12",
+      "cues": ["This card is made of a StatusBadge, a ProgressBar, and an AvatarStack."],
+      "say": "This card is made of a Status Badge, a Progress Bar, and an Avatar Stack."
+    },
+    {
+      "id": "c13",
+      "cues": ["On the right are its real props, read straight from the running app."]
+    },
+    {
+      "id": "c14",
+      "cues": ["You can drill into the project, its team, and its settings."]
+    },
+    {
+      "id": "c15",
+      "cues": ["There's nothing to add to your app:", "no package, no code changes, no reload."]
+    },
+    {
+      "id": "c16",
+      "cues": ["This is still a work in progress."]
+    },
+    {
+      "id": "c17",
+      "cues": [
+        "I'd love to hear whether this view would help you understand a React page,",
+        "and what you think is missing."
+      ]
+    }
+  ]
+}

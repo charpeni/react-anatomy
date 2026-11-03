@@ -1,0 +1,21 @@
+packages:
+  - packages/*
+
+# Astro generates the live example in predev and prebuild.
+enablePrePostScripts: true
+
+overrides:
+  pagefind: 1.5.2
+
+allowBuilds:
+  '@astrojs/compiler-rs': true
+  esbuild: true
+  ffmpeg-static: true
+  sharp: true
+  unrs-resolver: true
+  workerd: true
+
+minimumReleaseAgeExclude:
+  - astro@7.4.5
+  - miniflare@5.20261102.0-beta
+  - wrangler@4.156.2

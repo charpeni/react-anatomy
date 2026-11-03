@@ -1,0 +1,13 @@
+/* Explanatory first separation, followed by the real panel's normal timing. */
+@media (prefers-reduced-motion: no-preference) {
+  html[data-example-motion='explain'] .scene,
+  html[data-example-motion='explain'] .component-plane,
+  html[data-example-motion='explain'] .plane-label {
+    transition-duration: 700ms;
+  }
+}
+html[data-example-motion='instant'] .scene,
+html[data-example-motion='instant'] .component-plane,
+html[data-example-motion='instant'] .plane-label {
+  transition: none;
+}

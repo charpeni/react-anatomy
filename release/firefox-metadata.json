@@ -1,0 +1,13 @@
+{
+  "name": {
+    "en-US": "React Anatomy"
+  },
+  "summary": {
+    "en-US": "Explore how a React page is composed with a 3D component hierarchy and props inspector in DevTools."
+  },
+  "categories": ["web-development"],
+  "version": {
+    "license": "MIT",
+    "approval_notes": "React Anatomy is a developer tool for inspecting the current React page. Open a React DOM page, open Developer Tools, and select Anatomy. The toolbar button provides a separate inspector using activeTab and scripting. The source archive includes BUILDING.md with Node/pnpm versions and reproducible build commands. TypeScript and JSX are bundled with esbuild without minification. innerHTML is used by React and by an inert template parser that strips active content from captured page markup. The extension targets desktop Firefox 140 and later."
+  }
+}

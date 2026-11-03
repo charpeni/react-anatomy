@@ -1,0 +1,51 @@
+* {
+  box-sizing: border-box;
+}
+body {
+  margin: 0;
+  background: #f4f5f7;
+  color: #202632;
+  font:
+    16px/1.5 system-ui,
+    sans-serif;
+}
+.workspace {
+  display: grid;
+  grid-template-columns: 220px 1fr;
+  min-height: 600px;
+}
+aside {
+  background: #e9edf4;
+  padding: 28px;
+}
+aside a {
+  display: block;
+  padding: 10px 0;
+}
+main {
+  padding: 28px;
+}
+article {
+  background: white;
+  border: 1px solid #c8ccd3;
+  border-radius: 8px;
+  padding: 24px;
+  max-width: 650px;
+}
+button {
+  padding: 10px 16px;
+  margin: 8px 12px 0 0;
+  border: 1px solid #8b93a2;
+  border-radius: 4px;
+  background: white;
+  color: #202632;
+  cursor: pointer;
+}
+[role='dialog'] {
+  position: fixed;
+  inset: 100px auto auto 30%;
+  padding: 30px;
+  background: white;
+  border: 2px solid #265df1;
+  box-shadow: 0 8px 40px #0003;
+}

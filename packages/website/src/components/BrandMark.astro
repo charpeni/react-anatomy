@@ -1,0 +1,37 @@
+---
+// The approved Exploded Stack mark, inlined so its slabs can animate on first render.
+// Geometry comes from the shared brand file; the build fails if that file's structure
+// changes, rather than silently animating a stale copy.
+import source from '@react-anatomy/brand/svg/mark-light.svg?raw';
+
+interface Props {
+  size?: number;
+  animate?: boolean;
+}
+const { size = 32, animate = false } = Astro.props;
+
+const svg = source.replace(/^<\?xml[^>]*>\s*/, '');
+const slabs = [
+  ['M15 25.66L61 6.34L61 102.34L15 121.66Z', 'mark-back'],
+  ['M46 38.56L82 23.44L82 89.44L46 104.56Z', 'mark-middle'],
+  ['M77 50.46L103 39.54L103 77.54L77 88.46Z', 'mark-front'],
+];
+let markup = svg
+  .replace(/<title>.*?<\/title>/, '')
+  .replace(/id="es-1a73e8/g, 'id="brand-mark-')
+  .replace(/url\(#es-1a73e8/g, 'url(#brand-mark-');
+for (const [d, name] of slabs) {
+  const parts = markup.split(`<path d="${d}"`);
+  // Each slab is drawn once and appears once more as a knockout in a nearer slab's mask.
+  if (parts.length < 2) {
+    throw new Error(`Brand mark changed: missing ${name} geometry.`);
+  }
+  markup = parts.join(`<path class="${name}" d="${d}"`);
+}
+markup = markup.replace(
+  /<svg [^>]*>/,
+  `<svg class="brand-mark${animate ? ' brand-mark-animate' : ''}" width="${size}" height="${size}" viewBox="0 0 128 128" aria-hidden="true" focusable="false">`,
+);
+---
+
+<Fragment set:html={markup} />

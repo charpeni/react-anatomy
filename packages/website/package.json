@@ -1,0 +1,39 @@
+{
+  "name": "@react-anatomy/website",
+  "version": "0.1.0",
+  "private": true,
+  "license": "MIT",
+  "type": "module",
+  "scripts": {
+    "dev": "astro dev --host 0.0.0.0",
+    "build": "astro build && node scripts/check-build.ts",
+    "preview": "astro preview --host 0.0.0.0",
+    "check": "astro check",
+    "predev": "node scripts/build-demo.ts",
+    "prebuild": "node scripts/build-demo.ts",
+    "test": "pnpm run build && node scripts/check-demo.ts",
+    "export:diagram": "node scripts/export-diagram.ts",
+    "type-check": "astro check"
+  },
+  "dependencies": {
+    "@astrojs/markdown-remark": "^7.3.0",
+    "@astrojs/starlight": "0.42.8",
+    "@react-anatomy/brand": "workspace:*",
+    "astro": "7.4.5",
+    "photoswipe": "5.4.4"
+  },
+  "devDependencies": {
+    "@astrojs/check": "^0.9.4",
+    "@excalidraw/excalidraw": "0.18.1",
+    "@react-anatomy/extension": "workspace:*",
+    "@types/node": "^26.6.6",
+    "@types/react": "^19.3.0",
+    "@types/react-dom": "^19.3.0",
+    "esbuild": "^0.28.2",
+    "pagefind": "1.5.2",
+    "playwright": "^1.64.1",
+    "react": "^19.3.1",
+    "react-dom": "^19.3.1",
+    "typescript": "^5.9.3"
+  }
+}

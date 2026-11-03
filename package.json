@@ -1,0 +1,45 @@
+{
+  "name": "react-anatomy",
+  "version": "0.1.0",
+  "private": true,
+  "license": "MIT",
+  "scripts": {
+    "dev": "pnpm --filter @react-anatomy/website run dev",
+    "dev:extension": "pnpm --filter @react-anatomy/extension run dev",
+    "build": "pnpm -r run build",
+    "build:extension": "pnpm --filter @react-anatomy/extension run build",
+    "build:website": "pnpm --filter @react-anatomy/website run build",
+    "lint": "oxlint --deny-warnings",
+    "format": "oxfmt --write .",
+    "format:check": "oxfmt --check .",
+    "check": "pnpm lint && pnpm format:check && pnpm type-check",
+    "test": "pnpm --filter @react-anatomy/extension run test",
+    "package:extension": "pnpm --filter @react-anatomy/extension run package",
+    "test:website": "pnpm --filter @react-anatomy/website run test",
+    "build:firefox": "pnpm --filter @react-anatomy/extension run build:firefox",
+    "dev:firefox": "pnpm --filter @react-anatomy/extension run dev:firefox",
+    "test:firefox": "pnpm --filter @react-anatomy/extension run test:firefox",
+    "package:firefox": "pnpm --filter @react-anatomy/extension run package:firefox",
+    "setup:compatibility": "pnpm --filter @react-anatomy/extension run setup:compatibility",
+    "test:compatibility": "pnpm --filter @react-anatomy/extension run test:compatibility",
+    "test:public-apps": "pnpm --filter @react-anatomy/extension run test:public-apps",
+    "release:prepare": "node packages/extension/scripts/release/prepare.ts",
+    "release:chrome": "node packages/extension/scripts/release/chrome.ts",
+    "release:firefox": "node packages/extension/scripts/release/firefox.ts",
+    "test:release": "node --test packages/extension/scripts/release/check.ts",
+    "type-check": "pnpm -r --if-present run type-check",
+    "deploy:website": "pnpm run build:website && wrangler deploy",
+    "check:deploy": "pnpm run build:website && wrangler deploy --dry-run"
+  },
+  "devDependencies": {
+    "@astrojs/compiler-rs": "0.5.2",
+    "oxfmt": "0.75.0",
+    "oxlint": "1.90.0",
+    "wrangler": "4.156.2"
+  },
+  "engines": {
+    "node": ">=24.22.1",
+    "pnpm": ">=12.16.1 <13"
+  },
+  "packageManager": "pnpm@12.16.1"
+}
