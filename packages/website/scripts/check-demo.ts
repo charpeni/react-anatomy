@@ -6,6 +6,7 @@ import { resolve, extname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { chromium, type Page, type Locator } from 'playwright';
 import { browserOptions } from '../../extension/scripts/browser-options.ts';
+import { checkNotFound } from './check-not-found.ts';
 
 const directory = fileURLToPath(new URL('../dist/', import.meta.url));
 const shots = fileURLToPath(new URL('../artifacts/demo-check/', import.meta.url));
@@ -32,11 +33,19 @@ const server = createServer(async (request, response) => {
   }
 
   try {
+    const content = await readFile(file);
+
     response
       .writeHead(200, { 'Content-Type': types[extname(file)] || 'application/octet-stream' })
-      .end(await readFile(file));
+      .end(content);
   } catch {
-    response.writeHead(404).end('Not found');
+    if (!extname(path) || path.endsWith('.html')) {
+      response
+        .writeHead(404, { 'Content-Type': 'text/html' })
+        .end(await readFile(resolve(directory, '404.html')));
+    } else {
+      response.writeHead(404).end('Not found');
+    }
   }
 });
 
@@ -495,6 +504,7 @@ try {
   console.log(
     'Passed: keyboard motion, documentation image viewers, internal links, search, and no browser or asset errors.',
   );
+  await checkNotFound(browser, base, shots);
 } finally {
   await browser.close();
   await new Promise((done) => server.close(done));

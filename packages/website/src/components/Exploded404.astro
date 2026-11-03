@@ -1,0 +1,274 @@
+<main class="hero not-found">
+  <div
+    class="not-found-stage"
+    role="group"
+    aria-roledescription="3D view"
+    aria-label="This page, separated into layers"
+  >
+    <div class="not-found-scene">
+      <div class="layer page-layer" aria-hidden="true">
+        <span class="layer-tag">NotFoundPage</span>
+      </div>
+      <div class="layer" style="--depth: 1">
+        <span class="layer-tag" aria-hidden="true">
+          Eyebrow
+        </span>
+        <p class="eyebrow">404 / Page not found</p>
+      </div>
+      <div class="layer" style="--depth: 2">
+        <span class="layer-tag" aria-hidden="true">
+          Heading
+        </span>
+        <h1>This page isn’t here.</h1>
+      </div>
+      <div class="layer selected-layer" style="--depth: 3">
+        <span class="layer-tag" aria-hidden="true">
+          Links
+        </span>
+        <div class="hero-links">
+          <a class="watch-link" href="/">
+            Back to React Anatomy <span aria-hidden="true">↗</span>
+          </a>
+          <a class="text-link" href="/docs/">
+            Read the docs <span aria-hidden="true">↗</span>
+          </a>
+        </div>
+      </div>
+    </div>
+  </div>
+  <p class="not-found-hint" id="not-found-hint" hidden>
+    <span class="hint-drag">Drag to turn</span>
+    <span class="hint-keys">Arrow keys turn the view</span>
+  </p>
+</main>
+
+<script>
+  import { enableExploded404 } from '../scripts/exploded-404.ts';
+
+  const stage = document.querySelector<HTMLElement>('.not-found-stage');
+
+  if (stage) {
+    enableExploded404(stage);
+  }
+</script>
+
+<style>
+  .not-found {
+    padding-top: 56px;
+    padding-bottom: 40px;
+  }
+
+  .not-found-stage {
+    position: relative;
+    perspective: 1700px;
+    perspective-origin: 45% 40%;
+    padding: 56px 0 64px;
+    margin: 0 -8px;
+    border-radius: 8px;
+    outline: none;
+  }
+
+  .not-found-stage.is-interactive {
+    cursor: grab;
+    touch-action: pan-y pinch-zoom;
+    user-select: none;
+    -webkit-user-select: none;
+  }
+
+  .not-found-stage.is-dragging {
+    cursor: grabbing;
+  }
+
+  .not-found-stage:focus-visible {
+    box-shadow: 0 0 0 3px #1a73e8 inset;
+  }
+
+  .not-found-scene {
+    --rotate-x: 10deg;
+    --rotate-y: -30deg;
+    --scale: 0.9;
+    --separation: 64px;
+    --offset: 56px;
+    position: relative;
+    width: fit-content;
+    max-width: 100%;
+    padding: 34px 40px 38px;
+    transform-style: preserve-3d;
+    transform-origin: 50% 50%;
+    transform: translateX(var(--offset)) rotateX(var(--rotate-x)) rotateY(var(--rotate-y))
+      scale(var(--scale));
+  }
+
+  .layer {
+    position: relative;
+    width: fit-content;
+    max-width: 100%;
+    padding: 10px 16px;
+    margin-bottom: 18px;
+    transform-style: preserve-3d;
+    transform: translateZ(calc(var(--depth, 0) * var(--separation)));
+  }
+
+  .layer:last-child {
+    margin-bottom: 0;
+  }
+
+  .layer::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    border: 1px solid #c9ccd1;
+    border-radius: 4px;
+    background: rgb(255 255 255 / 66%);
+    box-shadow:
+      0 1px 0 rgb(0 0 0 / 2%),
+      0 18px 40px -28px rgb(32 34 38 / 35%);
+  }
+
+  .page-layer {
+    position: absolute;
+    inset: 0;
+    width: auto;
+    max-width: none;
+    margin: 0;
+    padding: 0;
+  }
+
+  .page-layer::before {
+    background: #f1f2f3;
+    border-style: dashed;
+    border-color: #c3c6ca;
+  }
+
+  .selected-layer::before {
+    border-color: #1a73e8;
+    box-shadow:
+      0 0 0 1px #1a73e8,
+      0 18px 40px -28px rgb(26 115 232 / 45%);
+  }
+
+  .layer-tag {
+    position: absolute;
+    left: -1px;
+    top: -22px;
+    font:
+      10.5px / 1.6 ui-monospace,
+      'SFMono-Regular',
+      Consolas,
+      'Liberation Mono',
+      monospace;
+    color: #5f6368;
+    background: #fff;
+    border: 1px solid #d3d6da;
+    border-radius: 3px;
+    padding: 0 6px;
+    white-space: nowrap;
+    pointer-events: none;
+  }
+
+  .selected-layer > .layer-tag {
+    color: #1a73e8;
+    border-color: #a9c3ea;
+  }
+
+  .page-layer > .layer-tag {
+    top: 8px;
+    left: auto;
+    right: 10px;
+  }
+
+  .not-found .eyebrow,
+  .not-found h1 {
+    margin: 0;
+  }
+
+  .not-found .hero-links {
+    margin-top: 0;
+  }
+
+  .layer a {
+    position: relative;
+  }
+
+  .not-found-hint {
+    margin-top: 6px;
+    font-size: 12px;
+    color: var(--muted);
+  }
+
+  .hint-keys {
+    display: none;
+  }
+
+  .not-found-stage:focus-visible + .not-found-hint .hint-drag {
+    display: none;
+  }
+
+  .not-found-stage:focus-visible + .not-found-hint .hint-keys {
+    display: inline;
+  }
+
+  /* Animate each plane's transform directly, without inheriting an animated property. */
+  @keyframes unfold-view {
+    from {
+      transform: translateX(0) rotateX(0deg) rotateY(0deg) scale(1);
+    }
+  }
+
+  @keyframes separate-layer {
+    from {
+      transform: translateZ(0);
+    }
+  }
+
+  .not-found-scene.is-entering {
+    animation: unfold-view 760ms var(--ease-out) 180ms both;
+  }
+
+  .not-found-scene.is-entering > .layer {
+    animation: separate-layer 760ms var(--ease-out) 180ms both;
+  }
+
+  @media (max-width: 720px) {
+    .not-found {
+      padding-top: 28px;
+    }
+
+    .not-found-stage {
+      padding: 40px 0 44px;
+      perspective: 1100px;
+    }
+
+    .not-found-scene {
+      --rotate-x: 9deg;
+      --rotate-y: -24deg;
+      --scale: 0.86;
+      --separation: 34px;
+      --offset: 22px;
+      padding: 28px 18px;
+    }
+
+    .layer {
+      padding: 8px 10px;
+      margin-bottom: 14px;
+    }
+  }
+
+  @media (max-width: 360px) {
+    .not-found-scene {
+      --rotate-y: -20deg;
+      --scale: 0.82;
+      --separation: 28px;
+      --offset: 16px;
+      padding: 24px 12px;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .not-found-scene.is-entering,
+    .not-found-scene.is-entering > .layer {
+      animation: none;
+    }
+  }
+</style>

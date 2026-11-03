@@ -62,6 +62,12 @@ The header GitHub link points to the public repository at `https://github.com/ch
 
 The website and documentation use **Instrument Sans**, self-hosted as variable WOFF2 files in `public/fonts/instrument-sans/`. Shared font faces and the `--font-sans` token live in `src/styles/fonts.css`; Starlight uses the same token. Normal and italic styles cover weights 400–700. The Latin regular face is preloaded, with italic and Latin Extended subsets loaded as needed. Provenance, checksums, and the OFL license are included with the font files. The native inspector and sample app retain their own typography, and the approved outlined logo lockups remain Inter.
 
+## 404 page
+
+`Exploded404.astro` presents the missing-page label, heading, and navigation as real HTML on CSS 3D planes. The component-style labels illustrate this static page; they do not come from a captured React tree. The view unfolds once, then stays exploded. Its only interaction is camera rotation: drag with a mouse, swipe horizontally on touch, or focus the view and use arrow keys. Vertical touch scrolling and pinch zoom remain native, and links never start a drag.
+
+`src/scripts/exploded-404.ts` handles rotation and input cancellation. Reduced motion skips the entrance; without JavaScript, the static exploded page and both navigation links still work. Keep the response status at 404 and the page marked `noindex`. The website browser suite checks those behaviors along with narrow layouts and navigation from the transformed links.
+
 ## Search and sharing
 
 `src/lib/site.ts` owns the production URL, product description, maintainer identity, and structured metadata. `Seo.astro` provides the landing-page metadata; `DocsHead.astro` extends Starlight's existing head without duplicating its title, description, or canonical URL. Public pages have Open Graph and Twitter previews and JSON-LD describing the website, software, and documentation. Do not add ratings, store URLs, release dates, or availability claims until they are real. Keep supported-version statements in the metadata and FAQ aligned with the compatibility guide.
