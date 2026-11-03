@@ -5,7 +5,7 @@ prev: false
 next: false
 ---
 
-Last updated: November 2, 2026
+Last updated: November 3, 2026
 
 React Anatomy is a browser extension developed by [Nicolas Charpentier](https://github.com/charpeni). It inspects React pages locally in your browser. **We do not receive your captures or component props.** The extension has no accounts, analytics, advertising, or remote error reporting.
 
@@ -41,6 +41,10 @@ Close DevTools or the Anatomy window to stop inspection, then reload the inspect
 Recreating a page can reload its images, backgrounds, and fonts from their original URLs. Those requests go directly to the sites or asset providers, without passing through a React Anatomy server. They can expose the requested URL, your IP address, and normal browser request headers to those providers. Browser caching and cookie rules apply, and providers may keep their own request logs.
 
 We do not sell inspection data or use it for advertising or analytics. React Anatomy’s use of information obtained through Chrome APIs follows the [Chrome Web Store User Data Policy](https://developer.chrome.com/docs/webstore/program-policies/policies#protecting-user-privacy), including the Limited Use requirements.
+
+## Website example
+
+The interactive example on react-anatomy.com stores one flag in your tab’s session storage to remember that its automatic introduction has played or been dismissed. The flag is not sent to us and contains no page content or personal information. It clears when the tab session ends and is separate from the browser extension’s inspection data.
 
 ## Contacting us
 

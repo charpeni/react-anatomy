@@ -1,3 +1,5 @@
+import { mountDemoIntroduction } from './demo-introduction.ts';
+
 type SampleWindow = Window & {
   anatomyExample?: { call: (request: { action: string }) => unknown };
 };
@@ -10,6 +12,7 @@ export function mountExample(root: HTMLElement) {
   const restart = root.querySelector<HTMLButtonElement>('.demo-reset')!;
   let ready: Promise<Document> | undefined;
   let panelLoaded = false;
+  let panelOpened = false;
   let loadingExit: Animation | undefined;
   const reducedMotion = matchMedia('(prefers-reduced-motion: reduce)');
   const easeOut = getComputedStyle(root).getPropertyValue('--ease-out').trim();
@@ -20,6 +23,7 @@ export function mountExample(root: HTMLElement) {
   let error = false;
   let motionTimer: ReturnType<typeof setTimeout>;
   const scrollDocuments = new WeakSet<Document>();
+  let introduction: ReturnType<typeof mountDemoIntroduction> | undefined;
 
   function cancelLoadingExit() {
     loadingExit?.cancel();
@@ -81,6 +85,49 @@ export function mountExample(root: HTMLElement) {
     }
 
     scrollDocuments.add(doc);
+    let touch: { x: number; y: number } | undefined;
+
+    doc.addEventListener(
+      'touchstart',
+      (event) => {
+        const point = event.touches.length === 1 ? event.touches[0] : undefined;
+        touch = point ? { x: point.clientX, y: point.clientY } : undefined;
+      },
+      { passive: true },
+    );
+    doc.addEventListener(
+      'touchmove',
+      (event) => {
+        const point = event.touches.length === 1 ? event.touches[0] : undefined;
+        if (!touch || !point) {
+          touch = undefined;
+          return;
+        }
+        const dx = touch.x - point.clientX;
+        const dy = touch.y - point.clientY;
+        if (Math.abs(dy) <= Math.abs(dx)) {
+          return;
+        }
+
+        event.preventDefault();
+        event.stopPropagation();
+        touch = { x: point.clientX, y: point.clientY };
+        if (!introduction?.holdingScroll) {
+          window.scrollBy({ top: dy, behavior: 'instant' });
+        }
+      },
+      { capture: true, passive: false },
+    );
+    for (const type of ['touchend', 'touchcancel']) {
+      doc.addEventListener(
+        type,
+        () => {
+          touch = undefined;
+        },
+        { passive: true },
+      );
+    }
+
     doc.addEventListener(
       'wheel',
       (event) => {
@@ -94,6 +141,14 @@ export function mountExample(root: HTMLElement) {
         }
 
         event.preventDefault();
+
+        if (introduction?.holdingScroll) {
+          if (event.deltaY < 0) {
+            introduction.cancel();
+          } else {
+            return;
+          }
+        }
 
         const unit =
           event.deltaMode === WheelEvent.DOM_DELTA_LINE
@@ -203,7 +258,7 @@ export function mountExample(root: HTMLElement) {
   async function choose(next: string, keyboard: boolean) {
     const request = ++action;
     const version = generation;
-    const returningToPanel = panel.hidden && Boolean(ready);
+    const returningToPanel = panel.hidden && panelOpened;
 
     try {
       if (next === 'page') {
@@ -221,6 +276,7 @@ export function mountExample(root: HTMLElement) {
 
       root.dataset.guide = 'done';
       setView('anatomy', next);
+      panelOpened = true;
 
       // A step within the ready panel needs no loading surface or new reveal.
       if (!panelLoaded || returningToPanel) {
@@ -309,10 +365,21 @@ export function mountExample(root: HTMLElement) {
     }
   }
 
+  introduction = mountDemoIntroduction({
+    root,
+    prepare: panelReady,
+    open: (instant) => choose('explode', instant),
+    cancelOpen: () => {
+      action++;
+      hideLoading();
+    },
+  });
+
   root
     .querySelectorAll<HTMLButtonElement>('[data-step], [data-view], [data-open-anatomy]')
     .forEach((button) => {
       button.addEventListener('click', (event) => {
+        introduction?.cancel();
         const next = button.dataset.step || (button.dataset.view === 'page' ? 'page' : 'explode');
 
         void choose(next, event.detail === 0);
@@ -321,6 +388,7 @@ export function mountExample(root: HTMLElement) {
   document
     .querySelector<HTMLAnchorElement>('[data-open-example]')
     ?.addEventListener('click', (event) => {
+      introduction?.cancel();
       void choose('explode', event.detail === 0);
     });
 
@@ -371,6 +439,7 @@ export function mountExample(root: HTMLElement) {
     clearTimeout(motionTimer);
     ready = undefined;
     panelLoaded = false;
+    panelOpened = false;
     panel.removeAttribute('src');
     source.src = '/interactive/source.html';
     setView('page', 'page');

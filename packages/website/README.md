@@ -34,6 +34,12 @@ Run `pnpm run test:website` at the repository root for the browser checks. Tests
 
 The documentation uses real screenshots of the native DevTools extension. Screenshots and diagrams on the landing page and in the docs open in a PhotoSwipe lightbox without changing the URL. The viewer supports zoom, touch gestures, arrow-key navigation, Escape to close, and focus restoration. The viewer core and full-size image dimensions load on first interaction; the normal image link remains as a no-JavaScript fallback. The previous video, poster, and subtitles are preserved under the ignored `artifacts/previous-intro/` folder and are no longer served.
 
+## Automatic demo introduction
+
+On the first downward scroll to the example, `demo-introduction.ts` briefly holds the page, moves an illustrated cursor to the Anatomy tab, and opens the real inspector. Scrolling resumes after separation finishes, with a hard 3.5-second limit even if loading fails. Escape, Skip intro, reversing direction, or interacting with the demo cancels the sequence. Keyboard navigation bypasses it; reduced motion opens the inspector without moving the cursor or holding scroll.
+
+A single `react-anatomy.demo-introduction` flag in session storage prevents replay in that tab session. No data leaves the browser. To replay during development, run `sessionStorage.removeItem('react-anatomy.demo-introduction'); location.reload();` in the page console. The browser tests use fresh sessions for this flow and mark it seen when testing the existing manual walkthrough.
+
 ## Excalidraw illustration
 
 The landing page's layout diagram is a real Excalidraw drawing. Its editable source and SVG/PNG exports live in `public/media/diagrams/page-composition.*`. Open the `.excalidraw` file in Excalidraw to edit it, then save it back to that location.

@@ -8,6 +8,7 @@ import { chromium, type Page, type Locator } from 'playwright';
 import { browserOptions } from '../../extension/scripts/browser-options.ts';
 import { checkNotFound } from './check-not-found.ts';
 import { checkHero } from './check-hero.ts';
+import { checkDemoIntroduction } from './check-demo-introduction.ts';
 
 const directory = fileURLToPath(new URL('../dist/', import.meta.url));
 const shots = fileURLToPath(new URL('../artifacts/demo-check/', import.meta.url));
@@ -57,7 +58,9 @@ const browser = await chromium.launch({ headless: true, ...browserOptions() });
 const errors: string[] = [];
 const failures: string[] = [];
 
-const observe = (page: Page) => {
+const observe = async (page: Page) => {
+  // Test the manual walkthrough independently from the one-time introduction.
+  await page.addInitScript(() => sessionStorage.setItem('react-anatomy.demo-introduction', 'seen'));
   page.on('pageerror', (error) => errors.push(error.message));
   page.on('response', (response) => {
     if (response.status() >= 400) {
@@ -99,11 +102,12 @@ async function assertPageScrollsOver(page: Page, target: Locator) {
 }
 
 try {
+  await checkDemoIntroduction(browser, base, shots);
   await checkHero(browser, base, shots);
 
   const page = await browser.newPage({ viewport: { width: 1440, height: 1050 } });
 
-  observe(page);
+  await observe(page);
   await page.goto(base);
   await page.locator('#demo').scrollIntoViewIfNeeded();
 
@@ -220,7 +224,7 @@ try {
       hasTouch: true,
     });
 
-    observe(mobile);
+    await observe(mobile);
     await mobile.goto(base);
     await mobile.locator('#demo').scrollIntoViewIfNeeded();
     await mobile.frameLocator('#anatomy-source').locator('.project-card').first().waitFor();
@@ -347,7 +351,7 @@ try {
     reducedMotion: 'reduce',
   });
 
-  observe(touch);
+  await observe(touch);
   await touch.goto(base);
   await touch.locator('.origin-compare a[data-image-viewer]').nth(1).tap();
   await touch.getByRole('dialog', { name: 'Image viewer' }).waitFor();

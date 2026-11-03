@@ -199,7 +199,9 @@
   background: #fff;
 }
 .demo-frame[hidden] {
-  display: none;
+  /* Prepare the inspector at its real size before the introduction reveals it. */
+  visibility: hidden;
+  pointer-events: none;
 }
 .demo-frame-inactive {
   visibility: hidden;
@@ -359,5 +361,74 @@
   .demo-start-hint {
     margin-left: 6px;
     font-size: 10px;
+  }
+}
+
+/* The introduction is a one-time demonstration of the real Anatomy tab. */
+.interactive-demo {
+  position: relative;
+}
+.demo-intro-cursor {
+  position: absolute;
+  left: 0;
+  top: 0;
+  z-index: 8;
+  pointer-events: none;
+  transform-origin: 0 0;
+  filter: drop-shadow(0 2px 3px rgb(0 0 0 / 24%));
+}
+.demo-intro-cursor[hidden],
+.demo-intro-skip[hidden] {
+  display: none;
+}
+.demo-intro-skip {
+  flex-shrink: 0;
+  border: 0;
+  background: none;
+  color: #1967d2;
+  padding: 4px 0 4px 8px;
+  font: inherit;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  cursor: pointer;
+}
+.demo-intro-status {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+.interactive-demo[data-introduction='playing'] .demo-badge,
+.interactive-demo[data-introduction='opening'] .demo-badge {
+  display: none;
+}
+
+.interactive-demo[data-introduction='opening'] .demo-intro-cursor::before {
+  content: '';
+  position: absolute;
+  width: 24px;
+  height: 24px;
+  left: -10px;
+  top: -10px;
+  border: 2px solid #1a73e8;
+  border-radius: 50%;
+  animation: demo-intro-click 220ms var(--ease-out) both;
+}
+@keyframes demo-intro-click {
+  from {
+    transform: scale(0.65);
+    opacity: 1;
+  }
+  to {
+    transform: scale(1.5);
+    opacity: 0;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .demo-intro-cursor {
+    display: none;
   }
 }
