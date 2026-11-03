@@ -62,6 +62,12 @@ The header GitHub link points to the public repository at `https://github.com/ch
 
 The website and documentation use **Instrument Sans**, self-hosted as variable WOFF2 files in `public/fonts/instrument-sans/`. Shared font faces and the `--font-sans` token live in `src/styles/fonts.css`; Starlight uses the same token. Normal and italic styles cover weights 400–700. The Latin regular face is preloaded, with italic and Latin Extended subsets loaded as needed. Provenance, checksums, and the OFL license are included with the font files. The native inspector and sample app retain their own typography, and the approved outlined logo lockups remain Inter.
 
+## Landing introduction
+
+`ExplodedHero.astro` presents the introduction as a fixed, front-facing composition of HTML layers. The component labels are a hand-authored illustration, with Emphasis nested inside Heading. There is no camera interaction or extra keyboard stop; the text stays selectable and the links remain ordinary links.
+
+The layers separate once on load using CSS transforms. Reduced motion and JavaScript-disabled browsers show the completed view immediately; focusing a hero link finishes the entrance. Keep this illustration separate from the live React capture in the example below it.
+
 ## 404 page
 
 `Exploded404.astro` presents the missing-page label, heading, and navigation as real HTML on CSS 3D planes. The component-style labels illustrate this static page; they do not come from a captured React tree. The view unfolds once, then stays exploded. Its only interaction is camera rotation: drag with a mouse, swipe horizontally on touch, or focus the view and use arrow keys. Vertical touch scrolling and pinch zoom remain native, and links never start a drag.

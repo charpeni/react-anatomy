@@ -2,6 +2,7 @@
 import mark from '@react-anatomy/brand/svg/mark-light.svg?url';
 import '../styles/landing.css';
 import InteractiveDemo from '../components/InteractiveDemo.astro';
+import ExplodedHero from '../components/ExplodedHero.astro';
 import ImageLightbox from '../components/ImageLightbox.astro';
 import BrandMark from '../components/BrandMark.astro';
 import Seo from '../components/Seo.astro';
@@ -50,32 +51,7 @@ import autoDepth from '../../public/media/auto-depth.png';
       </header>
 
       <main id="main">
-        <section class="hero" aria-labelledby="hero-title">
-          <p class="eyebrow">A browser DevTools panel for React pages</p>
-          <div class="hero-grid">
-            <h1 id="hero-title">
-              See how a React page
-              <br />
-              is <span>composed.</span>
-            </h1>
-            <div class="hero-copy">
-              <p>
-                React Anatomy is a browser extension that adds an <strong>Anatomy</strong> panel to
-                your browser’s developer tools. It connects the page in front of you to the
-                components React rendered for it: separate the page into 3D layers, follow the real
-                component tree, and read the props behind what you see.
-              </p>
-              <div class="hero-links">
-                <a class="watch-link" href="#demo" data-open-example>
-                  <span aria-hidden="true">↗</span> Explore the example
-                </a>
-                <a class="text-link" href="/docs/">
-                  Read the guide <span aria-hidden="true">↗</span>
-                </a>
-              </div>
-            </div>
-          </div>
-        </section>
+        <ExplodedHero />
 
         <InteractiveDemo />
 
