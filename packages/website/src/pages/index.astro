@@ -6,6 +6,7 @@ import ExplodedHero from '../components/ExplodedHero.astro';
 import ImageLightbox from '../components/ImageLightbox.astro';
 import BrandMark from '../components/BrandMark.astro';
 import Seo from '../components/Seo.astro';
+import Pirsch from '../components/Pirsch.astro';
 import { site } from '../lib/site.ts';
 import { Image } from 'astro:assets';
 import compositionFront from '../../public/media/composition-front.png';
@@ -18,6 +19,7 @@ import autoDepth from '../../public/media/auto-depth.png';
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <Seo title={site.title} description={site.description} />
+    <Pirsch />
     <meta name="theme-color" content="#fafaf8" />
     <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
     <link

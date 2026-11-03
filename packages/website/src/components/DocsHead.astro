@@ -1,6 +1,7 @@
 ---
 import DefaultHead from '@astrojs/starlight/components/Head.astro';
 import Seo from './Seo.astro';
+import Pirsch from './Pirsch.astro';
 import { site } from '../lib/site.ts';
 import { documentPath } from '../lib/documentation.ts';
 
@@ -9,5 +10,6 @@ const title = head.find((tag) => tag.tag === 'title')?.content ?? entry.data.tit
 ---
 
 <DefaultHead />
+<Pirsch />
 <Seo title={title} description={entry.data.description ?? site.description} core={false} />
 <link rel="alternate" type="text/markdown" href={`/${documentPath(entry)}.md`} title="Markdown" />
