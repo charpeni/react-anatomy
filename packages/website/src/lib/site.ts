@@ -3,7 +3,7 @@ export const site = {
   url: 'https://react-anatomy.com',
   title: 'React Anatomy — 3D React component inspector',
   description:
-    'Explore React component trees in 3D, inspect live props, and understand how a page is composed. An open-source browser DevTools extension for Chrome and Firefox.',
+    'Explore React component trees in 3D and inspect live props. An open-source DevTools extension for Chrome and Firefox.',
   repository: 'https://github.com/charpeni/react-anatomy',
   author: { name: 'Nicolas Charpentier', url: 'https://github.com/charpeni' },
   socialImage: '/media/react-anatomy-social.png',
