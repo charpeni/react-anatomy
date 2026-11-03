@@ -91,7 +91,13 @@ export function mountExample(root: HTMLElement) {
       'touchstart',
       (event) => {
         const point = event.touches.length === 1 ? event.touches[0] : undefined;
-        touch = point ? { x: point.clientX, y: point.clientY } : undefined;
+        // Reserve gestures that start on the canvas or a drag control for the
+        // inspector. Its pointer handlers already rotate or resize the view;
+        // forwarding the same touch gesture would also scroll the landing page.
+        const inspectorGesture =
+          frame === panel &&
+          (event.target as Element | null)?.closest('.stage, .splitter, input[type="range"]');
+        touch = point && !inspectorGesture ? { x: point.clientX, y: point.clientY } : undefined;
       },
       { passive: true },
     );

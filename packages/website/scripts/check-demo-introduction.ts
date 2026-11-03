@@ -196,15 +196,17 @@ export async function checkDemoIntroduction(browser: Browser, base: string, shot
         }),
       );
       const session = await mobile.context().newCDPSession(mobile);
-      const swipe = async (start: number, end: number) => {
+      const swipe = async (start: number, end: number, x = width / 2, endX = x) => {
         await session.send('Input.dispatchTouchEvent', {
           type: 'touchStart',
-          touchPoints: [{ x: width / 2, y: start, id: 1 }],
+          touchPoints: [{ x, y: start, id: 1 }],
         });
         for (let step = 1; step <= 12; step++) {
           await session.send('Input.dispatchTouchEvent', {
             type: 'touchMove',
-            touchPoints: [{ x: width / 2, y: start + ((end - start) * step) / 12, id: 1 }],
+            touchPoints: [
+              { x: x + ((endX - x) * step) / 12, y: start + ((end - start) * step) / 12, id: 1 },
+            ],
           });
           await mobile.waitForTimeout(25);
         }
@@ -227,8 +229,37 @@ export async function checkDemoIntroduction(browser: Browser, base: string, shot
       );
       assert(await mobile.evaluate(() => document.documentElement.scrollWidth <= innerWidth));
       await mobile.screenshot({ path: `${shots}/intro-${width}-exploded.png` });
-      await swipe(590, 280);
-      await mobile.waitForFunction((y) => scrollY > y + 100, held);
+
+      const panel = mobile.frameLocator('#anatomy-panel');
+      const stage = (await panel.locator('.stage').boundingBox())!;
+      const rotation = () =>
+        panel
+          .locator('.scene')
+          .evaluate((element) =>
+            (element as HTMLElement).style.transform.match(/rotate[XY]\([^)]+\)/g),
+          );
+      const beforeDrag = await rotation();
+      const dragX = stage.x + stage.width * 0.65;
+      const dragY = Math.min(stage.y + stage.height - 50, 760);
+      await swipe(dragY, dragY - 140, dragX, dragX - 10);
+      assert.notDeepEqual(await rotation(), beforeDrag, 'A canvas drag must rotate the view');
+      assert.equal(await mobile.evaluate(() => scrollY), held, 'Canvas drags must not scroll');
+
+      // A touch starting outside the canvas still scrolls, even when it crosses
+      // into the canvas. Gesture ownership is decided at touchstart.
+      const heading = (await panel.locator('.stage-heading').boundingBox())!;
+      const beforeScroll = await rotation();
+      await swipe(heading.y + heading.height / 2, heading.y + heading.height / 2 + 100);
+      assert(
+        (await mobile.evaluate(() => scrollY)) < held - 25,
+        'The toolbar must allow page scrolling',
+      );
+      assert.deepEqual(await rotation(), beforeScroll, 'Page scrolling must not rotate the view');
+
+      // Swipes beside the embedded example continue down the landing page.
+      const outsideScroll = await mobile.evaluate(() => scrollY);
+      await swipe(650, 400, 2);
+      await mobile.waitForFunction((y) => scrollY > y + 100, outsideScroll);
     } finally {
       await mobile.close();
     }
@@ -236,6 +267,6 @@ export async function checkDemoIntroduction(browser: Browser, base: string, shot
 
   assert.deepEqual(errors, []);
   console.log(
-    'Passed: one-time scroll introduction, cursor click, scroll release, session persistence, cancellation, loading timeout, keyboard bypass, reduced motion, and touch scrolling.',
+    'Passed: one-time scroll introduction, cursor click, scroll release, session persistence, cancellation, loading timeout, keyboard bypass, reduced motion, canvas touch rotation, and touch scrolling.',
   );
 }
