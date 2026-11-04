@@ -9,7 +9,7 @@ A separate Edge store release is deferred. Safari is outside the current release
 
 ## Other Chromium browsers
 
-[Brave](https://support.brave.app/hc/en-us/articles/360017909112-How-can-I-add-extensions-to-Brave) and [Edge](https://support.microsoft.com/en-gb/edge/add-turn-off-or-remove-extensions-in-microsoft-edge) support installing extensions from the Chrome Web Store. A future React Anatomy listing there would be the installation route for those browsers too; it would not require a separate Brave or Edge release.
+[Brave](https://support.brave.app/hc/en-us/articles/360017909112-How-can-I-add-extensions-to-Brave) and [Edge](https://support.microsoft.com/en-gb/edge/add-turn-off-or-remove-extensions-in-microsoft-edge) support installing extensions from the Chrome Web Store. Use [React Anatomy’s Chrome listing](https://chromewebstore.google.com/detail/react-anatomy/cllgnlljmehhoemdlfngkkpienkglkml) in those browsers too; a separate Brave or Edge release is not required.
 
 React Anatomy has not yet been validated in Brave or Edge. Sharing Chromium and supporting Chrome extensions does not establish that every DevTools feature behaves the same. We will list browser-specific test results as they become available.
 

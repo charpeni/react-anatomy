@@ -9,7 +9,7 @@ React Anatomy inspects React components running in your browser. It works with d
 
 Use **desktop Chrome 140+** or **Firefox 140+**.
 
-Brave and Edge can install the Chrome Web Store extension. Chrome and Firefox are the browsers we test. Safari and mobile browsers are not supported.
+Brave and Edge can install the [Chrome Web Store extension](https://chromewebstore.google.com/detail/react-anatomy/cllgnlljmehhoemdlfngkkpienkglkml). Chrome and Firefox are the browsers we test. Safari and mobile browsers are not supported.
 
 ## React
 
