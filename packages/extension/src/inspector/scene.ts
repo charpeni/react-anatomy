@@ -89,6 +89,24 @@ export function makeScene(
     }
   }
 
+  const limited =
+    chosen.size > 80 ||
+    (automatic &&
+      candidates.length > 80 - hierarchy.layers.filter((layer) => !parents.has(layer.id)).length);
+  if (chosen.size > 80) {
+    const selectedLayer = selected ? hierarchy.representatives.get(selected) : null;
+    const keep = [
+      ...new Set([
+        ...(selectedLayer && chosen.has(selectedLayer) ? [selectedLayer] : []),
+        ...chosen,
+      ]),
+    ].slice(0, 80);
+    chosen.clear();
+    for (const id of keep) {
+      chosen.add(id);
+    }
+  }
+
   const layers: SceneLayer[] = [];
   const nearest = new Map<string, SceneLayer | null>();
   const representedBy = new Map<string, string | null>();
@@ -118,6 +136,7 @@ export function makeScene(
   }
 
   return {
+    limited,
     layers,
     representedBy,
     revealDepth: layers.reduce((max, layer) => Math.max(max, layer.layerDepth), 0),

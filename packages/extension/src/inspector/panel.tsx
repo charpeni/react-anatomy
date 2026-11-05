@@ -1,10 +1,11 @@
-import type { CaptureBudget, ComponentNode, Snapshot } from './types.ts';
+import type { CaptureBudget, ComponentNode, SearchMatch, Snapshot } from './types.ts';
 import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import { createTransport } from './transport.ts';
 import { makeSnapshotRenderer, fontFacesOnly } from './snapshot.ts';
 import { makeLayerHierarchy } from './layers.ts';
 import { makeScene, fitScene } from './scene.ts';
+import { captureSnapshot } from './capture-client.ts';
 import { nextCaptureBudget, captureLimitMessage } from './capture-budget.ts';
 import { Glyph } from './Glyph.tsx';
 import { PropsInspector } from './PropsInspector.tsx';
@@ -78,6 +79,8 @@ function App() {
   const seenPick = useRef<string | null>(null);
   const generation = useRef(0);
   const captureBudget = useRef<CaptureBudget>({});
+  const overviewSelection = useRef<string | undefined>(undefined);
+  const captureAbort = useRef<AbortController | null>(null);
 
   const capture = useCallback(async (options: { limits?: CaptureBudget; quiet?: boolean } = {}) => {
     if (inFlight.current) {
@@ -90,11 +93,14 @@ function App() {
     setBusy(true);
     setError(null);
 
+    const controller = new AbortController();
+    captureAbort.current = controller;
     try {
-      const result = await transport.call({
-        action: 'capture',
-        ...(options.limits || captureBudget.current),
-      });
+      const result = await captureSnapshot(
+        transport.call,
+        options.limits || captureBudget.current,
+        controller.signal,
+      );
 
       if (!result || result.version !== 1 || !Array.isArray(result.nodes)) {
         throw new Error('The page returned an unsupported snapshot.');
@@ -105,6 +111,7 @@ function App() {
           captureBudget.current = {
             maxComponents: result.limits.components,
             maxDepth: result.limits.depth,
+            scopeId: result.scope?.id,
           };
         }
 
@@ -117,7 +124,12 @@ function App() {
         return true;
       }
     } catch (e) {
-      if (alive.current && startedGeneration === generation.current && !options.quiet) {
+      if (
+        alive.current &&
+        startedGeneration === generation.current &&
+        !options.quiet &&
+        !controller.signal.aborted
+      ) {
         setError(friendlyError(e));
       }
 
@@ -139,6 +151,7 @@ function App() {
     const off = transport.onNavigate(() => {
       const nextGeneration = ++generation.current;
 
+      captureAbort.current?.abort();
       current.current = null;
       captureBudget.current = {};
       setSnapshot(null);
@@ -179,6 +192,7 @@ function App() {
 
     return () => {
       alive.current = false;
+      captureAbort.current?.abort();
       clearTimeout(navigationTimer);
       off();
       window.removeEventListener('pagehide', cleanup);
@@ -212,6 +226,9 @@ function App() {
 
           if (status.picked && status.picked !== seenPick.current) {
             seenPick.current = status.picked;
+            if (!current.current.nodes.some((node) => node.id === status.picked)) {
+              await capture({ limits: { scopeId: status.picked } });
+            }
             setPicked({ id: status.picked, time: Date.now() });
           }
 
@@ -350,7 +367,7 @@ function App() {
         <div className="connection-banner capture-limit-banner" role="status">
           <span>
             {captureLimitMessage(snapshot)}
-            {!nextBudget && ' Maximum capture size reached; this hierarchy remains partial.'}
+            {!nextBudget && ' Focus a component to inspect more detail within it.'}
           </span>
           {nextBudget && (
             <button
@@ -358,20 +375,40 @@ function App() {
               aria-label="Capture more"
               disabled={busy}
               title={`Capture up to ${nextBudget.maxComponents.toLocaleString('en-US')} components and ${nextBudget.maxDepth.toLocaleString('en-US')} nested levels`}
-              onClick={() => capture({ limits: nextBudget })}
+              onClick={() => capture({ limits: { ...nextBudget, scopeId: snapshot.scope?.id } })}
             >
               {busy ? 'Capturing…' : 'Capture more'}
             </button>
           )}
         </div>
       )}
+      {busy && (
+        <div className="connection-banner" role="status">
+          Capturing in small steps…{' '}
+          <button onClick={() => captureAbort.current?.abort()}>Cancel capture</button>
+        </div>
+      )}
+      {ready && snapshot.visualLimited && (
+        <div className="connection-banner" role="status">
+          Visual detail is limited. Focus a component for a more detailed capture.
+        </div>
+      )}
       {ready ? (
         <Viewer
+          key={snapshot.scope?.id || 'overview'}
           snapshot={snapshot}
           picked={picked}
           onAction={onAction}
           onCapture={capture}
           onPick={pick}
+          onScope={(scopeId) => {
+            if (!snapshot.scope && scopeId) {
+              overviewSelection.current = scopeId;
+            }
+            void capture({ limits: scopeId ? { scopeId } : {} });
+          }}
+          initialSelection={overviewSelection.current}
+          busy={busy}
         />
       ) : (
         <div className="empty-state">
@@ -474,12 +511,18 @@ function Viewer({
   onAction,
   onCapture,
   onPick,
+  onScope,
+  busy,
+  initialSelection,
 }: {
   snapshot: Snapshot;
   picked: { id: string; time: number } | null;
   onAction: (action: 'inspect' | 'highlight' | 'clear', id?: string) => Promise<void>;
   onCapture: () => void;
   onPick: () => void;
+  onScope: (id: string | null) => void;
+  busy: boolean;
+  initialSelection?: string;
 }) {
   const nodes = snapshot.nodes;
 
@@ -487,9 +530,11 @@ function Viewer({
 
   const roots = useMemo(() => nodes.filter((n) => !n.parent), [nodes]);
 
-  const [selected, setSelected] = useState(nodes[0]?.id ?? '');
+  const [selected, setSelected] = useState(
+    initialSelection && byId[initialSelection] ? initialSelection : (nodes[0]?.id ?? ''),
+  );
   const [hovered, setHovered] = useState<string | null>(null);
-  const [focus, setFocus] = useState<string | null>(null);
+  const focus = snapshot.scope?.id || null;
   const [collapsed, setCollapsed] = useState(new Set<string>());
   const [search, setSearch] = useState('');
   const [dragging, setDragging] = useState(false);
@@ -501,10 +546,10 @@ function Viewer({
   );
 
   const maxDepth = hierarchy.maxDepth;
-  const [explode, setExplode] = useState(0);
+  const [explode, setExplode] = useState(focus ? 60 : 0);
   const [depth, setDepth] = useState(() => hierarchy.initialDepth);
   const [automaticDepth, setAutomaticDepth] = useState(true);
-  const [rotation, setRotation] = useState({ x: 0, y: 0 });
+  const [rotation, setRotation] = useState(focus ? { x: 22, y: -30 } : { x: 0, y: 0 });
   const [zoom, setZoom] = useState(1);
   const [labels, setLabels] = useState(true);
   const [instant, setInstant] = useState(false);
@@ -534,10 +579,6 @@ function Viewer({
   useEffect(() => {
     if (!byId[selected]) {
       setSelected(nodes[0]?.id);
-    }
-
-    if (focus && !byId[focus]) {
-      setFocus(null);
     }
 
     const expanded =
@@ -581,37 +622,106 @@ function Viewer({
 
   const ids = useMemo(() => new Set(planes.map((n) => n.id)), [planes]);
 
-  const textures = useMemo(
-    () =>
-      Object.fromEntries(
-        planes.map((n) => [
-          n.id,
-          render(
-            n,
-            n.sceneChildren.map((id) => byId[id]),
-          ),
-        ]),
-      ),
-    [planes, render, byId],
-  );
+  const textures = useMemo(() => {
+    const children = new Set(planes.flatMap((plane) => plane.sceneChildren));
+    return Object.fromEntries(
+      planes.map((n) => [
+        n.id,
+        render(
+          n,
+          n.sceneChildren.map((id) => byId[id]),
+          !children.has(n.id),
+        ),
+      ]),
+    );
+  }, [planes, render, byId]);
 
-  const searchIds = useMemo(() => {
-    if (!search) {
-      return null;
-    }
+  const [searchResults, setSearchResults] = useState<SearchMatch[]>([]);
+  const [searchStatus, setSearchStatus] = useState('');
+  useEffect(() => {
+    let cancelled = false;
+    const timer = setTimeout(async () => {
+      setSearchResults([]);
+      if (!search.trim()) {
+        setSearchStatus('');
+        return;
+      }
+      setSearchStatus('Searching this scope…');
+      let cursor: string | undefined;
+      let matches: SearchMatch[] = [];
+      try {
+        do {
+          const result = await transport.call({
+            action: 'search',
+            scopeId: focus || undefined,
+            query: search,
+            cursor,
+          });
+          if (cancelled) {
+            return;
+          }
+          matches = [...matches, ...result.matches];
+          setSearchResults(matches);
+          cursor = result.cursor || undefined;
+          setSearchStatus(
+            cursor
+              ? `Searching… ${matches.length} matches`
+              : result.limited
+                ? `${matches.length} matches in searched portion. Refine the search or focus a smaller component.`
+                : matches.length
+                  ? `${matches.length} matches in this scope`
+                  : 'No matching components in this scope.',
+          );
+          if (cursor) {
+            await new Promise((resolve) => setTimeout(resolve, 0));
+          }
+        } while (cursor && !cancelled);
+      } catch (error) {
+        if (!cancelled) {
+          setSearchStatus(error instanceof Error ? error.message : 'Search failed. Try again.');
+        }
+      }
+    }, 200);
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+    };
+  }, [search, focus, snapshot]);
 
-    const out = new Set();
-
-    for (const n of nodes) {
-      if (`${n.name} ${n.key || ''}`.toLowerCase().includes(search.toLowerCase())) {
-        for (const p of paths[n.id]) {
-          out.add(p.id);
+  const treeScroll = useRef<HTMLDivElement | null>(null);
+  const [treeViewport, setTreeViewport] = useState({ top: 0, height: 600 });
+  const treeRows = useMemo(() => {
+    const result: { node: ComponentNode; level: number }[] = [];
+    const stack = [...roots].reverse().map((node) => ({ node, level: 0 }));
+    while (stack.length) {
+      const row = stack.pop()!;
+      result.push(row);
+      if (!collapsed.has(row.node.id)) {
+        for (const id of [...row.node.children].reverse()) {
+          if (byId[id]) {
+            stack.push({ node: byId[id], level: row.level + 1 });
+          }
         }
       }
     }
-
-    return out;
-  }, [search, nodes, paths]);
+    return result;
+  }, [roots, byId, collapsed]);
+  const virtual = treeRows.length > 500;
+  const firstRow = virtual ? Math.max(0, Math.floor(treeViewport.top / 21) - 8) : 0;
+  const lastRow = virtual
+    ? Math.min(treeRows.length, firstRow + Math.ceil(treeViewport.height / 21) + 16)
+    : treeRows.length;
+  useLayoutEffect(() => {
+    const element = treeScroll.current;
+    if (!element) {
+      return;
+    }
+    const observer = new ResizeObserver(() =>
+      setTreeViewport({ top: element.scrollTop, height: element.clientHeight }),
+    );
+    observer.observe(element);
+    return () => observer.disconnect();
+  }, []);
 
   const frame = useMemo(
     () =>
@@ -633,7 +743,7 @@ function Viewer({
     [planes, frame, size, rotation, distance, focusNode],
   );
 
-  function select(id: string, wholePage = false) {
+  function select(id: string, _wholePage = false) {
     if (!byId[id]) {
       return;
     }
@@ -644,7 +754,7 @@ function Viewer({
       next.delete(p.id);
     }
 
-    const nextFocus = !wholePage && focus && paths[id].some((n) => n.id === focus) ? focus : null;
+    const nextFocus = focus;
     const nextHierarchy = makeLayerHierarchy(nodes, {
       focus: nextFocus,
       collapsed: next,
@@ -652,7 +762,6 @@ function Viewer({
     });
 
     setSelected(id);
-    setFocus(nextFocus);
     setCollapsed(next);
     setDepth(
       Math.min(
@@ -670,32 +779,18 @@ function Viewer({
   }
 
   function isolate(id: string) {
-    if (!byId[id]) {
-      return;
+    if (!busy) {
+      onScope(id);
     }
-
-    const next = new Set(collapsed);
-
-    next.delete(id);
-    setSelected(id);
-    setFocus(id);
-    setCollapsed(next);
-    setAutomaticDepth(!showWrappers);
-    setDepth(makeLayerHierarchy(nodes, { focus: id, collapsed: next, showWrappers }).initialDepth);
-    setZoom(1);
-    setExplode(60);
-    setRotation({ x: 22, y: -30 });
   }
 
   function wholePage() {
-    setFocus(null);
-    setZoom(1);
-    setAutomaticDepth(!showWrappers);
-    setDepth(makeLayerHierarchy(nodes, { collapsed, showWrappers }).initialDepth);
+    if (!busy && focus) {
+      onScope(null);
+    }
   }
 
   function reset() {
-    setFocus(null);
     setExplode(0);
     setRotation({ x: 0, y: 0 });
     setZoom(1);
@@ -840,70 +935,72 @@ function Viewer({
   }
 
   function treeKey(e: React.KeyboardEvent<HTMLButtonElement>, node: ComponentNode) {
-    const rows = Array.from(
-      e.currentTarget.closest('[role=tree]')!.querySelectorAll<HTMLButtonElement>('[data-tree]'),
-    );
-    const index = rows.indexOf(e.currentTarget);
-    let next;
-
+    const index = treeRows.findIndex((row) => row.node.id === node.id);
+    let next: ComponentNode | undefined;
     if (e.key === 'ArrowDown') {
-      next = rows[Math.min(rows.length - 1, index + 1)];
+      next = treeRows[Math.min(treeRows.length - 1, index + 1)]?.node;
     }
-
     if (e.key === 'ArrowUp') {
-      next = rows[Math.max(0, index - 1)];
+      next = treeRows[Math.max(0, index - 1)]?.node;
     }
-
     if (e.key === 'Home') {
-      next = rows[0];
+      next = treeRows[0]?.node;
     }
-
     if (e.key === 'End') {
-      next = rows.at(-1);
+      next = treeRows.at(-1)?.node;
     }
-
-    if (e.key === 'ArrowRight' && node.children.length) {
-      if (collapsed.has(node.id)) {
-        toggleBranch(node.id);
-      } else {
-        next = rows[index + 1];
+    if (e.key === 'ArrowRight') {
+      if (node.hasMore && !node.children.length) {
+        isolate(node.id);
+      } else if (node.children.length) {
+        if (collapsed.has(node.id)) {
+          toggleBranch(node.id);
+        } else {
+          next = treeRows[index + 1]?.node;
+        }
       }
     }
-
     if (e.key === 'ArrowLeft') {
       if (node.children.length && !collapsed.has(node.id)) {
         toggleBranch(node.id);
       } else {
-        next = rows.find((row) => row.dataset.tree === node.parent);
+        next = node.parent ? byId[node.parent] : undefined;
       }
     }
-
     if (['ArrowDown', 'ArrowUp', 'ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(e.key)) {
       e.preventDefault();
       e.stopPropagation();
-
       if (next) {
-        if (next.dataset.tree) {
-          select(next.dataset.tree);
-        }
-
-        next.focus();
+        select(next.id);
+        const target = next.id;
+        requestAnimationFrame(() =>
+          document.querySelector<HTMLButtonElement>(`[data-tree="${target}"]`)?.focus(),
+        );
       }
     }
   }
 
-  useEffect(() => {
-    document
-      .querySelector('.tree-row.selected .tree-select')
-      ?.scrollIntoView({ block: 'nearest', inline: 'nearest' });
-  }, [selected, picked]);
+  useLayoutEffect(() => {
+    if (virtual && treeScroll.current) {
+      const index = treeRows.findIndex((row) => row.node.id === selected);
+      const element = treeScroll.current;
+      if (
+        index >= 0 &&
+        (index * 21 < element.scrollTop ||
+          (index + 1) * 21 > element.scrollTop + element.clientHeight)
+      ) {
+        element.scrollTop = Math.max(0, index * 21 - element.clientHeight / 2);
+        setTreeViewport({ top: element.scrollTop, height: element.clientHeight });
+      }
+    } else {
+      document
+        .querySelector('.tree-row.selected .tree-select')
+        ?.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+    }
+  }, [selected, picked, virtual, treeRows]);
 
   function tree(node: ComponentNode, level = 0): React.ReactNode {
-    if (searchIds && !searchIds.has(node.id)) {
-      return null;
-    }
-
-    const closed = collapsed.has(node.id) && !searchIds;
+    const closed = collapsed.has(node.id);
 
     return (
       <React.Fragment key={node.id}>
@@ -915,12 +1012,16 @@ function Viewer({
         >
           <button
             tabIndex={-1}
-            className={'tree-toggle ' + (!node.children.length ? 'empty' : '')}
+            className={'tree-toggle ' + (!node.children.length && !node.hasMore ? 'empty' : '')}
             aria-label={(closed ? 'Expand ' : 'Collapse ') + node.name}
-            disabled={!node.children.length}
-            onClick={() => toggleBranch(node.id)}
+            disabled={!node.children.length && !node.hasMore}
+            onClick={() =>
+              node.hasMore && !node.children.length ? isolate(node.id) : toggleBranch(node.id)
+            }
           >
-            {node.children.length && <Glyph type={closed ? 'chevron' : 'chevronDown'} size={12} />}
+            {(node.children.length > 0 || node.hasMore) && (
+              <Glyph type={closed || !node.children.length ? 'chevron' : 'chevronDown'} size={12} />
+            )}
           </button>
           <button
             role="treeitem"
@@ -939,6 +1040,11 @@ function Viewer({
               <Glyph type="component" size={12} />
             </span>
             <span className="node-name">{node.name}</span>
+            {node.hasMore && (
+              <small title="More descendants available. Focus this component to capture them.">
+                …
+              </small>
+            )}
             {node.key && <small className="tree-key">key="{node.key}"</small>}
             {!node.frame && (
               <small
@@ -949,13 +1055,13 @@ function Viewer({
             )}
           </button>
         </div>
-        {!closed && node.children.map((id) => byId[id] && tree(byId[id], level + 1))}
       </React.Fragment>
     );
   }
 
   return (
     <div
+      inert={busy}
       className={
         'workspace inspector-workspace ' +
         (dragging ? 'is-dragging ' : '') +
@@ -986,7 +1092,7 @@ function Viewer({
           <input
             ref={searchRef}
             aria-label="Find a component"
-            placeholder="Filter components"
+            placeholder={focusNode ? `Search in ${focusNode.name}` : 'Search the page'}
             value={search}
             onChange={(e) => setSearch(e.target.value)}
           />
@@ -998,9 +1104,56 @@ function Viewer({
             <kbd>/</kbd>
           )}
         </label>
-        <div className="tree-scroll" role="tree" aria-label="React components">
-          {roots.map((n) => tree(n))}
-          {searchIds && !searchIds.size && <p className="search-empty">No matching components.</p>}
+        <div
+          className="tree-scroll"
+          ref={treeScroll}
+          role="tree"
+          aria-label="React components"
+          data-component-count={nodes.length}
+          onScroll={(e) =>
+            setTreeViewport({
+              top: e.currentTarget.scrollTop,
+              height: e.currentTarget.clientHeight,
+            })
+          }
+        >
+          {search.trim() ? (
+            <>
+              <p className="search-empty" role="status">
+                {searchStatus || 'Searching this scope…'}
+              </p>
+              {searchResults.map((match) => (
+                <button
+                  key={match.id}
+                  className="tree-select search-result"
+                  data-search-result={match.id}
+                  onClick={() => {
+                    if (byId[match.id]) {
+                      select(match.id);
+                      setSearch('');
+                    } else {
+                      isolate(match.id);
+                    }
+                  }}
+                >
+                  <span className="node-name">{match.name}</span>
+                  {match.key && <small>{match.key}</small>}
+                  {!byId[match.id] && <small>Focus to load</small>}
+                </button>
+              ))}
+            </>
+          ) : (
+            <>
+              {virtual && <div aria-hidden="true" style={{ height: firstRow * 21 }} />}
+              {treeRows.slice(firstRow, lastRow).map(({ node, level }) => tree(node, level))}
+              {virtual && (
+                <div
+                  aria-hidden="true"
+                  style={{ height: Math.max(0, treeRows.length - lastRow) * 21 }}
+                />
+              )}
+            </>
+          )}
         </div>
         <div className="tree-footer">
           Double-click to focus <kbd>F</kbd>
@@ -1078,7 +1231,7 @@ function Viewer({
               Whole page
             </button>
             <span>/</span>
-            {paths[focusNode.id].map((n) => (
+            {(snapshot.scope?.path || paths[focusNode.id]).map((n) => (
               <button key={n.id} onClick={() => isolate(n.id)}>
                 {n.name}
               </button>
@@ -1096,7 +1249,9 @@ function Viewer({
         >
           <div className="stage-meta">
             {snapshot.viewport.width} × {snapshot.viewport.height}
-            <span>{planes.length} planes</span>
+            <span>
+              {planes.length} planes{scene.limited ? ' · Focus for detail' : ''}
+            </span>
             {hierarchy.combined > 0 && <span>{hierarchy.combined} wrappers combined</span>}
           </div>
           <div className="scene-anchor">

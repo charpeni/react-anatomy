@@ -109,10 +109,24 @@ try {
   );
   await click('Focus subtree');
   await harness.until(
+    () =>
+      evaluate(
+        `!!document.querySelector('.focus-navigation')&&!document.querySelector('[aria-label="Capture"]').disabled`,
+      ),
+    'Focused capture did not finish',
+  );
+  await harness.until(
     () => evaluate(`document.querySelectorAll('[data-plane]').length===2`),
     'Focused card must show the card and its badge, not its wrappers',
   );
   await click('Whole page');
+  await harness.until(
+    () =>
+      evaluate(
+        `!document.querySelector('.focus-navigation')&&!document.querySelector('[aria-label="Capture"]').disabled`,
+      ),
+    'Whole page capture did not finish',
+  );
   await harness.until(
     () => evaluate(`document.querySelectorAll('[data-plane]').length===${overviewCount}`),
     'Returning to whole page lost layers',
@@ -166,9 +180,13 @@ try {
     `document.querySelector('.tree-row.selected [data-tree]').dataset.tree`,
   );
 
+  const previousCapture = await evaluate(`document.querySelector('.footer-count').textContent`);
   await click('Capture');
   await harness.until(
-    () => evaluate(`document.querySelector('.footer-count').textContent==='Capture 2'`),
+    () =>
+      evaluate(
+        `document.querySelector('.footer-count').textContent!==${JSON.stringify(previousCapture)}&&!document.querySelector('[aria-label="Capture"]').disabled`,
+      ),
     'Recapture failed',
   );
   assert.equal(

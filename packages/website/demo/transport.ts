@@ -37,6 +37,9 @@ export function createTransport(): Omit<Transport, 'mode'> & { mode: 'demo' } {
       }
 
       // Consistent display URL in capture and status; the source is a bundled fixture.
+      if (result && 'snapshot' in result) {
+        return { ...result, snapshot: { ...result.snapshot, url: sampleUrl } };
+      }
       return result && 'url' in result ? { ...result, url: sampleUrl } : result;
     },
     onNavigate: () => () => {},

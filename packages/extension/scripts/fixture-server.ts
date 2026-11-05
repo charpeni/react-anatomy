@@ -25,7 +25,9 @@ export async function startFixtureServer(port = 0) {
               ? 'dist/deep-app.html'
               : path === '/layout'
                 ? 'dist/layout-app.html'
-                : null;
+                : path === '/fidelity'
+                  ? 'dist/fidelity-app.html'
+                  : null;
 
     if (!file) {
       res.writeHead(404).end('Not found');

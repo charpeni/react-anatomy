@@ -1,4 +1,4 @@
-import type { PropValue } from './types.ts';
+import type { PropValue, Snapshot } from './types.ts';
 
 export interface FiberTypeInfo {
   displayName?: string;
@@ -60,6 +60,17 @@ export interface AgentState {
   rootHandles: FiberRoot[];
   propSessions: Map<string, PropSession>;
   propSequence: number;
+  jobSequence?: number;
+  captureJob?: { token: string; iterator: Generator<void, Snapshot> };
+  searchJob?: {
+    token: string;
+    query: string;
+    scopeId?: string;
+    queue: Fiber[];
+    offset: number;
+    matches: number;
+    revision: number;
+  };
 }
 
 export interface StoredPropEntry {

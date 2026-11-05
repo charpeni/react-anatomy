@@ -302,10 +302,28 @@ export function mountExample(root: HTMLElement) {
       }
 
       if (returningToPanel) {
-        const count = doc.querySelector('.footer-count')?.textContent;
+        const capture = await until(() => {
+          const button = doc.querySelector<HTMLButtonElement>('[aria-label="Capture"]');
 
-        doc.querySelector<HTMLButtonElement>('[aria-label="Capture"]')?.click();
-        await until(() => doc.querySelector('.footer-count')?.textContent !== count, version);
+          return button && !button.disabled && button;
+        }, version);
+
+        if (request !== action || version !== generation) {
+          return;
+        }
+
+        const count = doc.querySelector('.footer-count')?.textContent;
+        const previousProps = doc.querySelector('.props-inspector .property-list > *');
+
+        capture.click();
+        // The capture counter commits before the props effect replaces its old
+        // tree. Expanding that old tree would be lost when fresh props arrive.
+        await until(
+          () =>
+            doc.querySelector('.footer-count')?.textContent !== count &&
+            !previousProps?.isConnected,
+          version,
+        );
 
         if (request !== action || version !== generation) {
           return;
@@ -316,7 +334,19 @@ export function mountExample(root: HTMLElement) {
       setMotion(doc, keyboard);
 
       if (next === 'explode') {
-        doc.querySelector<HTMLButtonElement>('.focus-navigation button')?.click();
+        const wholePage = doc.querySelector<HTMLButtonElement>('.focus-navigation button');
+        if (wholePage) {
+          wholePage.click();
+          await until(
+            () =>
+              !doc.querySelector('.focus-navigation') &&
+              !doc.querySelector<HTMLButtonElement>('[aria-label="Capture"]')?.disabled,
+            version,
+          );
+          if (request !== action || version !== generation) {
+            return;
+          }
+        }
 
         const details = doc.querySelector<HTMLButtonElement>(
           '[aria-label="Toggle component details"]',
@@ -344,13 +374,17 @@ export function mountExample(root: HTMLElement) {
         const card = Array.from(doc.querySelectorAll<HTMLButtonElement>('.tree-select')).find(
           (button) => button.querySelector('.node-name')?.textContent === 'ProjectCard',
         );
+        const selectionChanged = card?.getAttribute('aria-selected') !== 'true';
+        const previousProps = doc.querySelector('.props-inspector .property-list > *');
 
         card?.click();
 
         // Selection already opens the real inspector on narrow screens. Do not
         // toggle it again before React commits that state update.
         const project = await until(
-          () => doc.querySelector<HTMLDetailsElement>('[data-prop-path="props.project"]'),
+          () =>
+            (!selectionChanged || !previousProps?.isConnected) &&
+            doc.querySelector<HTMLDetailsElement>('[data-prop-path="props.project"]'),
           version,
         );
 

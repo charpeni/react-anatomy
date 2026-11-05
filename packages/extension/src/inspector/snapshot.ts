@@ -1,6 +1,8 @@
 import type { Snapshot, ComponentNode } from './types.ts';
 
-export function makeSnapshotRenderer(snapshot: Pick<Snapshot, 'html' | 'hostRects'>) {
+export function makeSnapshotRenderer(
+  snapshot: Pick<Snapshot, 'html' | 'hostRects' | 'backgroundColor'>,
+) {
   const template = document.createElement('template');
 
   template.innerHTML = snapshot.html || '';
@@ -50,6 +52,7 @@ export function makeSnapshotRenderer(snapshot: Pick<Snapshot, 'html' | 'hostRect
     'colspan',
     'rowspan',
     'type',
+    'placeholder',
     'value',
     'checked',
     'disabled',
@@ -87,12 +90,13 @@ export function makeSnapshotRenderer(snapshot: Pick<Snapshot, 'html' | 'hostRect
   return (
     node: Pick<ComponentNode, 'id' | 'hosts' | 'frame'>,
     children: Pick<ComponentNode, 'id' | 'hosts' | 'frame'>[],
+    backdrop = false,
   ) => {
     if (!node.frame) {
       return '';
     }
 
-    const key = node.id + ':' + children.map((n) => n.id).join(',');
+    const key = node.id + ':' + children.map((n) => n.id).join(',') + ':' + backdrop;
 
     if (cache.has(key)) {
       return cache.get(key)!;
@@ -102,6 +106,9 @@ export function makeSnapshotRenderer(snapshot: Pick<Snapshot, 'html' | 'hostRect
     const wrapper = document.createElement('div');
 
     wrapper.style.cssText = `position:relative;width:${node.frame.w}px;height:${node.frame.h}px;overflow:hidden;pointer-events:none;`;
+    if (backdrop && snapshot.backgroundColor) {
+      wrapper.style.backgroundColor = snapshot.backgroundColor;
+    }
 
     for (const hostId of node.hosts) {
       const original = hosts.get(hostId);
@@ -111,26 +118,65 @@ export function makeSnapshotRenderer(snapshot: Pick<Snapshot, 'html' | 'hostRect
         continue;
       }
 
-      const copy = original.cloneNode(true) as HTMLElement | SVGElement;
-
-      for (const el of [
-        copy,
-        ...copy.querySelectorAll<HTMLElement | SVGElement>('[data-strata-host]'),
-      ]) {
-        if (hidden.has(el.getAttribute('data-strata-host') ?? '')) {
-          el.style.setProperty('visibility', 'hidden', 'important');
+      // A child plane supplies this region. Keep its measured layout box in
+      // the parent, but do not duplicate its hidden descendants in every plane.
+      const copy = original.cloneNode(false) as HTMLElement | SVGElement;
+      const pending = [{ source: original as Node, target: copy as Node }];
+      while (pending.length) {
+        const { source, target } = pending.pop()!;
+        if (target instanceof HTMLElement || target instanceof SVGElement) {
+          if (hidden.has(target.getAttribute('data-strata-host') ?? '')) {
+            target.style.setProperty('visibility', 'hidden', 'important');
+            continue;
+          }
+        }
+        for (const child of source.childNodes) {
+          const cloned = child.cloneNode(false);
+          target.appendChild(cloned);
+          if (child.childNodes.length) {
+            pending.push({ source: child, target: cloned });
+          } else if (cloned instanceof HTMLElement || cloned instanceof SVGElement) {
+            if (hidden.has(cloned.getAttribute('data-strata-host') ?? '')) {
+              cloned.style.setProperty('visibility', 'hidden', 'important');
+            }
+          }
         }
       }
 
-      // A child component can own the same host as its parent. Hide that whole
-      // parent copy, then let the child's plane supply the shared output.
-      for (const el of copy.querySelectorAll<HTMLElement | SVGElement>('[data-strata-host]')) {
-        for (let p = el.parentElement; p && p !== wrapper; p = p.parentElement) {
-          if (hidden.has(p.getAttribute('data-strata-host') ?? '')) {
-            el.style.setProperty('visibility', 'hidden', 'important');
-            break;
-          }
+      let positioned = copy;
+      // Rows, cells and table sections cannot be serialized under a div: the
+      // HTML parser discards their tags, taking borders and column layout with
+      // them. Preserve their table context and position that context instead.
+      const tableParents: Record<string, string[]> = {
+        TR: ['tbody'],
+        TD: ['tbody', 'tr'],
+        TH: ['tbody', 'tr'],
+        TBODY: [],
+        THEAD: [],
+        TFOOT: [],
+        CAPTION: [],
+        COLGROUP: [],
+        COL: ['colgroup'],
+      };
+      const parents = Object.hasOwn(tableParents, copy.tagName)
+        ? tableParents[copy.tagName]
+        : undefined;
+      if (parents) {
+        const table = document.createElement('table');
+        table.style.cssText =
+          'border:0;padding:0;margin:0;table-layout:fixed;box-sizing:border-box;';
+        table.style.borderCollapse = copy.style.borderCollapse || 'separate';
+        table.style.borderSpacing = copy.style.borderSpacing || '0';
+        let parent: HTMLElement = table;
+        for (const tag of parents) {
+          const child = document.createElement(tag);
+          parent.appendChild(child);
+          parent = child;
         }
+        copy.style.position = 'static';
+        copy.style.transform = 'none';
+        parent.appendChild(copy);
+        positioned = table;
       }
 
       // Logical insets copied from a fixed/absolute host otherwise override the
@@ -141,10 +187,10 @@ export function makeSnapshotRenderer(snapshot: Pick<Snapshot, 'html' | 'hostRect
         'inset-inline-start',
         'inset-inline-end',
       ]) {
-        copy.style.removeProperty(prop);
+        positioned.style.removeProperty(prop);
       }
 
-      Object.assign(copy.style, {
+      Object.assign(positioned.style, {
         right: 'auto',
         bottom: 'auto',
         position: 'absolute',
@@ -155,7 +201,7 @@ export function makeSnapshotRenderer(snapshot: Pick<Snapshot, 'html' | 'hostRect
         height: rect.h + 'px',
         transform: 'none',
       });
-      wrapper.appendChild(copy);
+      wrapper.appendChild(positioned);
     }
 
     const html = wrapper.outerHTML;

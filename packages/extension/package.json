@@ -18,7 +18,7 @@
     "test": "pnpm run test:extension",
     "build:extension": "node scripts/build-extension.ts",
     "dev:extension": "pnpm run build:extension && node scripts/fixture-server.ts",
-    "test:extension": "pnpm run build:extension && node scripts/check-layers.ts && node scripts/check-scene.ts && node scripts/check-extension.ts && node scripts/check-props.ts && node scripts/check-deep-hierarchy.ts && node scripts/check-capture-limits.ts && node scripts/check-layout-depth.ts",
+    "test:extension": "pnpm run build:extension && node scripts/check-layers.ts && node scripts/check-scene.ts && node scripts/check-background.ts && node scripts/check-rendering-fidelity.ts && node scripts/check-extension.ts && node scripts/check-props.ts && node scripts/check-deep-hierarchy.ts && node scripts/check-capture-limits.ts && node scripts/check-progressive-capture.ts && node scripts/check-layout-depth.ts",
     "record:demo": "pnpm run build:extension && node scripts/demo/build.ts && node scripts/demo/record.ts && node scripts/demo/render.ts",
     "record:intro": "pnpm run build:extension && node scripts/demo/build.ts && node scripts/intro/tts.ts && node scripts/intro/record.ts && node scripts/intro/compose.ts && node scripts/intro/render.ts && node scripts/intro/validate.ts && node scripts/intro/review.ts",
     "record:intro:elevenlabs": "pnpm run build:extension && node scripts/demo/build.ts && node scripts/intro/tts-elevenlabs.ts && node scripts/intro/record.ts && node scripts/intro/compose.ts && node scripts/intro/render.ts && node scripts/intro/validate.ts && node scripts/intro/review.ts",

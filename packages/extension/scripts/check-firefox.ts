@@ -82,6 +82,13 @@ try {
 
   await click('Focus subtree');
   await h.until(
+    () =>
+      run(
+        `!!document.querySelector('.focus-navigation')&&!document.querySelector('[aria-label="Capture"]').disabled`,
+      ),
+    'Focused capture did not finish',
+  );
+  await h.until(
     () => run(`document.querySelector('.focus-navigation')?.textContent.includes('ProjectCard')`),
     'Focus failed',
   );
@@ -91,6 +98,13 @@ try {
   await settle();
   await h.screenshot(artifacts + '/focused.png');
   await click('Whole page');
+  await h.until(
+    () =>
+      run(
+        `!document.querySelector('.focus-navigation')&&!document.querySelector('[aria-label="Capture"]').disabled`,
+      ),
+    'Whole page capture did not finish',
+  );
   await h.page(
     `(()=>{[...document.querySelectorAll('button')].find(el=>el.textContent==='Update app (0)').click();return true;})()`,
   );
@@ -151,11 +165,25 @@ try {
     `(()=>{[...document.querySelectorAll('button')].find(el=>el.textContent==='Toggle portal').click();return true;})()`,
   );
   await h.until(async () => (await count()) !== portalCount, 'Portal change not captured');
+  await h.until(
+    () =>
+      run(
+        `Array.from(document.querySelectorAll('.node-name')).some(n=>n.textContent==='Notification')`,
+      ),
+    'Portal did not appear after follow-up capture',
+  );
   await select('Notification');
   assert(
     await run<string>(`document.querySelector('.component-kind').textContent.includes('portal')`),
   );
   await click('Focus subtree');
+  await h.until(
+    () =>
+      run(
+        `!!document.querySelector('.focus-navigation')&&!document.querySelector('[aria-label="Capture"]').disabled`,
+      ),
+    'Focused capture did not finish',
+  );
 
   const portal = await run<{ x: number; y: number; text: string }>(
     `(()=>{const host=document.querySelector('.plane-content').firstElementChild.firstElementChild;return {x:host.offsetLeft,y:host.offsetTop,text:host.textContent};})()`,
@@ -165,6 +193,13 @@ try {
   assert.equal(portal.y, 0);
   assert(portal.text.includes('A React portal'));
   await click('Whole page');
+  await h.until(
+    () =>
+      run(
+        `!document.querySelector('.focus-navigation')&&!document.querySelector('[aria-label="Capture"]').disabled`,
+      ),
+    'Whole page capture did not finish',
+  );
   await click('Follow changes');
   console.log(
     'Passed: real page picking, highlighting, reveal in Firefox Inspector, fragments, null output and portals.',

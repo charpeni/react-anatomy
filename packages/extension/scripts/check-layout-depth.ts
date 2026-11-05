@@ -141,10 +141,24 @@ try {
   );
   await click('Focus subtree');
   await harness.until(
+    () =>
+      evaluate(
+        `!!document.querySelector('.focus-navigation')&&!document.querySelector('[aria-label="Capture"]').disabled`,
+      ),
+    'Focused capture did not finish',
+  );
+  await harness.until(
     () => evaluate(`document.querySelectorAll('[aria-label="Select NavItem"]').length===4`),
     'Focused overview did not reveal local details',
   );
   await click('Whole page');
+  await harness.until(
+    () =>
+      evaluate(
+        `!document.querySelector('.focus-navigation')&&!document.querySelector('[aria-label="Capture"]').disabled`,
+      ),
+    'Whole page capture did not finish',
+  );
   await harness.until(
     () => evaluate(`document.querySelectorAll('[aria-label="Select MessageCard"]').length===3`),
     'Whole page did not restore main layout',

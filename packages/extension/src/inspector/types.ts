@@ -16,11 +16,13 @@ export interface ComponentNode {
   bounds: Frame | null;
   frame: Frame | null;
   portal: boolean;
+  hasMore?: boolean;
 }
 
 export interface CaptureBudget {
   maxComponents?: number;
   maxDepth?: number;
+  scopeId?: string;
 }
 
 export interface CaptureLimits {
@@ -43,13 +45,31 @@ export interface Snapshot {
   message?: string;
   html?: string;
   fonts?: string;
+  backgroundColor?: string;
   hostRects?: Record<string, Frame>;
   warnings?: string[];
   truncated?: boolean;
   limits?: CaptureLimits;
   captureMs?: number;
   elementCount?: number;
+  scope?: { id: string; path: { id: string; name: string }[] };
+  visualLimited?: boolean;
 }
+
+export interface SearchMatch {
+  id: string;
+  name: string;
+  key: string | null;
+}
+
+export interface SearchPage {
+  matches: SearchMatch[];
+  cursor: string | null;
+  scanned: number;
+  limited: boolean;
+}
+
+export type CaptureStep = { done: false } | { done: true; snapshot: Snapshot };
 
 export interface Layer extends ComponentNode {
   frame: Frame;
@@ -94,6 +114,10 @@ export interface PropPage {
 
 export interface PageRequests {
   capture: CaptureBudget;
+  'capture-start': CaptureBudget;
+  'capture-step': { token: string };
+  'capture-cancel': { token: string };
+  search: { scopeId?: string; query: string; cursor?: string };
   status: object;
   props: { id: string };
   'props-read': { token: string; handle: string; offset: number; filter?: string };
@@ -107,6 +131,10 @@ export interface PageRequests {
 
 export interface PageResponses {
   capture: Snapshot;
+  'capture-start': { token: string };
+  'capture-step': CaptureStep;
+  'capture-cancel': Result;
+  search: SearchPage;
   status: {
     revision: number;
     picking: boolean;

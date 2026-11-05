@@ -75,11 +75,25 @@ try {
   await click('Focus subtree');
   await harness.until(
     () =>
+      evaluate(
+        `!!document.querySelector('.focus-navigation')&&!document.querySelector('[aria-label="Capture"]').disabled`,
+      ),
+    'Focused capture did not finish',
+  );
+  await harness.until(
+    () =>
       evaluate(`document.querySelector('.focus-navigation')?.textContent.includes('ProjectCard')`),
     'Subtree focus failed',
   );
   assert.equal(await evaluate(`document.querySelectorAll('[data-plane]').length`), 3);
   await click('Whole page');
+  await harness.until(
+    () =>
+      evaluate(
+        `!document.querySelector('.focus-navigation')&&!document.querySelector('[aria-label="Capture"]').disabled`,
+      ),
+    'Whole page capture did not finish',
+  );
   await page.getByRole('button', { name: 'Update app (0)' }).click();
   await harness.until(
     () =>
@@ -125,12 +139,26 @@ try {
     async () => (await captureCount()) !== beforePortal,
     'Portal update was not captured',
   );
+  await harness.until(
+    () =>
+      evaluate(
+        `Array.from(document.querySelectorAll('.node-name')).some(n=>n.textContent==='Notification')`,
+      ),
+    'Portal did not appear after follow-up capture',
+  );
   await select('Notification');
   assert(
     await evaluate(`document.querySelector('.component-kind').textContent.includes('portal')`),
     'Portal metadata is missing',
   );
   await click('Focus subtree');
+  await harness.until(
+    () =>
+      evaluate(
+        `!!document.querySelector('.focus-navigation')&&!document.querySelector('[aria-label="Capture"]').disabled`,
+      ),
+    'Focused capture did not finish',
+  );
 
   const portalOrigin = await evaluate<{ x: number; y: number; text: string }>(
     `(()=>{const host=document.querySelector('.plane-content').firstElementChild.firstElementChild;return{x:host.offsetLeft,y:host.offsetTop,text:host.textContent};})()`,
@@ -152,6 +180,13 @@ try {
     'Reveal in Elements returned an error',
   );
   await click('Whole page');
+  await harness.until(
+    () =>
+      evaluate(
+        `!document.querySelector('.focus-navigation')&&!document.querySelector('[aria-label="Capture"]').disabled`,
+      ),
+    'Whole page capture did not finish',
+  );
   console.log('Passed: visible fixed-position portal output and Reveal in Elements.');
   await select('Pair');
   assert(
@@ -238,6 +273,13 @@ try {
     oldWidth + 10,
   );
   await click('Focus subtree');
+  await harness.until(
+    () =>
+      evaluate(
+        `!!document.querySelector('.focus-navigation')&&!document.querySelector('[aria-label="Capture"]').disabled`,
+      ),
+    'Focused capture did not finish',
+  );
   assert.equal(
     await evaluate(`document.querySelector('.inspector-heading h2').textContent`),
     'ProjectCard',

@@ -227,6 +227,13 @@ try {
     session,
   );
   await click('Focus subtree');
+  await h.until(
+    () =>
+      run(
+        `!!document.querySelector('.focus-navigation')&&!document.querySelector('[aria-label="Capture"]').disabled`,
+      ),
+    'Focused capture did not finish',
+  );
   await page.waitForTimeout(350);
 
   const shot = await h.send('Page.captureScreenshot', { format: 'png' }, session);

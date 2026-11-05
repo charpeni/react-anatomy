@@ -386,6 +386,15 @@ kbd {
   color: var(--muted);
   font-size: 11px;
 }
+.search-result {
+  width: 100%;
+  padding-inline: 8px;
+  min-height: 26px;
+}
+.search-result small {
+  margin-left: auto;
+  color: var(--muted);
+}
 .splitter {
   width: 4px;
   flex-shrink: 0;

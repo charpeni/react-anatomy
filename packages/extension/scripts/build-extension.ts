@@ -110,3 +110,17 @@ await writeFile(
   'dist/layout-app.html',
   `<!doctype html><html><head><title>Uneven React layout</title></head><body><div id="app"></div><script>${layoutFixture.outputFiles[0].text.replace(/<\/script/gi, '<\\/script')}</script></body></html>`,
 );
+
+const fidelityFixture = await build({
+  entryPoints: ['scripts/fixtures/fidelity-app.tsx'],
+  bundle: true,
+  write: false,
+  format: 'iife',
+  minify: true,
+  keepNames: true,
+  define: { 'process.env.NODE_ENV': '"production"' },
+});
+await writeFile(
+  'dist/fidelity-app.html',
+  `<!doctype html><html><head><meta charset="utf-8"><title>Rendering fidelity</title></head><body><div id="app"></div><script>${fidelityFixture.outputFiles[0].text.replace(/<\/script/gi, '<\\/script')}</script></body></html>`,
+);

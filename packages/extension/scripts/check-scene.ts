@@ -156,6 +156,13 @@ broad.push({
 const bounded = makeScene(makeLayerHierarchy(broad));
 
 assert(bounded.layers.length <= 80);
+const manualBounded = makeScene(makeLayerHierarchy(broad), {
+  automatic: false,
+  depth: 100,
+  selected: 'main',
+});
+assert(manualBounded.layers.length <= 80, 'Manual depth must also have a bounded rendering cost');
+assert(manualBounded.limited);
 assert(
   bounded.layers.some((n) => n.id === 'main'),
   'Main region must not be crowded out by earlier small siblings',

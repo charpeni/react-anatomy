@@ -6,6 +6,9 @@ import type {
   StoredPropEntry,
 } from './page-agent-types.ts';
 import type {
+  CaptureBudget,
+  Snapshot,
+  SearchMatch,
   ComponentNode,
   Frame,
   PageRequest,
@@ -90,6 +93,8 @@ export function pageAgent(request: PageRequest = { action: 'capture' }): PageRes
     state.owners = new WeakMap();
     state.rootHandles = [];
     state.propSessions.clear();
+    state.captureJob = undefined;
+    state.searchJob = undefined;
   }
 
   if (request.action === 'dispose') {
@@ -130,6 +135,46 @@ export function pageAgent(request: PageRequest = { action: 'capture' }): PageRes
     });
     window.addEventListener('resize', state.invalidate);
     document.addEventListener('scroll', state.invalidate, true);
+  }
+
+  function fiberId(fiber: Fiber) {
+    let id =
+      state.fiberIds.get(fiber) ||
+      (fiber.alternate ? state.fiberIds.get(fiber.alternate) : undefined);
+
+    if (!id) {
+      id = `c${++state.sequence}`;
+    }
+
+    state.fiberIds.set(fiber, id);
+
+    if (fiber.alternate) {
+      state.fiberIds.set(fiber.alternate, id);
+    }
+
+    return id;
+  }
+
+  function componentName(f: Fiber) {
+    if (![0, 1, 2, 11, 14, 15].includes(f.tag)) {
+      return null;
+    }
+
+    let type = f.type;
+
+    if (type && typeof type !== 'string' && type.displayName) {
+      return type.displayName;
+    }
+
+    if (type && typeof type !== 'string' && type.render) {
+      type = type.render;
+    }
+
+    if (type && typeof type !== 'string' && type.type) {
+      type = type.type;
+    }
+
+    return typeof type === 'function' ? type.displayName || type.name || 'Anonymous' : 'Anonymous';
   }
 
   function highlight(id: string): Result {
@@ -195,6 +240,28 @@ export function pageAgent(request: PageRequest = { action: 'capture' }): PageRes
 
     const owner = (target: EventTarget | null) => {
       for (let el = target; el instanceof Element; el = el.parentElement) {
+        const prop = Object.keys(el).find((key) => key.startsWith('__reactFiber$'));
+        let fiber = prop
+          ? (Object.getOwnPropertyDescriptor(el, prop)?.value as Fiber | undefined)
+          : undefined;
+        for (let steps = 0; fiber && steps < 1000; steps++, fiber = fiber.return ?? undefined) {
+          if (componentName(fiber)) {
+            const id = fiberId(fiber);
+            let root = fiber;
+            for (let steps = 0; root.return && steps++ < 1000;) {
+              root = root.return;
+            }
+            if (
+              root.tag === 3 &&
+              root.stateNode &&
+              !state.rootHandles.includes(root.stateNode as FiberRoot)
+            ) {
+              state.rootHandles.push(root.stateNode as FiberRoot);
+            }
+            state.elements.set(id, [el]);
+            return id;
+          }
+        }
         const id = state.owners.get(el);
 
         if (id) {
@@ -557,511 +624,840 @@ export function pageAgent(request: PageRequest = { action: 'capture' }): PageRes
     );
   }
 
+  if (request.action === 'search') {
+    const query = request.query.trim().toLowerCase().slice(0, 150);
+    if (!request.cursor) {
+      const root = request.scopeId ? currentFiber(request.scopeId) : null;
+      if (request.scopeId && !root) {
+        throw new Error('This component is no longer mounted. Return to Whole page.');
+      }
+      state.searchJob = {
+        token: `s${(state.jobSequence = (state.jobSequence || 0) + 1)}`,
+        query,
+        scopeId: request.scopeId,
+        queue: root
+          ? [root]
+          : state.rootHandles.map((r) => r.current).filter((f): f is Fiber => !!f),
+        offset: 0,
+        matches: 0,
+        revision: state.revision,
+      };
+    }
+    const job = state.searchJob;
+    if (
+      !job ||
+      (request.cursor && job.token !== request.cursor) ||
+      job.query !== query ||
+      job.scopeId !== request.scopeId
+    ) {
+      throw new Error('Search expired. Search again.');
+    }
+    if (job.revision !== state.revision) {
+      state.searchJob = undefined;
+      throw new Error('The page changed during search. Search again.');
+    }
+    const matches: SearchMatch[] = [];
+    const started = performance.now();
+    let visits = 0;
+    while (
+      job.offset < job.queue.length &&
+      job.offset < 50000 &&
+      job.matches < 200 &&
+      visits++ < 500 &&
+      performance.now() - started < 8
+    ) {
+      const fiber = job.queue[job.offset++];
+      const name = componentName(fiber);
+      if (name && `${name} ${fiber.key || ''}`.toLowerCase().includes(query)) {
+        matches.push({
+          id: fiberId(fiber),
+          name,
+          key: fiber.key == null ? null : String(fiber.key).slice(0, 100),
+        });
+        job.matches++;
+      }
+      for (let child = fiber.child; child; child = child.sibling) {
+        if (job.queue.length >= 50000) {
+          break;
+        }
+        job.queue.push(child);
+      }
+    }
+    const limited =
+      job.queue.length >= 50000 || (job.matches >= 200 && job.offset < job.queue.length);
+    const done = job.offset >= job.queue.length || limited;
+    if (done) {
+      state.searchJob = undefined;
+    }
+    return { matches, cursor: done ? null : job.token, scanned: job.offset, limited };
+  }
+
+  if (request.action === 'capture-cancel') {
+    if (state.captureJob?.token === request.token) {
+      state.captureJob = undefined;
+    }
+    return { ok: true };
+  }
+  if (request.action === 'capture-step') {
+    const job = state.captureJob;
+    if (!job || job.token !== request.token) {
+      throw new Error('Capture cancelled.');
+    }
+    const started = performance.now();
+    let step: IteratorResult<void, Snapshot>;
+    let count = 0;
+    do {
+      step = job.iterator.next();
+      if (step.done) {
+        state.captureJob = undefined;
+        return { done: true, snapshot: step.value };
+      }
+    } while (++count < 250 && performance.now() - started < 8);
+    return { done: false };
+  }
+  if (request.action === 'capture-start') {
+    const token = `c${(state.jobSequence = (state.jobSequence || 0) + 1)}`;
+    state.captureJob = { token, iterator: capture(request) };
+    state.searchJob = undefined;
+    return { token };
+  }
   if (request.action !== 'capture') {
     return { ok: false, message: 'Unknown inspection action.' };
   }
+  const iterator = capture(request);
+  let step = iterator.next();
+  while (!step.done) {
+    step = iterator.next();
+  }
+  return step.value;
 
-  stopPicking();
-  clearHighlight();
-  observe();
+  function* capture(options: CaptureBudget): Generator<void, Snapshot> {
+    stopPicking();
+    clearHighlight();
+    observe();
 
-  const start = performance.now();
+    let activeMs = 0;
+    let resumedAt = performance.now();
+    function* checkpoint(): Generator<void> {
+      activeMs += performance.now() - resumedAt;
+      yield;
+      resumedAt = performance.now();
+    }
+    const workLimit = 1000;
+    const maxBytes = 6 * 1024 * 1024;
+    const maxVisualElements = 3000;
 
-  // Keep defaults and bounds inside this function: it is serialized into the
-  // inspected page and cannot reference an imported configuration module.
-  const budget = (value: number | undefined, fallback: number, maximum: number) =>
-    typeof value === 'number' && Number.isFinite(value) && value > 0
-      ? Math.min(Math.floor(value), maximum) || fallback
-      : fallback;
+    // Keep defaults and bounds inside this function: it is serialized into the
+    // inspected page and cannot reference an imported configuration module.
+    const budget = (value: number | undefined, fallback: number, maximum: number) =>
+      typeof value === 'number' && Number.isFinite(value) && value > 0
+        ? Math.min(Math.floor(value), maximum) || fallback
+        : fallback;
 
-  const maxComponents = budget(request.maxComponents, 2000, 10000);
-  const maxDepth = budget(request.maxDepth, 300, 1000);
-  const limits = {
-    components: maxComponents,
-    depth: maxDepth,
-    maximum: { components: 10000, depth: 1000 },
-    hit: { components: false, depth: false },
-  };
-  const maxElements = 12000;
-  const warnings = new Set<string>();
-  let truncated = false;
-  const roots = new Set<Fiber>();
-  const hook = window.__REACT_DEVTOOLS_GLOBAL_HOOK__;
+    const maxComponents = budget(options.maxComponents, 2000, 5000);
+    const maxDepth = budget(options.maxDepth, 300, 1000);
+    const limits = {
+      components: maxComponents,
+      depth: maxDepth,
+      maximum: { components: 5000, depth: 1000 },
+      hit: { components: false, depth: false },
+    };
+    const maxElements = 12000;
+    const warnings = new Set<string>();
+    let truncated = false;
+    const roots = new Set<Fiber>();
+    const scoped = options.scopeId ? currentFiber(options.scopeId) : null;
+    if (options.scopeId && !scoped) {
+      throw new Error(
+        'This component is no longer mounted. Return to Whole page and capture again.',
+      );
+    }
+    const scopePath: { id: string; name: string }[] = [];
+    if (scoped) {
+      for (
+        let fiber: Fiber | null = scoped, steps = 0;
+        fiber && steps++ < 1000;
+        fiber = fiber.return
+      ) {
+        const name = componentName(fiber);
+        if (name) {
+          scopePath.unshift({ id: fiberId(fiber), name });
+        }
+      }
+    }
+    const hook = window.__REACT_DEVTOOLS_GLOBAL_HOOK__;
 
-  // Cooperate with React DevTools when installed. Never replace its hook.
-  if (hook?.renderers && typeof hook.getFiberRoots === 'function') {
-    try {
-      for (const id of hook.renderers.keys()) {
-        for (const root of hook.getFiberRoots(id)) {
-          if (root.current) {
-            roots.add(root.current);
+    // Cooperate with React DevTools when installed. Never replace its hook.
+    if (!scoped && hook?.renderers && typeof hook.getFiberRoots === 'function') {
+      try {
+        for (const id of hook.renderers.keys()) {
+          for (const root of hook.getFiberRoots(id)) {
+            if (root.current) {
+              roots.add(root.current);
+            }
+          }
+        }
+      } catch {}
+    }
+
+    // Attach after React has mounted, without requiring app code or a reload.
+    const walker = document.createTreeWalker(document.documentElement, NodeFilter.SHOW_ELEMENT);
+    let scanned = 0;
+
+    for (
+      let el: Node | null = walker.currentNode;
+      !scoped && el && scanned++ < maxElements && activeMs < (roots.size ? 150 : workLimit);
+      el = walker.nextNode()
+    ) {
+      yield* checkpoint();
+      for (const prop of Object.keys(el)) {
+        if (!prop.startsWith('__reactFiber$') && !prop.startsWith('__reactContainer$')) {
+          continue;
+        }
+
+        let fiber = Object.getOwnPropertyDescriptor(el, prop)?.value as Fiber | undefined;
+
+        if (!fiber || typeof fiber !== 'object') {
+          continue;
+        }
+
+        let limit = 0;
+
+        while (fiber.return && limit++ < 1000) {
+          fiber = fiber.return;
+        }
+
+        if (fiber.tag === 3) {
+          roots.add((fiber.stateNode as FiberRoot | null)?.current || fiber);
+        }
+      }
+    }
+
+    if (scoped) {
+      roots.add(scoped);
+    } else {
+      // React can commit between discovery slices. Resolve each root once at
+      // the end rather than capturing both sides of its alternate pair.
+      state.rootHandles = [
+        ...new Set(Array.from(roots, (root) => root.stateNode as FiberRoot).filter(Boolean)),
+      ];
+      roots.clear();
+      for (const handle of state.rootHandles) {
+        if (handle.current) {
+          roots.add(handle.current);
+        }
+      }
+    }
+
+    const meta = {
+      url: location.href,
+      title: document.title,
+      capturedAt: Date.now(),
+      revision: state.revision,
+      viewport: { width: innerWidth, height: innerHeight, scrollX, scrollY },
+      rootCount: roots.size,
+      ...(scoped ? { scope: { id: options.scopeId!, path: scopePath } } : {}),
+    };
+
+    if (!roots.size) {
+      return {
+        version,
+        status: 'no-react',
+        nodes: [],
+        ...meta,
+        message:
+          'No mounted React components found in this page. Open a React app and capture again.',
+      };
+    }
+
+    if (!scoped && (scanned >= maxElements || activeMs >= 150)) {
+      warnings.add(
+        'DOM discovery reached its work limit. Some roots may be missing; pick a region on the page to inspect it.',
+      );
+    }
+
+    const nodes: ComponentNode[] = [];
+    const allHosts = new Set<Element>();
+    const hostRects: Record<string, Frame> = {};
+    const rectsByElement = new Map<Element, DOMRect>();
+    const measure = (el: Element) => {
+      let rect = rectsByElement.get(el);
+      if (!rect) {
+        rect = el.getBoundingClientRect();
+        rectsByElement.set(el, rect);
+      }
+      return rect;
+    };
+
+    const capturedElements = new Map<string, Element[]>();
+    const capturedOwners = new WeakMap<Element, string>();
+
+    function hostId(el: Element) {
+      if (!state.hostIds.has(el)) {
+        state.hostIds.set(el, `h${++state.hostSequence}`);
+      }
+
+      return state.hostIds.get(el)!;
+    }
+
+    function hostsOf(fiber: Fiber) {
+      const hosts: Element[] & { portal?: boolean } = [];
+      const stack = [fiber];
+      let visits = 0;
+
+      while (stack.length && visits++ < maxElements) {
+        const f = stack.pop()!;
+
+        if (f.tag === 4) {
+          hosts.portal = true;
+        }
+
+        if (f.stateNode instanceof Element) {
+          if (f.stateNode.ownerDocument === document) {
+            hosts.push(f.stateNode);
+          }
+
+          continue;
+        }
+
+        const children = [];
+
+        for (let child = f.child; child; child = child.sibling) {
+          children.push(child);
+        }
+
+        stack.push(...children.reverse());
+      }
+
+      return hosts;
+    }
+
+    function boundsOf(hosts: Element[]): Frame | null {
+      const rects = hosts.map(measure).filter((rect) => rect.width > 0 && rect.height > 0);
+      if (!rects.length) {
+        return null;
+      }
+
+      const x = Math.min(...rects.map((rect) => rect.left));
+      const y = Math.min(...rects.map((rect) => rect.top));
+      const right = Math.max(...rects.map((rect) => rect.right));
+      const bottom = Math.max(...rects.map((rect) => rect.bottom));
+      return { x, y, w: right - x, h: bottom - y };
+    }
+
+    const captureArea = { x: 0, y: 0, w: innerWidth, h: innerHeight };
+    const scopedBounds = scoped ? boundsOf(hostsOf(scoped).filter((el) => el.isConnected)) : null;
+    if (scopedBounds) {
+      // Focus changes which components we inspect, not how many screens of DOM
+      // we reconstruct. A long list must retain its visible content and fit the
+      // viewer. A small offscreen component still gets its own complete view.
+      const focusAxis = (start: number, length: number, viewport: number): [number, number] => {
+        if (length <= viewport) {
+          return [start, length];
+        }
+        const visibleStart = Math.max(0, start);
+        const visibleEnd = Math.min(viewport, start + length);
+        return visibleEnd > visibleStart
+          ? [visibleStart, visibleEnd - visibleStart]
+          : [start, viewport];
+      };
+      [captureArea.x, captureArea.w] = focusAxis(scopedBounds.x, scopedBounds.w, innerWidth);
+      [captureArea.y, captureArea.h] = focusAxis(scopedBounds.y, scopedBounds.h, innerHeight);
+    }
+
+    const queue: { fiber: Fiber; parent: ComponentNode | null; portal: boolean; steps: number }[] =
+      [...roots].map((fiber) => ({ fiber, parent: null, portal: false, steps: 0 }));
+    let cursor = 0;
+    const maxVisits = 50000;
+    while (cursor < queue.length && cursor < maxVisits && activeMs < workLimit) {
+      yield* checkpoint();
+      const { fiber, parent, portal, steps } = queue[cursor++];
+      if (steps > maxDepth) {
+        truncated = true;
+        limits.hit.depth = true;
+        if (parent) {
+          parent.hasMore = true;
+        }
+        warnings.add(
+          `Hierarchy capture stopped beyond ${maxDepth} nested levels. Focus this branch or use Capture more.`,
+        );
+        continue;
+      }
+      const name = componentName(fiber);
+      let owner = parent;
+
+      if (name) {
+        // Reaching the count alone does not mean anything is missing. Report the
+        // limit only when an additional React component would be omitted.
+        if (nodes.length >= maxComponents) {
+          truncated = true;
+          limits.hit.components = true;
+          warnings.add(
+            `Hierarchy capture stopped at ${maxComponents} components. ${maxComponents < limits.maximum.components ? 'Use Capture more or focus a component to inspect its subtree.' : 'Focus a component to inspect more detail within it.'}`,
+          );
+
+          if (parent) {
+            parent.hasMore = true;
+          }
+          continue;
+        }
+
+        const output = hostsOf(fiber);
+        const hosts = output.filter((el) => el.isConnected);
+        const bounds = boundsOf(hosts);
+        let frame: Frame | null = null;
+
+        if (bounds) {
+          const left = Math.max(captureArea.x, bounds.x);
+          const top = Math.max(captureArea.y, bounds.y);
+          const r = Math.min(captureArea.x + captureArea.w, bounds.x + bounds.w);
+          const b = Math.min(captureArea.y + captureArea.h, bounds.y + bounds.h);
+
+          if (r > left && b > top) {
+            frame = { x: left, y: top, w: r - left, h: b - top };
+          }
+        }
+
+        owner = {
+          id: fiberId(fiber),
+          name: String(name).slice(0, 150),
+          key: fiber.key === null ? null : String(fiber.key).slice(0, 100),
+          parent: parent?.id || null,
+          children: [],
+          depth: parent ? parent.depth + 1 : 0,
+          hosts: hosts.map(hostId),
+          bounds,
+          frame,
+          portal: portal || !!output.portal,
+        };
+        nodes.push(owner);
+
+        if (parent) {
+          parent.children.push(owner.id);
+        }
+
+        capturedElements.set(owner.id, hosts);
+
+        for (const host of hosts) {
+          allHosts.add(host);
+          capturedOwners.set(host, owner.id);
+
+          const rect = measure(host);
+
+          hostRects[hostId(host)] = { x: rect.left, y: rect.top, w: rect.width, h: rect.height };
+        }
+      }
+
+      for (let child = fiber.child; child; child = child.sibling) {
+        if (queue.length >= maxVisits) {
+          truncated = true;
+          if (owner) {
+            owner.hasMore = true;
+          }
+          break;
+        }
+        queue.push({
+          fiber: child,
+          parent: owner,
+          portal: portal || fiber.tag === 4,
+          steps: steps + 1,
+        });
+      }
+    }
+    if (cursor < queue.length || queue.length >= maxVisits) {
+      truncated = true;
+      for (const item of queue.slice(cursor)) {
+        if (item.parent) {
+          item.parent.hasMore = true;
+        }
+      }
+      warnings.add('Discovery work limit reached. Focus a component to inspect its subtree.');
+    }
+
+    if (!nodes.length) {
+      return {
+        version,
+        status: 'no-react',
+        nodes: [],
+        ...meta,
+        message: 'React is mounted, but no inspectable components are currently rendered.',
+      };
+    }
+
+    // Serialize DOM once, not once per component. The viewer splits this inert
+    // snapshot at host IDs as the user expands and collapses the hierarchy.
+    const forbidden = new Set([
+      'SCRIPT',
+      'STYLE',
+      'LINK',
+      'META',
+      'BASE',
+      'IFRAME',
+      'OBJECT',
+      'EMBED',
+      'NOSCRIPT',
+      'TEMPLATE',
+    ]);
+    const safeAttributes = new Set([
+      'viewBox',
+      'd',
+      'fill',
+      'stroke',
+      'stroke-width',
+      'stroke-linecap',
+      'stroke-linejoin',
+      'points',
+      'x',
+      'y',
+      'x1',
+      'x2',
+      'y1',
+      'y2',
+      'cx',
+      'cy',
+      'r',
+      'rx',
+      'ry',
+      'width',
+      'height',
+      'preserveAspectRatio',
+      'xmlns',
+      'alt',
+      'colspan',
+      'rowspan',
+      'type',
+      'placeholder',
+    ]);
+
+    function safeAsset(value: string, base = location.href) {
+      try {
+        const url = new URL(value, base);
+
+        return /^(https?:|data:)/.test(url.protocol) ? url.href : '';
+      } catch {
+        return '';
+      }
+    }
+
+    let cloned = 0;
+    let bytes = 0;
+    let visualLimited = false;
+    let styleProperties: string[] | undefined;
+    function clone(el: Node, computedStyle?: CSSStyleDeclaration): Node {
+      if (el.nodeType === Node.TEXT_NODE) {
+        return document.createTextNode((el.textContent ?? '').slice(0, 20000));
+      }
+
+      if (!(el instanceof Element) || forbidden.has(el.tagName.toUpperCase())) {
+        return document.createTextNode('');
+      }
+
+      let copy: Element & ElementCSSInlineStyle;
+
+      if (el instanceof HTMLCanvasElement) {
+        copy = document.createElement('img');
+
+        try {
+          copy.setAttribute('src', el.toDataURL());
+        } catch {
+          warnings.add('A canvas could not be captured.');
+        }
+      } else {
+        // Cloning a registered custom element runs its constructor in the app.
+        // Its visible output is copied below, into an inert ordinary element.
+        const custom =
+          el instanceof HTMLElement && (el.localName.includes('-') || el.hasAttribute('is'));
+        copy = custom
+          ? document.createElement(el.localName.includes('-') ? 'span' : el.localName)
+          : (el.cloneNode(false) as Element & ElementCSSInlineStyle);
+
+        if (custom) {
+          for (const attribute of Array.from(el.attributes)) {
+            if (safeAttributes.has(attribute.name)) {
+              copy.setAttribute(attribute.name, attribute.value);
+            }
+          }
+        }
+
+        for (const attribute of Array.from(copy.attributes)) {
+          if (!safeAttributes.has(attribute.name)) {
+            copy.removeAttribute(attribute.name);
           }
         }
       }
-    } catch {}
-  }
 
-  // Attach after React has mounted, without requiring app code or a reload.
-  const walker = document.createTreeWalker(document.documentElement, NodeFilter.SHOW_ELEMENT);
-  let scanned = 0;
+      copy.setAttribute('data-strata-host', hostId(el));
 
-  for (
-    let el: Node | null = walker.currentNode;
-    el && scanned++ < maxElements;
-    el = walker.nextNode()
-  ) {
-    for (const prop of Object.keys(el)) {
-      if (!prop.startsWith('__reactFiber$') && !prop.startsWith('__reactContainer$')) {
-        continue;
-      }
-
-      let fiber = Object.getOwnPropertyDescriptor(el, prop)?.value as Fiber | undefined;
-
-      if (!fiber || typeof fiber !== 'object') {
-        continue;
-      }
-
-      let limit = 0;
-
-      while (fiber.return && limit++ < 1000) {
-        fiber = fiber.return;
-      }
-
-      if (fiber.tag === 3) {
-        roots.add((fiber.stateNode as FiberRoot | null)?.current || fiber);
-      }
-    }
-  }
-
-  state.rootHandles = Array.from(roots, (root) => root.stateNode as FiberRoot).filter(Boolean);
-
-  const meta = {
-    url: location.href,
-    title: document.title,
-    capturedAt: Date.now(),
-    revision: state.revision,
-    viewport: { width: innerWidth, height: innerHeight, scrollX, scrollY },
-    rootCount: roots.size,
-  };
-
-  if (!roots.size) {
-    return {
-      version,
-      status: 'no-react',
-      nodes: [],
-      ...meta,
-      message:
-        'No mounted React components found in this page. Open a React app and capture again.',
-    };
-  }
-
-  if (scanned >= maxElements) {
-    warnings.add('DOM discovery stopped at 12,000 elements. Some roots may be missing.');
-  }
-
-  const nodes: ComponentNode[] = [];
-  const allHosts = new Set<Element>();
-  const hostRects: Record<string, Frame> = {};
-
-  state.elements = new Map();
-  state.owners = new WeakMap();
-
-  function fiberId(fiber: Fiber) {
-    let id =
-      state.fiberIds.get(fiber) ||
-      (fiber.alternate ? state.fiberIds.get(fiber.alternate) : undefined);
-
-    if (!id) {
-      id = `c${++state.sequence}`;
-    }
-
-    state.fiberIds.set(fiber, id);
-
-    if (fiber.alternate) {
-      state.fiberIds.set(fiber.alternate, id);
-    }
-
-    return id;
-  }
-
-  function hostId(el: Element) {
-    if (!state.hostIds.has(el)) {
-      state.hostIds.set(el, `h${++state.hostSequence}`);
-    }
-
-    return state.hostIds.get(el)!;
-  }
-
-  function hostsOf(fiber: Fiber) {
-    const hosts: Element[] & { portal?: boolean } = [];
-    const stack = [fiber];
-    let visits = 0;
-
-    while (stack.length && visits++ < maxElements) {
-      const f = stack.pop()!;
-
-      if (f.tag === 4) {
-        hosts.portal = true;
-      }
-
-      if (f.stateNode instanceof Element) {
-        if (f.stateNode.ownerDocument === document) {
-          hosts.push(f.stateNode);
-        }
-
-        continue;
-      }
-
-      const children = [];
-
-      for (let child = f.child; child; child = child.sibling) {
-        children.push(child);
-      }
-
-      stack.push(...children.reverse());
-    }
-
-    return hosts;
-  }
-
-  function componentName(f: Fiber) {
-    if (![0, 1, 2, 11, 14, 15].includes(f.tag)) {
-      return null;
-    }
-
-    let type = f.type;
-
-    if (type && typeof type !== 'string' && type.displayName) {
-      return type.displayName;
-    }
-
-    if (type && typeof type !== 'string' && type.render) {
-      type = type.render;
-    }
-
-    if (type && typeof type !== 'string' && type.type) {
-      type = type.type;
-    }
-
-    return typeof type === 'function' ? type.displayName || type.name || 'Anonymous' : 'Anonymous';
-  }
-
-  function visit(fiber: Fiber | null, parent: ComponentNode | null, portal = false, steps = 0) {
-    if (!fiber) {
-      return;
-    }
-
-    if (steps > maxDepth) {
-      truncated = true;
-      limits.hit.depth = true;
-      warnings.add(
-        `Hierarchy capture stopped beyond ${maxDepth} nested levels. ${maxDepth < limits.maximum.depth ? 'Use Capture more to increase the limit.' : 'The maximum supported nesting depth was reached.'}`,
+      const computed = computedStyle || getComputedStyle(el);
+      // Standard property names are the same for every element in this browser.
+      // Enumerate them once: large design systems can add thousands of custom
+      // properties to every computed style. Their resolved values are already
+      // included in the standard properties we copy below.
+      styleProperties ||= Array.from(computed).filter(
+        (prop) =>
+          !prop.startsWith('--') && !prop.startsWith('animation') && !prop.startsWith('transition'),
       );
 
-      return;
-    }
+      const declarations: string[] = [];
+      for (const prop of styleProperties) {
+        let value = computed.getPropertyValue(prop);
 
-    const name = componentName(fiber);
-    let owner = parent;
-
-    if (name) {
-      // Reaching the count alone does not mean anything is missing. Report the
-      // limit only when an additional React component would be omitted.
-      if (nodes.length >= maxComponents) {
-        truncated = true;
-        limits.hit.components = true;
-        warnings.add(
-          `Hierarchy capture stopped at ${maxComponents} components. ${maxComponents < limits.maximum.components ? 'Use Capture more to increase the limit.' : 'The maximum supported component count was reached.'}`,
-        );
-
-        return;
-      }
-
-      const output = hostsOf(fiber);
-      const hosts = output.filter((el) => el.isConnected);
-      const rects = hosts
-        .map((el) => el.getBoundingClientRect())
-        .filter((r) => r.width > 0 && r.height > 0);
-      let bounds: Frame | null = null;
-      let frame: Frame | null = null;
-
-      if (rects.length) {
-        const x = Math.min(...rects.map((r) => r.left));
-        const y = Math.min(...rects.map((r) => r.top));
-        const right = Math.max(...rects.map((r) => r.right));
-        const bottom = Math.max(...rects.map((r) => r.bottom));
-
-        bounds = { x, y, w: right - x, h: bottom - y };
-
-        const left = Math.max(0, x);
-        const top = Math.max(0, y);
-        const r = Math.min(innerWidth, right);
-        const b = Math.min(innerHeight, bottom);
-
-        if (r > left && b > top) {
-          frame = { x: left, y: top, w: r - left, h: b - top };
-        }
-      }
-
-      owner = {
-        id: fiberId(fiber),
-        name: String(name).slice(0, 150),
-        key: fiber.key === null ? null : String(fiber.key).slice(0, 100),
-        parent: parent?.id || null,
-        children: [],
-        depth: parent ? parent.depth + 1 : 0,
-        hosts: hosts.map(hostId),
-        bounds,
-        frame,
-        portal: portal || !!output.portal,
-      };
-      nodes.push(owner);
-
-      if (parent) {
-        parent.children.push(owner.id);
-      }
-
-      state.elements.set(owner.id, hosts);
-
-      for (const host of hosts) {
-        allHosts.add(host);
-        state.owners.set(host, owner.id);
-
-        const rect = host.getBoundingClientRect();
-
-        hostRects[hostId(host)] = { x: rect.left, y: rect.top, w: rect.width, h: rect.height };
-      }
-    }
-
-    for (let child = fiber.child; child; child = child.sibling) {
-      visit(child, owner, portal || fiber.tag === 4, steps + 1);
-    }
-  }
-
-  for (const root of roots) {
-    visit(root, null);
-  }
-
-  if (!nodes.length) {
-    return {
-      version,
-      status: 'no-react',
-      nodes: [],
-      ...meta,
-      message: 'React is mounted, but no inspectable components are currently rendered.',
-    };
-  }
-
-  // Serialize DOM once, not once per component. The viewer splits this inert
-  // snapshot at host IDs as the user expands and collapses the hierarchy.
-  const forbidden = new Set([
-    'SCRIPT',
-    'STYLE',
-    'LINK',
-    'META',
-    'BASE',
-    'IFRAME',
-    'OBJECT',
-    'EMBED',
-    'NOSCRIPT',
-    'TEMPLATE',
-  ]);
-  const safeAttributes = new Set([
-    'viewBox',
-    'd',
-    'fill',
-    'stroke',
-    'stroke-width',
-    'stroke-linecap',
-    'stroke-linejoin',
-    'points',
-    'x',
-    'y',
-    'x1',
-    'x2',
-    'y1',
-    'y2',
-    'cx',
-    'cy',
-    'r',
-    'rx',
-    'ry',
-    'width',
-    'height',
-    'preserveAspectRatio',
-    'xmlns',
-    'alt',
-    'colspan',
-    'rowspan',
-    'type',
-  ]);
-
-  function safeAsset(value: string, base = location.href) {
-    try {
-      const url = new URL(value, base);
-
-      return /^(https?:|data:)/.test(url.protocol) ? url.href : '';
-    } catch {
-      return '';
-    }
-  }
-
-  let cloned = 0;
-
-  function clone(el: Node): Node {
-    if (el.nodeType === Node.TEXT_NODE) {
-      return document.createTextNode((el.textContent ?? '').slice(0, 20000));
-    }
-
-    if (
-      !(el instanceof Element) ||
-      forbidden.has(el.tagName.toUpperCase()) ||
-      cloned++ >= maxElements
-    ) {
-      return document.createTextNode('');
-    }
-
-    let copy: Element & ElementCSSInlineStyle;
-
-    if (el instanceof HTMLCanvasElement) {
-      copy = document.createElement('img');
-
-      try {
-        copy.setAttribute('src', el.toDataURL());
-      } catch {
-        warnings.add('A canvas could not be captured.');
-      }
-    } else {
-      copy = el.cloneNode(false) as Element & ElementCSSInlineStyle;
-
-      for (const attribute of Array.from(copy.attributes)) {
-        if (!safeAttributes.has(attribute.name)) {
-          copy.removeAttribute(attribute.name);
-        }
-      }
-    }
-
-    copy.setAttribute('data-strata-host', hostId(el));
-
-    const computed = getComputedStyle(el);
-
-    for (const prop of computed) {
-      if (prop.startsWith('--') || prop.startsWith('animation') || prop.startsWith('transition')) {
-        continue;
-      }
-
-      let value = computed.getPropertyValue(prop);
-
-      value = value.replace(
-        /url\(["']?([^"')]+)["']?\)/g,
-        (_, url) => `url("${safeAsset(url).replace(/"/g, '%22')}")`,
-      );
-      copy.style.setProperty(prop, value);
-    }
-
-    copy.style.setProperty('pointer-events', 'none', 'important');
-    copy.style.setProperty('animation', 'none', 'important');
-    copy.style.setProperty('transition', 'none', 'important');
-
-    if (el instanceof HTMLImageElement) {
-      copy.setAttribute('src', safeAsset(el.currentSrc || el.src));
-    }
-
-    if (
-      el instanceof HTMLInputElement ||
-      el instanceof HTMLTextAreaElement ||
-      el instanceof HTMLSelectElement
-    ) {
-      copy.setAttribute('disabled', '');
-
-      if (el instanceof HTMLInputElement && (el.type === 'password' || el.type === 'file')) {
-        (copy as HTMLInputElement).value = '';
-      }
-
-      if (el instanceof HTMLInputElement && el.type !== 'password' && el.type !== 'file') {
-        copy.setAttribute('value', el.value);
-      }
-
-      if (el instanceof HTMLInputElement && el.checked) {
-        copy.setAttribute('checked', '');
-      }
-
-      if (el instanceof HTMLTextAreaElement) {
-        copy.textContent = el.value;
-      }
-    }
-
-    if (el instanceof HTMLVideoElement) {
-      warnings.add('Video is represented by its element bounds.');
-    }
-
-    if (!(el instanceof HTMLCanvasElement) && !(el instanceof HTMLTextAreaElement)) {
-      for (const child of el.childNodes) {
-        copy.appendChild(clone(child));
-      }
-    }
-
-    return copy;
-  }
-
-  const topHosts = [...allHosts].filter((el) => {
-    for (let parent = el.parentElement; parent; parent = parent.parentElement) {
-      if (allHosts.has(parent)) {
-        return false;
-      }
-    }
-
-    return true;
-  });
-  const holder = document.createElement('div');
-
-  for (const el of topHosts) {
-    holder.appendChild(clone(el));
-  }
-
-  if (cloned >= maxElements) {
-    warnings.add('Visual capture stopped at 12,000 DOM elements.');
-  }
-
-  const fontRules: string[] = [];
-
-  function collectFonts(rules: CSSRuleList, base: string) {
-    for (const rule of rules) {
-      if (rule.type === CSSRule.FONT_FACE_RULE) {
-        const css = rule.cssText.replace(
+        value = value.replace(
           /url\(["']?([^"')]+)["']?\)/g,
-          (_, url) => `url("${safeAsset(url, base).replace(/"/g, '%22')}")`,
+          (_, url) => `url("${safeAsset(url).replace(/"/g, '%22')}")`,
         );
+        declarations.push(`${prop}:${value}`);
+      }
 
-        fontRules.push(css);
-      } else if ('cssRules' in rule && rule.cssRules) {
-        collectFonts((rule as CSSGroupingRule).cssRules, base);
+      copy.style.cssText = declarations.join(';');
+      bytes += copy.style.cssText.length * 2;
+      copy.style.setProperty('pointer-events', 'none', 'important');
+      copy.style.setProperty('animation', 'none', 'important');
+      copy.style.setProperty('transition', 'none', 'important');
+
+      if (el instanceof HTMLImageElement) {
+        copy.setAttribute('src', safeAsset(el.currentSrc || el.src));
+      }
+
+      if (
+        el instanceof HTMLInputElement ||
+        el instanceof HTMLTextAreaElement ||
+        el instanceof HTMLSelectElement
+      ) {
+        copy.setAttribute('disabled', '');
+
+        if (el instanceof HTMLInputElement && (el.type === 'password' || el.type === 'file')) {
+          (copy as HTMLInputElement).value = '';
+        }
+
+        if (el instanceof HTMLInputElement && el.type !== 'password' && el.type !== 'file') {
+          copy.setAttribute('value', el.value);
+        }
+
+        if (el instanceof HTMLInputElement && el.checked) {
+          copy.setAttribute('checked', '');
+        }
+
+        if (el instanceof HTMLTextAreaElement) {
+          copy.textContent = el.value;
+        }
+      }
+
+      if (el instanceof HTMLVideoElement) {
+        warnings.add('Video is represented by its element bounds.');
+      }
+
+      return copy;
+    }
+    const topHosts = [...allHosts].filter((el) => {
+      for (let parent = el.parentElement; parent; parent = parent.parentElement) {
+        if (allHosts.has(parent)) {
+          return false;
+        }
+      }
+
+      return true;
+    });
+    // React roots often sit on a transparent host. Preserve the canvas painted
+    // by html/body (or the focused scope's external ancestors) so it does not
+    // turn into the inspector's background. Composite translucent colors once,
+    // below the captured hosts, rather than filling every component plane.
+    let backgroundAncestor: Element | null = topHosts[0]?.parentElement || document.body;
+    while (backgroundAncestor) {
+      const ancestor: Element = backgroundAncestor;
+      if (topHosts.every((host) => ancestor.contains(host))) {
+        break;
+      }
+      backgroundAncestor = ancestor.parentElement;
+    }
+    const backgroundAncestors: Element[] = [];
+    for (let el: Element | null = backgroundAncestor; el; el = el.parentElement) {
+      backgroundAncestors.unshift(el);
+    }
+    const canvas = document.createElement('canvas');
+    canvas.width = canvas.height = 1;
+    const scheme = getComputedStyle(document.documentElement).colorScheme;
+    canvas.style.colorScheme =
+      scheme.includes('dark') &&
+      (!scheme.includes('light') || matchMedia('(prefers-color-scheme: dark)').matches)
+        ? 'dark'
+        : 'light';
+    const context = canvas.getContext('2d');
+    let backgroundColor: string | undefined;
+    if (context) {
+      for (const ancestor of backgroundAncestors) {
+        context.fillStyle = getComputedStyle(ancestor).backgroundColor;
+        context.fillRect(0, 0, 1, 1);
+      }
+      if (context.getImageData(0, 0, 1, 1).data[3] < 255) {
+        // Resolve the browser canvas color only if the page's own backgrounds
+        // leave it visible. Detached canvases use the default color scheme.
+        canvas.setAttribute('data-strata-overlay', '');
+        canvas.style.setProperty('display', 'none', 'important');
+        canvas.style.setProperty('color', 'Canvas', 'important');
+        document.documentElement.appendChild(canvas);
+        try {
+          context.fillStyle = getComputedStyle(canvas).color;
+        } finally {
+          canvas.remove();
+        }
+        context.globalCompositeOperation = 'destination-over';
+        context.fillRect(0, 0, 1, 1);
+      }
+      const [r, g, b] = context.getImageData(0, 0, 1, 1).data;
+      backgroundColor = `rgb(${r}, ${g}, ${b})`;
+    }
+    const holder = document.createElement('div');
+
+    // Discover components breadth first, but finish each visible DOM branch
+    // before its siblings. If the visual budget runs out, this retains complete
+    // text and controls instead of a broad collection of empty containers.
+    const pending: { el: Node; parent: Node }[] = topHosts
+      .map((el) => ({ el, parent: holder }))
+      .reverse();
+    const visibleArea = captureArea;
+    let visualCursor = 0;
+    while (pending.length) {
+      yield* checkpoint();
+      visualCursor++;
+      const { el, parent } = pending.pop()!;
+      if (
+        el instanceof Element &&
+        (forbidden.has(el.tagName.toUpperCase()) || el.hasAttribute('data-strata-overlay'))
+      ) {
+        continue;
+      }
+      let computed: CSSStyleDeclaration | undefined;
+      if (el instanceof Element) {
+        computed = getComputedStyle(el);
+        if (computed.display === 'none') {
+          // Closed menus and other hidden subtrees have no visible output.
+          // Keep the reconstruction budget for the UI the user can see.
+          continue;
+        }
+        const rect = measure(el);
+        if (
+          rect.width > 0 &&
+          rect.height > 0 &&
+          (rect.right <= visibleArea.x ||
+            rect.bottom <= visibleArea.y ||
+            rect.left >= visibleArea.x + visibleArea.w ||
+            rect.top >= visibleArea.y + visibleArea.h)
+        ) {
+          // Keep offscreen flow geometry without spending the reconstruction
+          // budget on every card in a long list, including within a focused scope.
+          const placeholder = document.createElement('span');
+          const style = computed;
+          placeholder.setAttribute('data-strata-host', hostId(el));
+          placeholder.style.cssText = `display:${style.display};width:${rect.width}px;height:${rect.height}px;box-sizing:border-box;margin:${style.margin};flex:${style.flex};grid-area:${style.gridArea};visibility:hidden`;
+          parent.appendChild(placeholder);
+          continue;
+        }
+      }
+      if (cloned >= maxVisualElements || bytes >= maxBytes || activeMs >= workLimit) {
+        visualLimited = true;
+        // Preserve the position/size of omitted regions without retaining their DOM.
+        // Keep placeholder work bounded too; the rest is reported as omitted detail.
+        if (el instanceof Element && visualCursor < maxVisualElements * 2) {
+          const rect = measure(el);
+          const placeholder = document.createElement('span');
+          placeholder.setAttribute('data-strata-host', hostId(el));
+          placeholder.style.cssText = `display:block;width:${rect.width}px;height:${rect.height}px;box-sizing:border-box;background:#80808012`;
+          parent.appendChild(placeholder);
+        }
+        if (activeMs >= workLimit || visualCursor >= maxVisualElements * 2) {
+          break;
+        }
+        continue;
+      }
+      const copy = clone(el, computed);
+      parent.appendChild(copy);
+      if (el instanceof Element) {
+        cloned++;
+        if (!(el instanceof HTMLCanvasElement) && !(el instanceof HTMLTextAreaElement)) {
+          // Copy the composed tree: open shadow roots supply rendered content,
+          // and slots supply assigned nodes (or their fallback), not hidden light DOM.
+          const children =
+            el.shadowRoot?.childNodes ||
+            (el instanceof HTMLSlotElement ? el.assignedNodes({ flatten: true }) : el.childNodes);
+          const count = Math.min(
+            children.length,
+            Math.max(0, maxVisualElements * 2 - pending.length - visualCursor),
+          );
+          if (count < children.length) {
+            visualLimited = true;
+          }
+          for (let i = count - 1; i >= 0; i--) {
+            pending.push({ el: children[i], parent: copy });
+          }
+        }
+      } else {
+        bytes += (copy.textContent?.length || 0) * 2;
       }
     }
-  }
-
-  for (const sheet of [...document.styleSheets, ...document.adoptedStyleSheets]) {
-    try {
-      collectFonts(sheet.cssRules, sheet.href || location.href);
-    } catch {
+    if (visualLimited) {
       warnings.add(
-        'Some cross-origin font definitions are unavailable; those fonts may use a fallback.',
+        'Visual detail was limited to keep capture responsive. Focus a component for a more detailed capture.',
       );
     }
-  }
 
-  return {
-    version,
-    status: 'ready',
-    ...meta,
-    nodes,
-    html: holder.innerHTML,
-    fonts: fontRules.join('\n'),
-    hostRects,
-    warnings: [...warnings],
-    truncated,
-    limits,
-    captureMs: Math.round(performance.now() - start),
-    elementCount: cloned,
-  };
+    const fontRules: string[] = [];
+    let fontRuleCount = 0;
+    let fontBytes = 0;
+
+    function collectFonts(rules: CSSRuleList, base: string, depth = 0) {
+      for (const rule of rules) {
+        if (++fontRuleCount > 10000 || fontBytes > 100000 || depth > 20) {
+          break;
+        }
+        if (rule.type === CSSRule.FONT_FACE_RULE) {
+          const css = rule.cssText.replace(
+            /url\(["']?([^"')]+)["']?\)/g,
+            (_, url) => `url("${safeAsset(url, base).replace(/"/g, '%22')}")`,
+          );
+
+          fontBytes += css.length;
+          fontRules.push(css);
+        } else if ('cssRules' in rule && rule.cssRules) {
+          collectFonts((rule as CSSGroupingRule).cssRules, base, depth + 1);
+        }
+      }
+    }
+
+    for (const sheet of [...document.styleSheets, ...document.adoptedStyleSheets]) {
+      yield* checkpoint();
+      if (activeMs >= workLimit || fontRules.join('').length > 100000) {
+        break;
+      }
+      try {
+        collectFonts(sheet.cssRules, sheet.href || location.href);
+      } catch {
+        warnings.add(
+          'Some cross-origin font definitions are unavailable; those fonts may use a fallback.',
+        );
+      }
+    }
+
+    state.elements = capturedElements;
+    state.owners = capturedOwners;
+    if (meta.revision !== state.revision) {
+      warnings.add('The page changed during capture. Refresh to inspect its latest state.');
+    }
+    return {
+      version,
+      status: 'ready',
+      ...meta,
+      nodes,
+      html: holder.innerHTML,
+      fonts: fontRules.join('\n'),
+      backgroundColor,
+      hostRects,
+      warnings: [...warnings],
+      truncated,
+      limits,
+      captureMs: Math.round(activeMs + performance.now() - resumedAt),
+      visualLimited,
+      elementCount: cloned,
+    };
+  }
 }

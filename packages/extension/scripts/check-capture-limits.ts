@@ -8,20 +8,17 @@ import { nextCaptureBudget, captureLimitMessage } from '../src/inspector/capture
 const budget = {
   components: 2000,
   depth: 300,
-  maximum: { components: 10000, depth: 1000 },
+  maximum: { components: 5000, depth: 1000 },
   hit: { components: true, depth: false },
 };
 
 assert.deepEqual(nextCaptureBudget(budget), { maxComponents: 5000, maxDepth: 300 });
-assert.deepEqual(nextCaptureBudget({ ...budget, components: 5000 }), {
-  maxComponents: 10000,
-  maxDepth: 300,
-});
+assert.equal(nextCaptureBudget({ ...budget, components: 5000 }), null);
 assert.deepEqual(nextCaptureBudget({ ...budget, hit: { components: false, depth: true } }), {
   maxComponents: 2000,
   maxDepth: 600,
 });
-assert.equal(nextCaptureBudget({ ...budget, components: 10000 }), null);
+assert.equal(nextCaptureBudget({ ...budget, components: 5000 }), null);
 assert.equal(nextCaptureBudget({ ...budget, hit: { components: false, depth: false } }), null);
 assert.match(
   captureLimitMessage({ nodes: Array(2000), limits: budget }),
@@ -50,7 +47,7 @@ try {
   console.log(
     'Initial partial capture:',
     await evaluate(
-      `({components:document.querySelectorAll('.tree-select').length,message:document.querySelector('.capture-limit-banner').textContent})`,
+      `({components:Number(document.querySelector('.tree-scroll')?.getAttribute('data-component-count')),message:document.querySelector('.capture-limit-banner').textContent})`,
     ),
   );
   assert(
@@ -70,15 +67,17 @@ try {
   await harness.until(
     () =>
       evaluate(
-        `document.querySelectorAll('.tree-select').length>2900&&!document.querySelector('.capture-limit-banner')`,
+        `Number(document.querySelector('.tree-scroll')?.getAttribute('data-component-count'))>2900&&!document.querySelector('.capture-limit-banner')`,
       ),
     'Capture more did not complete the large hierarchy',
   );
 
-  const fullCount = await evaluate(`document.querySelectorAll('.tree-select').length`);
+  const fullCount = await evaluate(
+    `Number(document.querySelector('.tree-scroll')?.getAttribute('data-component-count'))`,
+  );
 
   assert.equal(fullCount, 2985);
-  // The later sibling was absent when the depth-first capture stopped early.
+  // The later sibling stays inspectable in the balanced overview.
   await click('Pick on page');
   await page.locator('[data-region="details"]').click();
   await harness.until(
@@ -96,7 +95,9 @@ try {
     'Manual recapture did not finish',
   );
   assert.equal(
-    await evaluate(`document.querySelectorAll('.tree-select').length`),
+    await evaluate(
+      `Number(document.querySelector('.tree-scroll')?.getAttribute('data-component-count'))`,
+    ),
     fullCount,
     'Manual capture forgot the increased budget',
   );
@@ -114,7 +115,9 @@ try {
     'Follow changes did not recapture',
   );
   assert.equal(
-    await evaluate(`document.querySelectorAll('.tree-select').length`),
+    await evaluate(
+      `Number(document.querySelector('.tree-scroll')?.getAttribute('data-component-count'))`,
+    ),
     fullCount,
     'Follow changes forgot the increased budget',
   );
@@ -136,7 +139,7 @@ try {
   await harness.until(
     () =>
       evaluate(
-        `document.querySelectorAll('.tree-select').length===454&&!document.querySelector('.capture-limit-banner')`,
+        `Number(document.querySelector('.tree-scroll')?.getAttribute('data-component-count'))===454&&!document.querySelector('.capture-limit-banner')`,
       ),
     'Capture more did not recover components below the nesting limit',
   );
@@ -149,7 +152,10 @@ try {
   await page.goto(fixture.url + '/deep?projects=90');
   await page.locator('[data-region="card"]').first().waitFor();
   await harness.until(
-    () => evaluate(`document.querySelectorAll('.tree-select').length===1725`),
+    () =>
+      evaluate(
+        `Number(document.querySelector('.tree-scroll')?.getAttribute('data-component-count'))===1725`,
+      ),
     'Default capture still stops at the old 500-component limit',
   );
   assert.equal(await evaluate(`document.querySelector('.capture-limit-banner')===null`), true);
@@ -186,7 +192,7 @@ try {
     maxDepth: 1000000,
   });
 
-  assert.equal(bounded.limits!.components, 10000);
+  assert.equal(bounded.limits!.components, 5000);
   assert.equal(bounded.limits!.depth, 1000);
   console.log(
     'Passed: larger default, exact-limit boundary, distinct limit reasons, invalid inputs and maximum budgets.',
