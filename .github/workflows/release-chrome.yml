@@ -1,0 +1,128 @@
+name: Release Chrome extension
+
+on:
+  release:
+    types: [published]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: chrome-web-store-release
+  cancel-in-progress: false
+
+env:
+  ASTRO_TELEMETRY_DISABLED: '1'
+  CHROME_WORKLOAD_IDENTITY_PROVIDER: ${{ vars.CHROME_WORKLOAD_IDENTITY_PROVIDER }}
+  CHROME_SERVICE_ACCOUNT: ${{ vars.CHROME_SERVICE_ACCOUNT }}
+
+jobs:
+  prepare:
+    name: Verify and package the release
+    if: github.repository == 'charpeni/react-anatomy' && !github.event.release.prerelease && !github.event.release.draft
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    outputs:
+      version: ${{ steps.release.outputs.version }}
+      directory: ${{ steps.release.outputs.directory }}
+    steps:
+      - name: Checkout the release commit
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Install pnpm, Node.js, and dependencies
+        uses: pnpm/setup@fbda4c85fc2e1e08721cd8763afea8f48d60f024 # v3.0.0
+        with:
+          node-version-file: .nvmrc
+          cache: true
+          require-lockfile: true
+      - name: Check release version and configuration
+        id: release
+        run: node packages/extension/scripts/release/github.ts check
+      - name: Install compatibility fixture dependencies
+        run: pnpm run setup:compatibility
+      - name: Install Chromium
+        run: pnpm --filter @react-anatomy/extension exec playwright install --with-deps chromium
+      - name: Install Firefox
+        id: firefox
+        uses: browser-actions/setup-firefox@8058e910ee76e74bb76b7b2e5b61a55b3a65ed78 # v1.7.2
+        with:
+          firefox-version: latest
+      - name: Verify and prepare immutable packages
+        env:
+          FIREFOX_PATH: ${{ steps.firefox.outputs.firefox-path }}
+        run: pnpm run release:prepare
+      - name: Save verified packages
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: chrome-release-${{ github.run_id }}
+          path: ${{ steps.release.outputs.directory }}/
+          if-no-files-found: error
+          retention-days: 30
+          overwrite: true
+      - name: Upload failure diagnostics
+        if: failure()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: chrome-release-diagnostics-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            packages/extension/artifacts/check-*/
+            packages/extension/artifacts/firefox/
+            packages/extension/artifacts/rendering-fidelity/
+          if-no-files-found: ignore
+          retention-days: 7
+
+  submit:
+    name: Submit to Chrome for automatic publication
+    needs: prepare
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: write
+      id-token: write
+    steps:
+      - name: Checkout the verified release commit
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Install pnpm, Node.js, and dependencies
+        uses: pnpm/setup@fbda4c85fc2e1e08721cd8763afea8f48d60f024 # v3.0.0
+        with:
+          node-version-file: .nvmrc
+          cache: true
+          require-lockfile: true
+      - name: Download verified packages
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8
+        with:
+          name: chrome-release-${{ github.run_id }}
+          path: ${{ needs.prepare.outputs.directory }}
+      - name: Attach packages and restore any submission receipt
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: node packages/extension/scripts/release/github.ts assets
+      - name: Authenticate with Google
+        id: google
+        uses: google-github-actions/auth@7c6bc770dae815cd3e89ee6cdf493a5fab2cc093 # v3
+        with:
+          workload_identity_provider: ${{ vars.CHROME_WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: ${{ vars.CHROME_SERVICE_ACCOUNT }}
+          token_format: access_token
+          access_token_scopes: https://www.googleapis.com/auth/chromewebstore
+          access_token_lifetime: 1800s
+          create_credentials_file: false
+          export_environment_variables: false
+      - name: Submit for review and automatic publication
+        id: submit
+        env:
+          CHROME_ACCESS_TOKEN: ${{ steps.google.outputs.access_token }}
+          GH_TOKEN: ${{ github.token }}
+        run: pnpm run release:chrome submit
+      - name: Save submission receipt and summary
+        if: always() && steps.submit.outcome != 'skipped'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: node packages/extension/scripts/release/github.ts receipt

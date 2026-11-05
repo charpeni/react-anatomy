@@ -8,6 +8,7 @@ export interface Release {
   schema: number;
   version: string;
   verified: boolean;
+  sourceCommit?: string;
   firefoxId: string;
   artifacts: Record<'chrome' | 'firefox' | 'source', Artifact>;
 }
@@ -33,6 +34,14 @@ export interface ChromeResponse {
   lastAsyncUploadState?: string;
   crxVersion?: string;
   state?: string;
+  takenDown?: boolean;
+  publishedItemRevisionStatus?: ChromeRevisionStatus;
+  submittedItemRevisionStatus?: ChromeRevisionStatus;
+}
+
+export interface ChromeRevisionStatus {
+  state: string;
+  distributionChannels?: { crxVersion: string; deployPercentage: number }[];
 }
 
 export interface FirefoxListing {

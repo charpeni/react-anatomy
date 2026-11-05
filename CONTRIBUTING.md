@@ -81,7 +81,11 @@ GitHub Actions runs seven independent matrix jobs: Oxlint, Oxfmt, TypeScript, we
 
 `pnpm package:extension` and `pnpm package:firefox` create local ZIPs. `pnpm release:prepare` runs the release checks and creates verified browser and source archives. Preparation does not upload or publish anything.
 
-The separate `release:chrome` and `release:firefox` commands provide `plan`, `submit`, and `status` actions. Submission requires store credentials. Chrome submissions are staged for review; a listed Firefox submission may become public after approval.
+The separate `release:chrome` and `release:firefox` commands provide `plan`, `submit`, and `status` actions. Submission requires store credentials. Chrome submissions publish automatically to all users after approval; a listed Firefox submission may become public after approval.
+
+Publishing a stable GitHub Release triggers the Chrome release workflow. Its `v<version>` tag must match both the extension package and manifest versions and point to a commit on `main`. The workflow runs checks, attaches verified browser and source ZIPs with checksums, and submits Chrome for automatic publication. Drafts and prereleases do not submit. Firefox packages are attached but are not submitted by this workflow.
+
+Configure the repository variables `CHROME_WORKLOAD_IDENTITY_PROVIDER` and `CHROME_SERVICE_ACCOUNT` after connecting Google Workload Identity Federation to this repository's release workflow and linking the service account in the Chrome Web Store dashboard. Publishing uses a temporary token; no service-account key is stored in GitHub. Submission receipts are saved on the release so reruns can identify completed or uncertain attempts.
 
 Website deployment is documented in the [website guide](packages/website/README.md#deployment). It is independent of browser-store submissions.
 

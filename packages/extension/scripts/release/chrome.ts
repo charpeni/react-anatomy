@@ -3,6 +3,7 @@ import { readFile, writeFile } from 'node:fs/promises';
 import { join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { GoogleAuth } from 'google-auth-library';
+import { reserveChromeAttempt } from './github.ts';
 import {
   argumentsFor,
   json,
@@ -28,6 +29,61 @@ export function chromeEndpoints(publisher: string, item: string) {
     publish: `https://chromewebstore.googleapis.com/${resource}:publish`,
     status: `https://chromewebstore.googleapis.com/${resource}:fetchStatus`,
   };
+}
+
+// Compare numeric version segments (0.4.10 is newer than 0.4.9).
+function compareVersions(left: string, right: string) {
+  const a = left.split('.').map(Number);
+  const b = right.split('.').map(Number);
+  for (let index = 0; index < 4; index++) {
+    const difference = (a[index] || 0) - (b[index] || 0);
+    if (difference) {
+      return difference;
+    }
+  }
+  return 0;
+}
+
+export function chromeSubmissionAction(status: ChromeResponse, version: string) {
+  if (status.takenDown) {
+    throw new Error('Chrome has taken down the item. Resolve the store issue before releasing.');
+  }
+
+  const published = status.publishedItemRevisionStatus;
+  const channels = published?.distributionChannels || [];
+  if (channels.some((channel) => compareVersions(channel.crxVersion, version) > 0)) {
+    throw new Error('Chrome already has a newer version. Refusing to upload an older release.');
+  }
+  if (channels.some((channel) => compareVersions(channel.crxVersion, version) === 0)) {
+    if (
+      published?.state === 'PUBLISHED' &&
+      channels.every((channel) => channel.deployPercentage === 100)
+    ) {
+      return 'already-published';
+    }
+    throw new Error(
+      'This version already exists with a partial or non-public rollout. Check Chrome status.',
+    );
+  }
+
+  const submitted = status.submittedItemRevisionStatus;
+  if (submitted) {
+    const sameVersion = submitted.distributionChannels?.some(
+      (channel) => compareVersions(channel.crxVersion, version) === 0,
+    );
+    if (sameVersion && submitted.state === 'PENDING_REVIEW') {
+      return 'already-in-review';
+    }
+    if (sameVersion || !['CANCELLED', 'REJECTED'].includes(submitted.state)) {
+      throw new Error(
+        `Chrome has a ${submitted.state} submission. Check it before uploading another release.`,
+      );
+    }
+  }
+  if (status.lastAsyncUploadState === 'IN_PROGRESS') {
+    throw new Error('Another Chrome upload is still processing. Retry after it finishes.');
+  }
+  return 'upload';
 }
 
 export async function submitChrome({
@@ -75,17 +131,28 @@ export async function submitChrome({
     );
   }
 
-  // This command stages only the upload made above. CWS status cannot identify
+  // This command submits only the upload made above. CWS status cannot identify
   // an unrelated draft; publisher jobs and dashboard uploads must be serialized.
   await record({ outcome: 'upload-succeeded-review-outcome-unknown', upload });
 
   const submission = await request(endpoints.publish, {
     method: 'POST',
     headers: { ...headers, 'Content-Type': 'application/json' },
-    body: JSON.stringify({ publishType: 'STAGED_PUBLISH', blockOnWarnings: true }),
+    body: JSON.stringify({
+      publishType: 'DEFAULT_PUBLISH',
+      deployInfos: [{ deployPercentage: 100 }],
+      blockOnWarnings: true,
+    }),
   });
 
-  await record({ outcome: 'submitted-for-review-held-after-approval', upload, submission });
+  if (!['PENDING_REVIEW', 'PUBLISHED'].includes(submission.state || '')) {
+    await record({ outcome: 'unexpected-submission-state', upload, submission });
+    throw new Error(
+      `Chrome returned ${submission.state || 'an unknown state'}. Check status before retrying.`,
+    );
+  }
+
+  await record({ outcome: 'submitted-for-automatic-publication', upload, submission });
 
   return submission;
 }
@@ -113,13 +180,16 @@ async function cli() {
         itemId,
         artifact: release.artifacts.chrome,
         steps: [
+          'Check for an existing submission or a newer published version',
           'Upload prepared ZIP',
           'Wait for upload processing',
-          'Submit review with STAGED_PUBLISH',
+          'Submit review with DEFAULT_PUBLISH and 100% rollout',
           'Check status',
-          'Verify approved version and publish from dashboard',
+          'Chrome publishes automatically after approval',
         ],
-        credentials: ['Google Application Default Credentials with chromewebstore scope'],
+        credentials: [
+          'CHROME_ACCESS_TOKEN or Google Application Default Credentials with chromewebstore scope',
+        ],
         effect: 'Plan only. No authentication or store requests.',
       }),
     );
@@ -127,14 +197,16 @@ async function cli() {
     return;
   }
 
-  let token;
+  let token = process.env.CHROME_ACCESS_TOKEN;
 
   try {
-    const client = await new GoogleAuth({
-      scopes: ['https://www.googleapis.com/auth/chromewebstore'],
-    }).getClient();
+    if (!token) {
+      const client = await new GoogleAuth({
+        scopes: ['https://www.googleapis.com/auth/chromewebstore'],
+      }).getClient();
 
-    token = (await client.getAccessToken()).token;
+      token = (await client.getAccessToken()).token || undefined;
+    }
   } catch {
     throw new Error(
       'Google authentication failed. Configure Application Default Credentials for the service account linked to your publisher.',
@@ -159,11 +231,25 @@ async function cli() {
     return;
   }
 
+  const status = await requestJson<ChromeResponse>(endpoints.status, { headers });
+  const action = chromeSubmissionAction(status, release.version);
+  if (action !== 'upload') {
+    await writeFile(
+      join(release.directory, 'chrome-status.json'),
+      json({ version: release.version, outcome: action, status }),
+    );
+    console.log(`Chrome ${release.version}: ${action}. No upload was needed.`);
+    return;
+  }
+
   const record = await startAttempt(release, 'chrome', 'submit', {
     itemId,
     publisherId,
     sha256: release.artifacts.chrome.sha256,
+    publishType: 'DEFAULT_PUBLISH',
   });
+
+  await reserveChromeAttempt(release);
 
   await submitChrome({
     endpoints,
@@ -173,7 +259,7 @@ async function cli() {
     record,
   });
   console.log(
-    'Submitted to Chrome for review with publication held. Check status, then verify and publish the approved version in the dashboard.',
+    'Submitted to Chrome for review. Chrome will publish this version to all users automatically after approval.',
   );
 }
 

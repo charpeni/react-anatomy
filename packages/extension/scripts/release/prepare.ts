@@ -52,20 +52,9 @@ await main(async () => {
     await rm(join(extension, 'dist', name), { recursive: true, force: true });
   }
 
-  await node('scripts/build-extension.ts');
+  // Use the same Chrome suite as CI so new regressions also gate releases.
+  await pnpm(['test']);
   await node('scripts/build-extension.ts', ['--browser=firefox']);
-
-  for (const check of [
-    'scene',
-    'layers',
-    'extension',
-    'props',
-    'deep-hierarchy',
-    'capture-limits',
-    'layout-depth',
-  ]) {
-    await node(`scripts/check-${check}.ts`);
-  }
 
   await node(join(extension, 'node_modules/web-ext/bin/web-ext.js'), [
     'lint',
@@ -105,6 +94,7 @@ await main(async () => {
         version: manifest.version,
         preparedAt: new Date().toISOString(),
         verified: true,
+        sourceCommit: process.env.GITHUB_SHA,
         firefoxId: gecko.id,
         node: process.version,
         artifacts,
