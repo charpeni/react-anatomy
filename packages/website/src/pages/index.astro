@@ -87,16 +87,29 @@ import autoDepth from '../../public/media/auto-depth.png';
             </div>
             <div class="browser-route">
               <p class="route-store">Firefox Add-ons</p>
-              <a class="install-button" href="#browser-download-notice" data-store-placeholder>
-                <img src="/media/browsers/firefox.png" width="18" height="18" alt="" />
-                <span>Add to Firefox</span>
-                <span class="install-arrow" aria-hidden="true">
-                  ↗
+              <div class="browser-availability">
+                <img src="/media/browsers/firefox.png" width="20" height="20" alt="" />
+                <strong>Firefox</strong>
+                <span class="availability-help">
+                  <button
+                    class="availability-badge"
+                    type="button"
+                    aria-describedby="firefox-availability-tooltip"
+                  >
+                    Coming soon
+                  </button>
+                  <span
+                    class="availability-tooltip"
+                    id="firefox-availability-tooltip"
+                    role="tooltip"
+                    hidden
+                  >
+                    <span>The download link will appear here shortly.</span>
+                  </span>
                 </span>
-              </a>
+              </div>
             </div>
           </div>
-          <p id="browser-download-notice" class="browser-download-notice" role="status" hidden></p>
         </section>
 
         <section class="origin" aria-labelledby="origin-title">
@@ -355,17 +368,55 @@ import autoDepth from '../../public/media/auto-depth.png';
       document.addEventListener('keydown', releasePress, true);
       window.addEventListener('blur', releasePress);
 
-      const notice = document.getElementById('browser-download-notice');
-      document.querySelectorAll<HTMLAnchorElement>('[data-store-placeholder]').forEach((link) => {
-        link.addEventListener('click', (event) => {
-          if (!notice) {
-            return;
+      const availabilityHelp = document.querySelector<HTMLElement>('.availability-help');
+      const availabilityButton = availabilityHelp?.querySelector('button');
+      const availabilityTooltip = document.getElementById('firefox-availability-tooltip');
+
+      if (availabilityHelp && availabilityButton && availabilityTooltip) {
+        let pinned = false;
+        const showTooltip = () => {
+          availabilityTooltip.hidden = false;
+        };
+        const hideTooltip = () => {
+          pinned = false;
+          availabilityTooltip.hidden = true;
+        };
+
+        availabilityHelp.addEventListener('pointerenter', (event) => {
+          if (event.pointerType !== 'touch') {
+            showTooltip();
           }
-          event.preventDefault();
-          notice.hidden = false;
-          notice.textContent = 'Firefox download link coming soon.';
         });
-      });
+        availabilityHelp.addEventListener('pointerleave', () => {
+          if (!pinned && document.activeElement !== availabilityButton) {
+            hideTooltip();
+          }
+        });
+        availabilityButton.addEventListener('focus', showTooltip);
+        availabilityButton.addEventListener('blur', () => {
+          if (!availabilityHelp.matches(':hover')) {
+            hideTooltip();
+          }
+        });
+        availabilityButton.addEventListener('click', () => {
+          if (pinned) {
+            hideTooltip();
+          } else {
+            pinned = true;
+            showTooltip();
+          }
+        });
+        document.addEventListener('pointerdown', (event) => {
+          if (event.target instanceof Node && !availabilityHelp.contains(event.target)) {
+            hideTooltip();
+          }
+        });
+        document.addEventListener('keydown', (event) => {
+          if (event.key === 'Escape') {
+            hideTooltip();
+          }
+        });
+      }
     </script>
   </body>
 </html>
