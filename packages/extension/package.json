@@ -1,6 +1,6 @@
 {
   "name": "@react-anatomy/extension",
-  "version": "0.4.7",
+  "version": "0.4.8",
   "private": true,
   "description": "Explore React composition in a 3D browser DevTools panel",
   "keywords": [],
