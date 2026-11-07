@@ -54,6 +54,6 @@ The extension reads the running app’s React Fiber tree and captures the visibl
 
 Inspection runs in your browser. The extension does not upload captures or props to a service. A rendered snapshot may still load images and fonts referenced by the inspected page.
 
-The capture is a reconstruction, not the browser’s exact paint output. React’s private internals and production name minification also affect what can be shown. Read the [current limitations](/docs/limitations/) for the boundaries of this preview.
+The capture is a reconstruction, not the browser’s exact paint output. React’s private internals and production name minification also affect what can be shown. Read the [current limitations](/docs/limitations/) for what it can capture today.
 
 [Back to the website](/)

@@ -11,6 +11,13 @@ Explore the rendered component tree, pull the layout apart into layers, focus a 
 
 ![The Anatomy DevTools panel showing the component tree, exploded layout, and live props of a React page.](packages/extension/assets/extension.png)
 
+## Install
+
+- [Chrome Web Store](https://chromewebstore.google.com/detail/react-anatomy/cllgnlljmehhoemdlfngkkpienkglkml) — also installs in Brave and Edge
+- [Firefox Add-ons](https://addons.mozilla.org/en-US/firefox/addon/react-anatomy/)
+
+Then open DevTools on a React page and choose **Anatomy**. Requires desktop Chrome or Firefox 140+ and React DOM 18.2, 18.3, or 19.0–19.3. You can also try the [interactive example](https://react-anatomy.com/#demo) on [react-anatomy.com](https://react-anatomy.com) without installing anything. [Documentation](https://react-anatomy.com/docs/)
+
 ## Run locally
 
 Use Node **24.22.1** and the pinned **pnpm 12.16.1**:
@@ -21,7 +28,7 @@ pnpm install --frozen-lockfile
 pnpm build:extension
 ```
 
-Load `packages/extension/dist/extension` as an unpacked extension, then open **Anatomy** in DevTools. See the [extension guide](packages/extension/README.md) for Chrome and Firefox instructions. Store releases are being prepared.
+Load `packages/extension/dist/extension` as an unpacked extension, then open **Anatomy** in DevTools. See the [extension guide](packages/extension/README.md) for Chrome and Firefox development builds.
 
 To run the website and docs, use `pnpm dev`.
 

@@ -1,6 +1,6 @@
 ---
 title: Current limitations
-description: What this preview can capture and where the reconstruction can differ.
+description: What React Anatomy can capture and where the reconstruction can differ.
 ---
 
 For supported browser and React versions, see [Compatibility](/docs/compatibility/).
@@ -21,7 +21,7 @@ Components with no visible output can appear in the tree without having a useful
 
 ## Capture boundaries
 
-Captures cover the **top document’s current viewport**. They do not traverse iframe or shadow-root contents.
+Captures cover the **top document’s current viewport**. The 3D view includes the rendered content of open shadow roots, such as web components. Iframe contents and closed shadow roots are not captured.
 
 The 3D view reconstructs DOM output using computed styles. It is not an exact browser paint capture. Canvas, video, complex effects, external assets, and unusual positioning can look different from the source page.
 
@@ -29,7 +29,7 @@ The 3D view reconstructs DOM output using computed styles. It is not an exact br
 
 A capture starts with a budget of **2,000 components** and **300 nested levels**. When a limit is reached, the panel marks the hierarchy as partial and identifies the reason in Capture notes.
 
-**Capture more** raises the component budget to 5,000 and then 10,000, and can raise the nesting budget up to 1,000. The larger budget persists across manual capture and Follow changes on the same page. Navigation resets it. Captures that reach the maximum remain marked as partial.
+**Capture more** raises the limit that was reached: the component budget to 5,000, and the nesting budget to 600 and then 1,000. The larger budget persists across manual capture and Follow changes on the same page. Navigation resets it. Captures that reach the maximum remain marked as partial.
 
 Increasing Layer depth does not capture missing components. Depth changes how an existing capture is displayed; **Capture more** changes the traversal budget.
 

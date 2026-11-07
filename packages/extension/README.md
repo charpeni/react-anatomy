@@ -2,31 +2,35 @@
 
 See how your React page is built. In 3D.
 
-An early browser extension for understanding how a React page is composed. Capture the page, separate its component hierarchy in 3D, select components on the page, and focus on a subtree.
+A browser extension for understanding how a React page is composed. Capture the page, separate its component hierarchy in 3D, select components on the page, and focus on a subtree.
 
-The extension has separate Chrome and Firefox builds sharing the same inspector. Firefox requires desktop version 140 or later. A separate Edge store listing is deferred, and Safari is outside the release plan.
+The extension has separate Chrome and Firefox builds sharing the same inspector, published on the [Chrome Web Store](https://chromewebstore.google.com/detail/react-anatomy/cllgnlljmehhoemdlfngkkpienkglkml) and [Firefox Add-ons](https://addons.mozilla.org/en-US/firefox/addon/react-anatomy/). Both require desktop version 140 or later. Brave and Edge can install the Chrome Web Store release; a separate Edge store listing is deferred, and Safari is outside the release plan.
 
 The extension attaches to an already running React app. No npm package, source changes, or page reload is required. Captures and props are processed locally; recreating the page can load assets from their original servers. See the [privacy policy](../website/src/content/docs/privacy.md).
 
-## Install the preview
+## Install
 
-1. At the monorepo root, run `pnpm install --frozen-lockfile` and `pnpm run build:extension`. For an archive, run `pnpm run package:extension` and extract `packages/extension/artifacts/react-anatomy-extension-0.4.7.zip`.
+Install the published extension from the [Chrome Web Store](https://chromewebstore.google.com/detail/react-anatomy/cllgnlljmehhoemdlfngkkpienkglkml) or [Firefox Add-ons](https://addons.mozilla.org/en-US/firefox/addon/react-anatomy/). Then open DevTools on a React page and choose **Anatomy**; it may be under the `»` menu.
+
+### Load a development build in Chrome
+
+1. At the monorepo root, run `pnpm install --frozen-lockfile` and `pnpm run build:extension`. For an archive, run `pnpm run package:extension` and extract `packages/extension/artifacts/react-anatomy-extension-<version>.zip`.
 2. Open `chrome://extensions` (or `edge://extensions`) and enable **Developer mode**.
 3. Click **Load unpacked**, then select the extracted folder containing `manifest.json`, or `packages/extension/dist/extension` from a local build.
 4. Open your React app and open DevTools. Choose **Anatomy** in the panel tabs; it may be under the `»` menu. If DevTools was already open when you installed the extension, close and reopen DevTools.
 
 The first capture happens automatically. Undock DevTools when you want more room for the 3D scene. You can also click the React Anatomy extension button on the app's tab to open an inspector window. The toolbar route uses Chrome's temporary `activeTab` grant; open it again from the target page after navigation to a different origin.
 
-### Firefox
+### Load a development build in Firefox
 
-Run `pnpm run build:firefox` from the monorepo root, or `pnpm run package:firefox` for `packages/extension/artifacts/react-anatomy-firefox-0.4.7.zip`.
+Run `pnpm run build:firefox` from the monorepo root, or `pnpm run package:firefox` for `packages/extension/artifacts/react-anatomy-firefox-<version>.zip`.
 
 1. Extract the archive if using the ZIP.
 2. In desktop Firefox 140 or later, open `about:debugging#/runtime/this-firefox`.
 3. Choose **Load Temporary Add-on…** and select `manifest.json` from the extracted folder or `packages/extension/dist/firefox`.
 4. Open a React page, reopen Developer Tools, and choose **Anatomy**. The toolbar button also opens a separate inspector window.
 
-This is an unsigned development build. Firefox removes temporary add-ons when it restarts; permanent installation requires Mozilla signing. The ZIP is not a signed store release.
+This is an unsigned development build. Firefox removes temporary add-ons when it restarts; for a permanent installation, use the signed release from Firefox Add-ons.
 
 ## Explore the page
 
@@ -98,11 +102,11 @@ Frames represent React composition depth, not CSS z-index or browser compositing
 
 ## Current limits
 
-Captures start at 2,000 components and 300 nested levels. The partial-hierarchy banner identifies the limit and provides **Capture more**, increasing the budget up to 10,000 components or 1,000 nested levels. The larger budget is retained for manual and automatic recaptures of the same page and resets on navigation. Reaching a maximum remains explicitly marked as partial.
+Captures start at 2,000 components and 300 nested levels. The partial-hierarchy banner identifies the limit and provides **Capture more**, which raises the limit that was reached: components to 5,000, and nesting to 600 and then 1,000 levels. The larger budget is retained for manual and automatic recaptures of the same page and resets on navigation. Reaching a maximum remains explicitly marked as partial.
 
-This is an installable preview, not a Web Store release. The supported target is React DOM 18.2, 18.3, and 19.0–19.3 on desktop Chrome 140+ and Firefox 140+. The compatibility suite covers six pinned React releases, Excalidraw, and Next.js, with supplemental checks on react.dev and shadcn/ui. See the [compatibility workloads](validation/README.md) and [support policy](../website/src/content/docs/docs/compatibility.md). React's Fiber structure and DOM associations are private APIs, so broader React-version compatibility needs testing. Production builds may expose minified or anonymous component names. Server-only components are not present in the client Fiber tree.
+The supported target is React DOM 18.2, 18.3, and 19.0–19.3 on desktop Chrome 140+ and Firefox 140+. The compatibility suite covers six pinned React releases, Excalidraw, and Next.js, with supplemental checks on react.dev and shadcn/ui. See the [compatibility workloads](validation/README.md) and [support policy](../website/src/content/docs/docs/compatibility.md). React's Fiber structure and DOM associations are private APIs, so broader React-version compatibility needs testing. Production builds may expose minified or anonymous component names. Server-only components are not present in the client Fiber tree.
 
-Capture is for the top document and current viewport. Iframes and shadow roots are not traversed. DOM cloning approximates the painted result: pseudo-elements, complex clipping/transforms, video, cross-origin fonts, SVG references, and tainted canvas can differ from the original page. Relevant capture limits and font/canvas issues appear under **Capture notes**. Ordinary visible controls are captured, but password values are excluded.
+Capture is for the top document and current viewport. The visual snapshot includes the rendered content of open shadow roots, such as web components; iframe contents and closed shadow roots are not captured. DOM cloning approximates the painted result: pseudo-elements, complex clipping/transforms, video, cross-origin fonts, SVG references, and tainted canvas can differ from the original page. Relevant capture limits and font/canvas issues appear under **Capture notes**. Ordinary visible controls are captured, but password values are excluded.
 
 Follow mode observes rendered DOM and viewport changes; it is not a complete React commit profiler. A React-only change with no DOM mutation may require a manual capture. Source-map navigation, full-page capture, editing props, and persistent exports are not implemented.
 

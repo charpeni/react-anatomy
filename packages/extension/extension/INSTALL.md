@@ -1,4 +1,8 @@
-# React Anatomy — extension preview
+# React Anatomy
+
+The published release is on the Chrome Web Store: https://chromewebstore.google.com/detail/react-anatomy/cllgnlljmehhoemdlfngkkpienkglkml
+
+To load a build as an unpacked extension instead:
 
 1. Extract this archive to a folder you will keep.
 2. Open chrome://extensions or edge://extensions and enable Developer mode.
@@ -15,8 +19,8 @@ Wrappers that return exactly the same DOM output share a plane by default, so de
 
 **Layer depth** starts in **Auto**, which explores visible regions independently so deeper main content is not hidden behind a shallower sidebar. Extra containers and small details stay painted within their shown parent; every captured component remains in the tree. Selecting a component reveals its plane. Move the slider left to group more output into parents, or right to give deeper components separate planes. Click **Auto** to restore the overview. **Focus subtree** gives you an overview of just that component, including smaller local details. **Separation** changes spacing, not which components appear. Enabling **Wrappers** switches to manual depth and makes shared-output wrappers available as separate layers.
 
-A capture starts with a limit of 2,000 components and 300 nested levels. If a limit is reached, the banner shows which one and offers **Capture more**. Component limits increase to 5,000, then 10,000; nesting can increase up to 1,000 levels. Manual capture and Follow changes keep the larger budget for that page. Navigation resets it. Captures that reach the maximum remain clearly marked as partial.
+A capture starts with a limit of 2,000 components and 300 nested levels. If a limit is reached, the banner shows which one and offers **Capture more**. The component limit increases to 5,000; nesting increases to 600, then 1,000 levels. Manual capture and Follow changes keep the larger budget for that page. Navigation resets it. Captures that reach the maximum remain clearly marked as partial.
 
-No changes to your React app are required. This preview has been tested with React 19 in Chromium. It uses private React internals and a computed-style DOM snapshot, so compatibility and visual fidelity can vary. Capture covers the top document's current viewport; iframe and shadow-root contents are not included. No data is uploaded to a service.
+No changes to your React app are required. It supports React DOM 18.2, 18.3, and 19.0–19.3 on desktop Chrome 140 or later. It uses private React internals and a computed-style DOM snapshot, so compatibility and visual fidelity can vary. Capture covers the top document's current viewport. The rendered content of open shadow roots is included; iframe contents and closed shadow roots are not. No data is uploaded to a service.
 
 Fonts and their license texts are included in the licenses folder.
