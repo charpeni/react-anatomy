@@ -5,10 +5,15 @@ import { tmpdir } from 'node:os';
 import { basename, join } from 'node:path';
 import { createHmac } from 'node:crypto';
 import { archive, collect, extract, json, releaseAt, sha256, startAttempt } from './common.ts';
-import type { Artifact, ChromeResponse, Release, ReleaseReceipt } from './types.ts';
+import type { Artifact, ChromeResponse, FirefoxVersion, Release, ReleaseReceipt } from './types.ts';
 import { chromeEndpoints, chromeSubmissionAction, submitChrome } from './chrome.ts';
 import { attachReleaseAssets, sameRelease, validateRelease } from './github.ts';
-import { amoToken, firefoxSignArguments } from './firefox.ts';
+import {
+  amoToken,
+  firefoxSignArguments,
+  firefoxSubmissionAction,
+  firefoxVersion,
+} from './firefox.ts';
 
 const endpoints = chromeEndpoints('publisher', 'a'.repeat(32));
 const bytes = new Uint8Array([1, 2, 3]);
@@ -244,6 +249,74 @@ test('Firefox submits listed with source and metadata; credentials stay out of a
   );
 });
 
+test('Firefox reruns skip complete listed versions and stop on ambiguous or incomplete submissions', () => {
+  const status: FirefoxVersion = {
+    version,
+    channel: 'listed',
+    source: 'https://example.org/source.zip',
+    file: { status: 'public' },
+  };
+  assert.equal(firefoxSubmissionAction(null, version), 'upload');
+  assert.equal(firefoxSubmissionAction(status, version), 'already-published');
+  assert.equal(
+    firefoxSubmissionAction({ ...status, file: { status: 'unreviewed' } }, version),
+    'already-in-review',
+  );
+  for (const override of [
+    { version: '9.9.9' },
+    { channel: 'unlisted' },
+    { channel: 'enterprise' },
+    { is_disabled: true },
+    { source: null },
+    { source: undefined },
+    { file: { status: 'disabled' } },
+    { file: { status: 'unexpected' } },
+    { file: undefined },
+  ]) {
+    assert.throws(() => firefoxSubmissionAction({ ...status, ...override }, version));
+  }
+});
+
+test('Firefox preflight treats only a missing version as new; authentication and service failures stop', async () => {
+  const expected: FirefoxVersion = { version, channel: 'listed' };
+  const result = await firefoxVersion(
+    '{addon-id}',
+    version,
+    'JWT test-token',
+    async (url, options) => {
+      assert.equal(
+        String(url),
+        `https://addons.mozilla.org/api/v5/addons/addon/%7Baddon-id%7D/versions/v${version}/`,
+      );
+      assert.equal(new Headers(options?.headers).get('Authorization'), 'JWT test-token');
+      assert.equal(options?.redirect, 'error');
+      return Response.json(expected);
+    },
+  );
+  assert.deepEqual(result, expected);
+  assert.equal(
+    await firefoxVersion(
+      'id',
+      version,
+      'JWT test-token',
+      async () => new Response(null, { status: 404 }),
+    ),
+    null,
+  );
+  for (const status of [401, 403, 429, 500, 503]) {
+    await assert.rejects(
+      firefoxVersion('id', version, 'JWT test-token', async () => new Response(null, { status })),
+      new RegExp(`HTTP ${status}`),
+    );
+  }
+  await assert.rejects(
+    firefoxVersion('id', version, 'JWT test-token', async () => {
+      throw new Error('Connection lost');
+    }),
+    /Connection lost/,
+  );
+});
+
 test('Archives reproduce deterministically; unsafe inputs and modified packages are rejected', async () => {
   const directory = await mkdtemp(join(tmpdir(), 'anatomy-release-'));
 
@@ -306,17 +379,26 @@ test('Archives reproduce deterministically; unsafe inputs and modified packages 
     remote.set('chrome.zip', chrome);
     remote.set('source.zip', Buffer.from(packed));
 
-    const attempt = { version, sha256: release.artifacts.chrome.sha256, outcome: 'unknown' };
-    remote.set('chrome-submit-attempt.json', Buffer.from(json({ ...attempt, sha256: 'wrong' })));
-    await assert.rejects(attachReleaseAssets(release, store), /different release bytes/);
-    remote.set('chrome-submit-attempt.json', Buffer.from(json(attempt)));
-    await attachReleaseAssets(release, store);
-    await assert.rejects(startAttempt(release, 'chrome', 'submit'), /already attempted/);
-    assert.deepEqual(
-      JSON.parse(await readFile(join(directory, 'chrome-submit.json'), 'utf8')),
-      attempt,
-    );
-    await rm(join(directory, 'chrome-submit.json'));
+    for (const browser of ['chrome', 'firefox'] as const) {
+      const attempt = { version, sha256: release.artifacts[browser].sha256, outcome: 'unknown' };
+      const marker = `${browser}-submit-attempt.json`;
+      const receipt = `${browser}-submit.json`;
+      remote.set(marker, Buffer.from(json({ ...attempt, sha256: 'wrong' })));
+      await assert.rejects(attachReleaseAssets(release, store), /different release bytes/);
+      remote.set(marker, Buffer.from(json(attempt)));
+      await attachReleaseAssets(release, store);
+      await assert.rejects(startAttempt(release, browser, 'submit'), /already attempted/);
+      assert.deepEqual(JSON.parse(await readFile(join(directory, receipt), 'utf8')), attempt);
+
+      // A completed receipt takes precedence over the original unknown marker.
+      const complete = { ...attempt, outcome: 'submitted' };
+      remote.set(receipt, Buffer.from(json(complete)));
+      await attachReleaseAssets(release, store);
+      assert.deepEqual(JSON.parse(await readFile(join(directory, receipt), 'utf8')), complete);
+      await rm(join(directory, receipt));
+      remote.delete(marker);
+      remote.delete(receipt);
+    }
 
     const finish = await startAttempt(release, 'chrome', 'submit');
 

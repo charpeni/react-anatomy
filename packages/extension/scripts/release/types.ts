@@ -21,6 +21,16 @@ export interface ReleaseReceipt {
   outcome: string;
   [key: string]: unknown;
 }
+export type Store = 'chrome' | 'firefox';
+export interface FirefoxVersion {
+  id?: number;
+  version: string;
+  channel: string;
+  reviewed?: string | null;
+  is_disabled?: boolean;
+  file?: { status?: string };
+  source?: string | null;
+}
 
 export interface ExtensionManifest {
   version: string;
@@ -46,6 +56,6 @@ export interface ChromeRevisionStatus {
 
 export interface FirefoxListing {
   summary?: Record<string, string>;
-  categories?: string[];
+  categories?: Record<string, string[]>;
   version?: { license?: string };
 }

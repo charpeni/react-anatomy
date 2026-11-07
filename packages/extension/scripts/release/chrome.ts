@@ -3,7 +3,7 @@ import { readFile, writeFile } from 'node:fs/promises';
 import { join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { GoogleAuth } from 'google-auth-library';
-import { reserveChromeAttempt } from './github.ts';
+import { reserveSubmissionAttempt } from './github.ts';
 import {
   argumentsFor,
   json,
@@ -249,7 +249,7 @@ async function cli() {
     publishType: 'DEFAULT_PUBLISH',
   });
 
-  await reserveChromeAttempt(release);
+  await reserveSubmissionAttempt(release, 'chrome');
 
   await submitChrome({
     endpoints,

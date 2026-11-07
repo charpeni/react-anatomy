@@ -3,7 +3,7 @@ import { appendFile, copyFile, mkdtemp, readFile, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import type { LocatedRelease, Release } from './types.ts';
+import type { LocatedRelease, Release, Store } from './types.ts';
 import { extension, main, readJson, releaseAt, repository, run, sha256 } from './common.ts';
 
 interface ReleaseEvent {
@@ -25,7 +25,7 @@ export function validateRelease(
     release.prerelease
   ) {
     throw new Error(
-      'Only published stable releases of charpeni/react-anatomy can submit to Chrome.',
+      'Only published stable releases of charpeni/react-anatomy can submit to browser stores.',
     );
   }
   if (
@@ -144,18 +144,23 @@ export async function attachReleaseAssets(release: LocatedRelease, store: Releas
 
     // Recover the attempt on a fresh runner. An uncertain upload must not be
     // repeated just because a GitHub Actions job was retried.
-    const receipt = existing.includes('chrome-submit.json')
-      ? 'chrome-submit.json'
-      : existing.includes('chrome-submit-attempt.json')
-        ? 'chrome-submit-attempt.json'
-        : null;
-    if (receipt) {
-      await store.download(receipt, temporary);
-      const saved = await readJson<{ version: string; sha256: string }>(join(temporary, receipt));
-      if (saved.version !== release.version || saved.sha256 !== release.artifacts.chrome.sha256) {
-        throw new Error('The previous Chrome attempt belongs to different release bytes.');
+    for (const browser of ['chrome', 'firefox'] as const) {
+      const receipt = existing.includes(`${browser}-submit.json`)
+        ? `${browser}-submit.json`
+        : existing.includes(`${browser}-submit-attempt.json`)
+          ? `${browser}-submit-attempt.json`
+          : null;
+      if (receipt) {
+        await store.download(receipt, temporary);
+        const saved = await readJson<{ version: string; sha256: string }>(join(temporary, receipt));
+        if (
+          saved.version !== release.version ||
+          saved.sha256 !== release.artifacts[browser].sha256
+        ) {
+          throw new Error(`The previous ${browser} attempt belongs to different release bytes.`);
+        }
+        await copyFile(join(temporary, receipt), join(release.directory, `${browser}-submit.json`));
       }
-      await copyFile(join(temporary, receipt), join(release.directory, 'chrome-submit.json'));
     }
     for (const file of files.filter((name) => !existing.includes(name))) {
       await store.upload(join(release.directory, file));
@@ -165,20 +170,20 @@ export async function attachReleaseAssets(release: LocatedRelease, store: Releas
   }
 }
 
-export async function reserveChromeAttempt(release: LocatedRelease) {
+export async function reserveSubmissionAttempt(release: LocatedRelease, store: Store) {
   if (process.env.GITHUB_ACTIONS !== 'true') {
     return;
   }
   const { tag, repo } = await context();
-  const marker = join(release.directory, 'chrome-submit-attempt.json');
-  await copyFile(join(release.directory, 'chrome-submit.json'), marker);
+  const marker = join(release.directory, `${store}-submit-attempt.json`);
+  await copyFile(join(release.directory, `${store}-submit.json`), marker);
   // Never clobber the initial marker. It is durable before any store mutation.
   await run('gh', ['release', 'upload', tag, marker, '--repo', repo], repository);
 }
 
-async function receipt() {
+async function receipt(store: Store) {
   const { tag, repo, release } = await prepared();
-  for (const file of ['chrome-submit.json', 'chrome-status.json']) {
+  for (const file of [`${store}-submit.json`, `${store}-status.json`]) {
     let contents: string;
     try {
       contents = await readFile(join(release.directory, file), 'utf8');
@@ -206,11 +211,6 @@ async function cli() {
   const command = process.argv[2];
   if (command === 'check') {
     const { version } = await context();
-    for (const variable of ['CHROME_WORKLOAD_IDENTITY_PROVIDER', 'CHROME_SERVICE_ACCOUNT']) {
-      if (!process.env[variable]) {
-        throw new Error(`Configure the GitHub Actions variable ${variable} before releasing.`);
-      }
-    }
     if (process.env.GITHUB_OUTPUT) {
       await appendFile(
         process.env.GITHUB_OUTPUT,
@@ -221,7 +221,11 @@ async function cli() {
     const { tag, repo, release } = await prepared();
     await attachReleaseAssets(release, assetStore(tag, repo));
   } else if (command === 'receipt') {
-    await receipt();
+    const store = process.argv[3] || 'chrome';
+    if (store !== 'chrome' && store !== 'firefox') {
+      throw new Error('Choose a receipt store: chrome or firefox.');
+    }
+    await receipt(store);
   } else {
     throw new Error('Choose: check, assets, receipt.');
   }

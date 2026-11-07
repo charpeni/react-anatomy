@@ -1,4 +1,4 @@
-import type { FirefoxListing } from './types.ts';
+import type { FirefoxListing, FirefoxVersion } from './types.ts';
 import { createHmac, randomUUID, type KeyLike } from 'node:crypto';
 import { readFile, writeFile, mkdir } from 'node:fs/promises';
 import { join, resolve } from 'node:path';
@@ -13,9 +13,55 @@ import {
   readJson,
   releaseAt,
   repository,
-  requestJson,
   startAttempt,
 } from './common.ts';
+import { reserveSubmissionAttempt } from './github.ts';
+
+export async function firefoxVersion(
+  addonId: string,
+  version: string,
+  authorization: string,
+  request: typeof fetch = fetch,
+): Promise<FirefoxVersion | null> {
+  const url = `https://addons.mozilla.org/api/v5/addons/addon/${encodeURIComponent(addonId)}/versions/v${encodeURIComponent(version)}/`;
+  const response = await request(url, {
+    headers: { Authorization: authorization },
+    signal: AbortSignal.timeout(30_000),
+    redirect: 'error',
+  });
+  if (response.status === 404) {
+    return null;
+  }
+  if (!response.ok) {
+    throw new Error(
+      `Mozilla status request failed (HTTP ${response.status}). No upload was attempted by this request.`,
+    );
+  }
+  return response.json();
+}
+
+export function firefoxSubmissionAction(status: FirefoxVersion | null, version: string) {
+  if (!status) {
+    return 'upload';
+  }
+  if (
+    status.version !== version ||
+    status.channel !== 'listed' ||
+    status.is_disabled ||
+    !status.source
+  ) {
+    throw new Error(
+      'This Firefox version already exists but is disabled, unlisted, or missing source. Check AMO before retrying.',
+    );
+  }
+  if (status.file?.status === 'public') {
+    return 'already-published';
+  }
+  if (status.file?.status === 'unreviewed') {
+    return 'already-in-review';
+  }
+  throw new Error('This Firefox version has an unexpected status. Check AMO before retrying.');
+}
 
 export function firefoxSignArguments({
   directory,
@@ -82,35 +128,51 @@ async function cli() {
     throw new Error('Set WEB_EXT_API_KEY and WEB_EXT_API_SECRET from AMO API credentials.');
   }
 
-  if (options.command === 'status') {
-    const url = `https://addons.mozilla.org/api/v5/addons/addon/${encodeURIComponent(release.firefoxId)}/versions/v${encodeURIComponent(release.version)}/`;
-    const result = await requestJson(url, {
-      headers: { Authorization: `JWT ${amoToken(key, secret)}` },
-    });
-    const status = {
-      id: result.id,
-      version: result.version,
-      channel: result.channel,
-      reviewed: result.reviewed,
-      disabled: result.is_disabled,
-      file: result.file,
-      sourceAttached: Boolean(result.source),
-    };
+  const result = await firefoxVersion(
+    release.firefoxId,
+    release.version,
+    `JWT ${amoToken(key, secret)}`,
+  );
+  const status = result
+    ? {
+        id: result.id,
+        version: result.version,
+        channel: result.channel,
+        reviewed: result.reviewed,
+        disabled: result.is_disabled,
+        file: result.file,
+        sourceAttached: Boolean(result.source),
+      }
+    : null;
+  await writeFile(
+    join(release.directory, 'firefox-status.json'),
+    json({ checkedAt: new Date().toISOString(), status }),
+  );
 
-    await writeFile(
-      join(release.directory, 'firefox-status.json'),
-      json({ checkedAt: new Date().toISOString(), status }),
-    );
+  if (options.command === 'status') {
+    if (!result) {
+      throw new Error(`Firefox ${release.version} has not been found on AMO.`);
+    }
     console.log(json(status));
 
     return;
   }
 
+  const action = firefoxSubmissionAction(result, release.version);
+  if (action !== 'upload') {
+    console.log(`Firefox ${release.version}: ${action}. No upload was needed.`);
+    return;
+  }
+
   const listing = await readJson<FirefoxListing>(metadata);
 
-  if (!listing.summary?.['en-US'] || !listing.categories?.length || !listing.version?.license) {
+  if (
+    !listing.summary?.['en-US'] ||
+    !listing.categories?.firefox?.length ||
+    !listing.version?.license
+  ) {
     throw new Error(
-      'Firefox metadata needs summary.en-US, categories, and version.license. Review the listing before submission.',
+      'Firefox metadata needs summary.en-US, categories.firefox, and version.license. Review the listing before submission.',
     );
   }
 
@@ -118,6 +180,7 @@ async function cli() {
     addonId: release.firefoxId,
     sha256: release.artifacts.firefox.sha256,
   });
+  await reserveSubmissionAttempt(release, 'firefox');
   const submission = join(release.directory, 'firefox-submission');
 
   await mkdir(submission, { recursive: true });

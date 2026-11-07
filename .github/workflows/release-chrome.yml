@@ -1,4 +1,5 @@
-name: Release Chrome extension
+# Keep this filename: Google's Workload Identity trust checks its workflow_ref.
+name: Release browser extensions
 
 on:
   release:
@@ -13,8 +14,6 @@ concurrency:
 
 env:
   ASTRO_TELEMETRY_DISABLED: '1'
-  CHROME_WORKLOAD_IDENTITY_PROVIDER: ${{ vars.CHROME_WORKLOAD_IDENTITY_PROVIDER }}
-  CHROME_SERVICE_ACCOUNT: ${{ vars.CHROME_SERVICE_ACCOUNT }}
 
 jobs:
   prepare:
@@ -22,6 +21,8 @@ jobs:
     if: github.repository == 'charpeni/react-anatomy' && !github.event.release.prerelease && !github.event.release.draft
     runs-on: ubuntu-latest
     timeout-minutes: 40
+    permissions:
+      contents: write
     outputs:
       version: ${{ steps.release.outputs.version }}
       directory: ${{ steps.release.outputs.directory }}
@@ -54,10 +55,15 @@ jobs:
         env:
           FIREFOX_PATH: ${{ steps.firefox.outputs.firefox-path }}
         run: pnpm run release:prepare
+
+      - name: Attach verified packages to GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: node packages/extension/scripts/release/github.ts assets
       - name: Save verified packages
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
-          name: chrome-release-${{ github.run_id }}
+          name: browser-release-${{ github.run_id }}
           path: ${{ steps.release.outputs.directory }}/
           if-no-files-found: error
           retention-days: 30
@@ -66,7 +72,7 @@ jobs:
         if: failure()
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
-          name: chrome-release-diagnostics-${{ github.run_id }}-${{ github.run_attempt }}
+          name: browser-release-diagnostics-${{ github.run_id }}-${{ github.run_attempt }}
           path: |
             packages/extension/artifacts/check-*/
             packages/extension/artifacts/firefox/
@@ -79,6 +85,9 @@ jobs:
     needs: prepare
     runs-on: ubuntu-latest
     timeout-minutes: 15
+    environment:
+      name: chrome
+      deployment: false
     permissions:
       contents: write
       id-token: write
@@ -98,7 +107,7 @@ jobs:
       - name: Download verified packages
         uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8
         with:
-          name: chrome-release-${{ github.run_id }}
+          name: browser-release-${{ github.run_id }}
           path: ${{ needs.prepare.outputs.directory }}
       - name: Attach packages and restore any submission receipt
         env:
@@ -125,4 +134,61 @@ jobs:
         if: always() && steps.submit.outcome != 'skipped'
         env:
           GH_TOKEN: ${{ github.token }}
-        run: node packages/extension/scripts/release/github.ts receipt
+        run: node packages/extension/scripts/release/github.ts receipt chrome
+
+  submit-firefox:
+    name: Submit Firefox for automatic publication
+    needs: prepare
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    environment:
+      name: firefox
+      deployment: false
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout release commit
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Install pnpm, Node.js, and dependencies
+        uses: pnpm/setup@fbda4c85fc2e1e08721cd8763afea8f48d60f024 # v3.0.0
+        with:
+          node-version-file: .nvmrc
+          cache: true
+          require-lockfile: true
+
+      - name: Download verified packages
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8
+        with:
+          name: browser-release-${{ github.run_id }}
+          path: ${{ needs.prepare.outputs.directory }}
+
+      - name: Verify packages and restore any submission receipt
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: node packages/extension/scripts/release/github.ts assets
+
+      - name: Submit listed Firefox version with source code
+        id: submit
+        env:
+          WEB_EXT_API_KEY: ${{ secrets.WEB_EXT_API_KEY }}
+          WEB_EXT_API_SECRET: ${{ secrets.WEB_EXT_API_SECRET }}
+          GH_TOKEN: ${{ github.token }}
+        run: pnpm run release:firefox submit
+
+      - name: Check Mozilla submission status
+        if: always() && steps.submit.outcome != 'skipped'
+        env:
+          WEB_EXT_API_KEY: ${{ secrets.WEB_EXT_API_KEY }}
+          WEB_EXT_API_SECRET: ${{ secrets.WEB_EXT_API_SECRET }}
+        run: pnpm run release:firefox status
+
+      - name: Save submission receipt and summary
+        if: always() && steps.submit.outcome != 'skipped'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: node packages/extension/scripts/release/github.ts receipt firefox
