@@ -505,6 +505,10 @@ function Splitter({
   );
 }
 
+// Keep slider percentages independent from the scene's spacing units.
+const SEPARATION_SCALE = 1.5;
+const DEFAULT_SEPARATION = 55;
+
 function Viewer({
   snapshot,
   picked,
@@ -546,7 +550,7 @@ function Viewer({
   );
 
   const maxDepth = hierarchy.maxDepth;
-  const [explode, setExplode] = useState(focus ? 60 : 0);
+  const [explode, setExplode] = useState(focus ? DEFAULT_SEPARATION * SEPARATION_SCALE : 0);
   const [depth, setDepth] = useState(() => hierarchy.initialDepth);
   const [automaticDepth, setAutomaticDepth] = useState(true);
   const [rotation, setRotation] = useState(focus ? { x: 22, y: -30 } : { x: 0, y: 0 });
@@ -818,7 +822,7 @@ function Viewer({
   }
 
   function reveal() {
-    setExplode(explode ? 0 : 65);
+    setExplode(explode ? 0 : DEFAULT_SEPARATION * SEPARATION_SCALE);
     setRotation(explode ? { x: 0, y: 0 } : { x: 24, y: -32 });
   }
 
@@ -1354,10 +1358,10 @@ function Viewer({
               type="range"
               min="0"
               max="100"
-              value={explode}
-              onChange={(e) => setExplode(+e.target.value)}
+              value={Math.round(explode / SEPARATION_SCALE)}
+              onChange={(e) => setExplode(+e.target.value * SEPARATION_SCALE)}
             />
-            <output>{Math.round(explode)}%</output>
+            <output>{Math.round(explode / SEPARATION_SCALE)}%</output>
           </label>
           <span className="toolbar-separator" />
           <div className="depth-control">

@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "React Anatomy",
-  "version": "0.4.8",
+  "version": "0.4.9",
   "description": "Explore how a React page is composed with an exploded 3D component hierarchy.",
   "permissions": ["activeTab", "scripting"],
   "devtools_page": "devtools.html",

@@ -10,6 +10,9 @@
   },
   "version": {
     "license": "MIT",
+    "release_notes": {
+      "en-US": "- Increased the maximum distance between component layers by 50%, with the Separation slider still running from 0–100%.\n- Set default separation to 55% when exploding the page or focusing a subtree.\n- Updated the bundled Chrome and Firefox installation notes to reflect the published store versions and current capture limitations."
+    },
     "approval_notes": "React Anatomy is a developer tool for inspecting the current React page. Open a React DOM page, open Developer Tools, and select Anatomy. The toolbar button provides a separate inspector using activeTab and scripting. The source archive includes BUILDING.md with Node/pnpm versions and reproducible build commands. TypeScript and JSX are bundled with esbuild without minification. innerHTML is used by React and by an inert template parser that strips active content from captured page markup. The extension targets desktop Firefox 140 and later.\n\nData disclosure: websiteContent is declared because visual reconstruction may request the inspected page's original images, CSS backgrounds, and fonts from their original URLs. These requests go directly to the original asset hosts; they are not sent to a React Anatomy service. Captures, component relationships, and inspected props remain in browser memory. The extension has no analytics or telemetry. Pirsch is used by the separate public website and is not included in either extension package.\n\nBuild from the attached source archive using Node 24.22.1 and pnpm 12.16.1; follow BUILDING.md. The extension is written in TypeScript/TSX and bundled with esbuild."
   }
 }
