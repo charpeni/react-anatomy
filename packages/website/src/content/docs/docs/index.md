@@ -5,7 +5,7 @@ description: Understand how a React page is composed. React Anatomy connects a r
 
 React Anatomy is a browser extension for understanding how a React page is composed. It adds an **Anatomy** panel to DevTools that connects what you see on a running page with the components React rendered for it, and separates the page into layers you can explore in 3D.
 
-[Install React Anatomy from the Chrome Web Store](https://chromewebstore.google.com/detail/react-anatomy/cllgnlljmehhoemdlfngkkpienkglkml), open a React page, then choose **Anatomy** in DevTools. You can also [explore the interactive example](/#demo), which runs the inspector against a bundled sample app without installing the extension.
+Install React Anatomy from the [Chrome Web Store](https://chromewebstore.google.com/detail/react-anatomy/cllgnlljmehhoemdlfngkkpienkglkml) or [Firefox Add-ons](https://addons.mozilla.org/en-US/firefox/addon/react-anatomy/), open a React page, then choose **Anatomy** in DevTools. You can also [explore the interactive example](/#demo), which runs the inspector against a bundled sample app without installing the extension.
 
 ## The mental model
 

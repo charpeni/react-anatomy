@@ -308,65 +308,6 @@ h1 span {
   height: 16px;
   object-fit: contain;
 }
-.browser-availability {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 9px;
-  min-height: 36px;
-  font-size: 13px;
-}
-.browser-availability img {
-  flex: none;
-  object-fit: contain;
-}
-.browser-availability strong {
-  font-weight: 600;
-}
-.availability-help {
-  position: relative;
-  display: inline-flex;
-}
-.availability-badge {
-  display: inline-flex;
-  align-items: center;
-  min-height: 26px;
-  padding: 3px 7px;
-  border: 1px solid #e2e4e8;
-  border-radius: 4px;
-  background: #f0f1f3;
-  color: #565c65;
-  font-size: 11px;
-  font-weight: 500;
-  line-height: 1.5;
-  white-space: nowrap;
-  cursor: pointer;
-}
-.availability-badge:hover {
-  border-color: #bec3cc;
-}
-.availability-tooltip {
-  position: absolute;
-  top: 100%;
-  left: 50%;
-  z-index: 2;
-  width: 240px;
-  max-width: calc(100vw - 40px);
-  padding-top: 8px;
-  transform: translateX(-50%);
-  font-size: 12px;
-  font-weight: 400;
-  line-height: 1.6;
-  color: #565c65;
-}
-.availability-tooltip > span {
-  display: block;
-  padding: 10px 12px;
-  border: 1px solid var(--line);
-  border-radius: 6px;
-  background: #fff;
-  box-shadow: 0 4px 16px #20222612;
-}
 .origin {
   display: grid;
   grid-template-columns: 1fr 1fr;
