@@ -10,4 +10,4 @@ Use it to find your way around an unfamiliar codebase, learn how React composes 
 
 To begin, open a React page, open Chrome DevTools, and select Anatomy. No package installation or application code changes are needed.
 
-React Anatomy targets React DOM 18.2–19.3 on desktop Chrome 140 and later. Production builds may show shortened or anonymous component names. Inspection covers the current page viewport; server-only components, iframe contents, and shadow DOM are not included.
+React Anatomy targets React DOM 18.2–19.3 on desktop Chrome 140 and later. Production builds may show shortened or anonymous component names. Inspection covers the current page viewport, including the rendered content of open shadow roots; server-only components, iframe contents, and closed shadow roots are not included.
