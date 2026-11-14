@@ -112,6 +112,6 @@ Follow mode observes rendered DOM and viewport changes; it is not a complete Rea
 
 ## Original experience studies
 
-The original standalone prototypes are retained. Run `pnpm run build:prototype` and open `dist/prototype.html`, or `pnpm --filter @react-anatomy/extension run dev:prototype`. The `?variant=A|B|C` switch compares the spatial workbench, subtree lens, and depth atlas. Their original source is also captured on `prototype/react-hierarchy`.
+The original standalone prototypes are retained. Run `pnpm run build:prototype` and open `dist/prototype.html`, or `pnpm --filter @react-anatomy/extension run dev:prototype`. The `?variant=A|B|C` switch compares the spatial workbench, subtree lens, and depth atlas. Their source is `src/prototype.tsx` and `src/capture.ts`, which the extension bundles do not include.
 
 Fonts: DM Sans and IBM Plex Mono, distributed under the SIL Open Font License; license texts are in `licenses/`.
