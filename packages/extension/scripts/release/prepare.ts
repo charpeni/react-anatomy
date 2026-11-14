@@ -63,6 +63,15 @@ await main(async () => {
   ]);
   await node('scripts/check-firefox.ts');
 
+  // The supported React range rests on private Fiber internals. Check every
+  // pinned React release against the exact bundles that are about to be packaged.
+  await node('scripts/compatibility/build.ts');
+  await node('scripts/compatibility/build-next.ts');
+
+  for (const browser of ['chrome', 'firefox']) {
+    await node('scripts/compatibility/check.ts', [`--browser=${browser}`]);
+  }
+
   if (sha256(archive(await sourceFiles(manifest.version))) !== sourceHash) {
     throw new Error('Release inputs changed while checks ran. Prepare again from stable sources.');
   }
@@ -106,6 +115,7 @@ await main(async () => {
           'chrome-regressions',
           'mozilla-lint',
           'firefox-regressions',
+          'react-compatibility',
         ],
       }),
     );
