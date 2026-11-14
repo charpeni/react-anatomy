@@ -1086,6 +1086,8 @@ export function pageAgent(request: PageRequest = { action: 'capture' }): PageRes
 
     // Serialize DOM once, not once per component. The viewer splits this inert
     // snapshot at host IDs as the user expands and collapses the hierarchy.
+    // It re-checks the markup with its own copy of these lists in snapshot.ts;
+    // scripts/check-sanitizer.ts keeps the two aligned.
     const forbidden = new Set([
       'SCRIPT',
       'STYLE',
