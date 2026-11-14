@@ -9,6 +9,7 @@ export function makeSnapshotRenderer(
 
   // The inspected page is untrusted, including its DOM APIs. Re-check the
   // serialized markup in the extension before inserting it into our document.
+  // scripts/check-sanitizer.ts keeps these lists aligned with page-agent.ts.
   const forbidden = new Set([
     'SCRIPT',
     'STYLE',
