@@ -272,6 +272,69 @@ try {
     await evaluate(`document.querySelector('.tree-panel').getBoundingClientRect().width`),
     oldWidth + 10,
   );
+
+  // Shortcuts are registered once, so each must act on the view as it is now.
+  const press = (key: string) =>
+    evaluate(
+      `document.body.dispatchEvent(new KeyboardEvent('keydown',{key:${JSON.stringify(key)},bubbles:true}))`,
+    );
+  const explodeLabel = () =>
+    evaluate(`document.querySelector('.explode-button').getAttribute('aria-label')`);
+
+  assert.equal(await explodeLabel(), 'Assemble');
+  await press('0');
+  await harness.until(async () => (await explodeLabel()) === 'Explode view', '0 did not reset');
+  await press(' ');
+  await harness.until(async () => (await explodeLabel()) === 'Assemble', 'Space did not explode');
+  await press(' ');
+  await harness.until(
+    async () => (await explodeLabel()) === 'Explode view',
+    'Space did not assemble the exploded view',
+  );
+  await press('/');
+  assert.equal(
+    await evaluate(`document.activeElement.getAttribute('aria-label')`),
+    'Find a component',
+  );
+  await evaluate(`document.activeElement.blur()`);
+
+  const beforeShortcutCapture = await captureCount();
+
+  await press('r');
+  await harness.until(
+    async () =>
+      (await captureCount()) !== beforeShortcutCapture &&
+      (await evaluate(`!document.querySelector('[aria-label="Capture"]').disabled`)),
+    'R did not capture',
+  );
+  await press('c');
+  await harness.until(
+    () => evaluate(`!!document.querySelector('.picker-banner')`),
+    'C did not start picking',
+  );
+  await press('c');
+  await harness.until(
+    () => evaluate(`!document.querySelector('.picker-banner')`),
+    'C did not cancel picking',
+  );
+  await select('ProgressBar');
+  await press('f');
+  await harness.until(
+    () =>
+      evaluate(
+        `!!document.querySelector('.focus-navigation')?.textContent.includes('ProgressBar')&&!document.querySelector('[aria-label="Capture"]').disabled`,
+      ),
+    'F did not focus the selected component',
+  );
+  await press('Escape');
+  await harness.until(
+    () =>
+      evaluate(
+        `!document.querySelector('.focus-navigation')&&!document.querySelector('[aria-label="Capture"]').disabled`,
+      ),
+    'Escape did not return to the whole page',
+  );
+  await select('ProjectCard');
   await click('Focus subtree');
   await harness.until(
     () =>
@@ -342,7 +405,7 @@ try {
     session,
   );
   console.log(
-    'Passed: tree keyboard navigation, sidebar resizing, expandable props, narrow/short layouts.',
+    'Passed: tree keyboard navigation, shortcuts, sidebar resizing, expandable props, narrow/short layouts.',
   );
 
   const nativeTheme = await evaluate(`chrome.devtools.panels.themeName`);
