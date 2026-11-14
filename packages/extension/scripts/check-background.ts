@@ -25,7 +25,7 @@ try {
   );
   const list = await page.evaluate(
     () =>
-      [...window.__STRATA_INSPECTOR_V1__!.elements].find(([, hosts]) =>
+      [...window.__REACT_ANATOMY_INSPECTOR_V1__!.elements].find(([, hosts]) =>
         hosts.some((el) => el.getAttribute('data-region') === 'list'),
       )?.[0],
   );

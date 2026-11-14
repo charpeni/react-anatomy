@@ -23,7 +23,7 @@ try {
   const page = await browser.newPage({ viewport: { width: 1400, height: 900 } });
   const partition = await page.evaluate(`(() => {
     const renderer = (${makeSnapshotRenderer.toString()})({
-      html: '<div data-strata-host="parent"><section data-strata-host="child"><p>Child supplied by another plane</p></section><p>Parent content</p></div>',
+      html: '<div data-anatomy-host="parent"><section data-anatomy-host="child"><p>Child supplied by another plane</p></section><p>Parent content</p></div>',
       hostRects: { parent: { x: 0, y: 0, w: 100, h: 100 }, child: { x: 0, y: 0, w: 50, h: 50 } }
     });
     return renderer({ id: 'parent', hosts: ['parent'], frame: { x: 0, y: 0, w: 100, h: 100 } },
@@ -31,7 +31,7 @@ try {
   })()`);
   assert(typeof partition === 'string');
   assert(partition.includes('Parent content'));
-  assert(partition.includes('data-strata-host="child"'));
+  assert(partition.includes('data-anatomy-host="child"'));
   assert(
     !partition.includes('Child supplied by another plane'),
     'Parent planes must not duplicate hidden child subtrees',
@@ -47,7 +47,7 @@ try {
   );
   const details = await page.evaluate(
     () =>
-      [...window.__STRATA_INSPECTOR_V1__!.elements].find(([, hosts]) =>
+      [...window.__REACT_ANATOMY_INSPECTOR_V1__!.elements].find(([, hosts]) =>
         hosts.some((el) => el.getAttribute('data-region') === 'details'),
       )?.[0],
   );
@@ -56,7 +56,7 @@ try {
 
   const list = await page.evaluate(
     () =>
-      [...window.__STRATA_INSPECTOR_V1__!.elements].find(([, hosts]) =>
+      [...window.__REACT_ANATOMY_INSPECTOR_V1__!.elements].find(([, hosts]) =>
         hosts.some((el) => el.getAttribute('data-region') === 'list'),
       )?.[0],
   );
@@ -183,7 +183,7 @@ try {
   await themedPage.evaluate(capture, { action: 'capture' as const });
   const themedList = await themedPage.evaluate(
     () =>
-      [...window.__STRATA_INSPECTOR_V1__!.elements].find(([, hosts]) =>
+      [...window.__REACT_ANATOMY_INSPECTOR_V1__!.elements].find(([, hosts]) =>
         hosts.some((el) => el.getAttribute('data-region') === 'list'),
       )?.[0],
   );

@@ -24,7 +24,7 @@ export function makeSnapshotRenderer(
   ]);
   const attributes = new Set([
     'style',
-    'data-strata-host',
+    'data-anatomy-host',
     'src',
     'viewBox',
     'd',
@@ -83,8 +83,8 @@ export function makeSnapshotRenderer(
 
   const hosts = new Map(
     Array.from(
-      template.content.querySelectorAll<HTMLElement | SVGElement>('[data-strata-host]'),
-    ).map((el) => [el.getAttribute('data-strata-host'), el]),
+      template.content.querySelectorAll<HTMLElement | SVGElement>('[data-anatomy-host]'),
+    ).map((el) => [el.getAttribute('data-anatomy-host'), el]),
   );
   const cache = new Map<string, string>();
 
@@ -126,7 +126,7 @@ export function makeSnapshotRenderer(
       while (pending.length) {
         const { source, target } = pending.pop()!;
         if (target instanceof HTMLElement || target instanceof SVGElement) {
-          if (hidden.has(target.getAttribute('data-strata-host') ?? '')) {
+          if (hidden.has(target.getAttribute('data-anatomy-host') ?? '')) {
             target.style.setProperty('visibility', 'hidden', 'important');
             continue;
           }
@@ -137,7 +137,7 @@ export function makeSnapshotRenderer(
           if (child.childNodes.length) {
             pending.push({ source: child, target: cloned });
           } else if (cloned instanceof HTMLElement || cloned instanceof SVGElement) {
-            if (hidden.has(cloned.getAttribute('data-strata-host') ?? '')) {
+            if (hidden.has(cloned.getAttribute('data-anatomy-host') ?? '')) {
               cloned.style.setProperty('visibility', 'hidden', 'important');
             }
           }

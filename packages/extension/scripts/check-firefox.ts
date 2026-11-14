@@ -135,7 +135,7 @@ try {
     'Page picker did not select the component',
   );
   await click('Highlight on page');
-  assert.equal(await h.page(`document.querySelectorAll('[data-strata-overlay]').length`), 1);
+  assert.equal(await h.page(`document.querySelectorAll('[data-anatomy-overlay]').length`), 1);
   await click('Reveal in Elements');
   await h.until(
     () => h.chrome(`window.__anatomyToolbox.currentToolId==='inspector'`),
@@ -272,7 +272,7 @@ try {
   const sanitized = await h.page<{ active: number; passwordLeaked: boolean; fonts: string }>(`(()=>{
     ${snapshotSource}
     const render=makeSnapshotRenderer({
-      html:'<div data-strata-host="h1"><script>window.bad=true</script><iframe srcdoc="bad"></iframe><img src="javascript:bad()" onerror="window.bad=true"><a href="javascript:bad()">link</a><input type="password" value="fixture-secret"></div>',
+      html:'<div data-anatomy-host="h1"><script>window.bad=true</script><iframe srcdoc="bad"></iframe><img src="javascript:bad()" onerror="window.bad=true"><a href="javascript:bad()">link</a><input type="password" value="fixture-secret"></div>',
       hostRects:{h1:{x:0,y:0,w:100,h:100}}
     });
     const html=render({id:'c1',hosts:['h1'],frame:{x:0,y:0,w:100,h:100}},[]);

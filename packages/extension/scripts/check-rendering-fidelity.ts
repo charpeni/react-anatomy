@@ -55,7 +55,7 @@ try {
       const snapshot = ${JSON.stringify(snapshot)};
       const render = (${makeSnapshotRenderer.toString()})(snapshot);
       document.body.innerHTML = render(${JSON.stringify(row)}, []);
-      const row = document.querySelector('tr[data-strata-host]');
+      const row = document.querySelector('tr[data-anatomy-host]');
       if(!row)return null;
       return {height:row.getBoundingClientRect().height,cells:[...row.children].map(cell=>({
         x:cell.getBoundingClientRect().left-row.getBoundingClientRect().left,
@@ -75,7 +75,7 @@ try {
   const dateCell = snapshot.nodes.find((node) => node.name === 'DateCell')!;
   const cellTag = await view.evaluate(`(() => {
     document.body.innerHTML = (${makeSnapshotRenderer.toString()})(${JSON.stringify(snapshot)})(${JSON.stringify(dateCell)}, []);
-    return document.querySelector('[data-strata-host="${dateCell.hosts[0]}"]')?.tagName;
+    return document.querySelector('[data-anatomy-host="${dateCell.hosts[0]}"]')?.tagName;
   })()`);
   assert.equal(cellTag, 'TD', 'Individual table cells need valid table context too');
   for (const [node, tag] of [
@@ -86,7 +86,7 @@ try {
     const detail = await view.evaluate<{ tag?: string; text?: string }>(`(() => {
       const snapshot = ${JSON.stringify(focused)};
       document.body.innerHTML = (${makeSnapshotRenderer.toString()})(snapshot)(snapshot.nodes[0], []);
-      const host = document.querySelector('[data-strata-host="${node.hosts[0]}"]');
+      const host = document.querySelector('[data-anatomy-host="${node.hosts[0]}"]');
       return {tag:host?.tagName,text:host?.innerText};
     })()`);
     assert.equal(detail.tag, tag, 'A fresh scoped capture must retain its table host');
@@ -121,7 +121,7 @@ try {
     const check = () =>
       run<boolean>(`(() => {
       const visible=el=>getComputedStyle(el).visibility==='visible'&&el.getBoundingClientRect().width>0;
-      const rows=[...document.querySelectorAll('.plane-content tr[data-strata-host]')].filter(visible);
+      const rows=[...document.querySelectorAll('.plane-content tr[data-anatomy-host]')].filter(visible);
       const dates=[...document.querySelectorAll('.plane-content span')].filter(el=>el.textContent==='2 days ago'&&visible(el));
       return rows.length===2&&dates.length>=2&&!!document.querySelector('.plane-content input[placeholder="Go to file"]')&&rows.every(row=>getComputedStyle(row.cells[0]).borderBottomWidth==='1px');
     })()`);

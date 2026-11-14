@@ -129,7 +129,7 @@ try {
     'Page picker did not select the component',
   );
   await click('Highlight on page');
-  assert.equal(await page.locator('[data-strata-overlay]').count(), 1);
+  assert.equal(await page.locator('[data-anatomy-overlay]').count(), 1);
   console.log('Passed: real page picking and highlighting.');
 
   const beforePortal = await captureCount();
@@ -372,7 +372,7 @@ try {
 
   const sanitization = await isolated.evaluate(() => {
     const renderer = makeSnapshotRenderer({
-      html: '<div data-strata-host="h1"><script>window.bad=true</script><iframe srcdoc="bad"></iframe><img src="javascript:bad()" onerror="window.bad=true"><a href="javascript:bad()">link</a><input type="password" value="fixture-secret"></div>',
+      html: '<div data-anatomy-host="h1"><script>window.bad=true</script><iframe srcdoc="bad"></iframe><img src="javascript:bad()" onerror="window.bad=true"><a href="javascript:bad()">link</a><input type="password" value="fixture-secret"></div>',
       hostRects: { h1: { x: 0, y: 0, w: 100, h: 100 } },
     });
     const html = renderer({ id: 'c1', hosts: ['h1'], frame: { x: 0, y: 0, w: 100, h: 100 } }, []);

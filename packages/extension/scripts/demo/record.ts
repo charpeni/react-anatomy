@@ -412,9 +412,9 @@ try {
     await pause(250);
     await shot(0.7);
 
-    const strataTab = `(()=>{const walk=root=>{for(const el of root.querySelectorAll('*')){if(el.getAttribute('role')==='tab'&&((el.getAttribute('aria-label')||'').startsWith('Anatomy')||el.textContent.trim()==='Anatomy'))return el;if(el.shadowRoot){const match=walk(el.shadowRoot);if(match)return match;}}};return walk(document);})()`;
+    const anatomyTab = `(()=>{const walk=root=>{for(const el of root.querySelectorAll('*')){if(el.getAttribute('role')==='tab'&&((el.getAttribute('aria-label')||'').startsWith('Anatomy')||el.textContent.trim()==='Anatomy'))return el;if(el.shadowRoot){const match=walk(el.shadowRoot);if(match)return match;}}};return walk(document);})()`;
 
-    await click(strataTab, { target: 'native', after: 1.8, wait: 250 });
+    await click(anatomyTab, { target: 'native', after: 1.8, wait: 250 });
     show('panel');
     await h.until(() => run(`document.visibilityState==='visible'`), 'React Anatomy did not open');
     caption(
@@ -663,7 +663,7 @@ try {
     console.log('Resumed before Elements at', time.toFixed(1), 'seconds.');
   }
 
-  const strataTab = `(()=>{const walk=root=>{for(const el of root.querySelectorAll('*')){if(el.getAttribute('role')==='tab'&&((el.getAttribute('aria-label')||'').startsWith('Anatomy')||el.textContent.trim()==='Anatomy'))return el;if(el.shadowRoot){const match=walk(el.shadowRoot);if(match)return match;}}};return walk(document);})()`;
+  const anatomyTab = `(()=>{const walk=root=>{for(const el of root.querySelectorAll('*')){if(el.getAttribute('role')==='tab'&&((el.getAttribute('aria-label')||'').startsWith('Anatomy')||el.textContent.trim()==='Anatomy'))return el;if(el.shadowRoot){const match=walk(el.shadowRoot);if(match)return match;}}};return walk(document);})()`;
 
   chapter(
     '06 / ELEMENTS',
@@ -675,7 +675,7 @@ try {
   await click(button('Reveal in Elements'), { after: 2, wait: 300 });
   show('native');
   await shot(2);
-  await click(strataTab, { target: 'native', after: 0.6, wait: 200 });
+  await click(anatomyTab, { target: 'native', after: 0.6, wait: 200 });
   show('panel');
   await click(button('Follow changes'));
   await click(button('Reset view'));

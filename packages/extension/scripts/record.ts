@@ -23,7 +23,7 @@ const errors: string[] = [];
 
 page.on('pageerror', (e) => errors.push(e.message));
 await page.goto(process.env.PROTOTYPE_URL || 'http://localhost:4173');
-await page.waitForFunction(() => window.__strata);
+await page.waitForFunction(() => window.__anatomyPrototype);
 await page.evaluate(() => {
   const cursor = document.createElement('div');
 
@@ -50,11 +50,11 @@ await page.evaluate(() => {
 const wait = (ms: number) => page.waitForTimeout(ms);
 
 async function caption(kicker: string, title: string, text: string) {
-  await page.evaluate((c) => window.__strata.setCaption(c), { kicker, title, text });
+  await page.evaluate((c) => window.__anatomyPrototype.setCaption(c), { kicker, title, text });
 }
 
 async function clearCaption() {
-  await page.evaluate(() => window.__strata.setCaption(null));
+  await page.evaluate(() => window.__anatomyPrototype.setCaption(null));
 }
 
 async function click(locator: Locator) {
