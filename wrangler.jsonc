@@ -7,4 +7,7 @@
     "html_handling": "auto-trailing-slash",
     "not_found_handling": "404-page",
   },
+  // Branch builds run `wrangler preview`, which requires this block. It stays
+  // empty: Previews take assets and the compatibility date from the top level.
+  "previews": {},
 }
