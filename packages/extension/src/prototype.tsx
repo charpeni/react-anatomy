@@ -324,7 +324,7 @@ async function boot() {
     }, [variant, selected, explode]);
     /* oxlint-enable react-hooks/exhaustive-deps */
     useEffect(() => {
-      window.__strata = {
+      window.__anatomyPrototype = {
         nodes: nodes.map(({ hosts, ...rest }) => rest),
         state: {
           variant,

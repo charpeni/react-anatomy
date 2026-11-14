@@ -53,7 +53,7 @@ export async function startFixtureServer(port = 0) {
 }
 
 if (process.argv[1] && import.meta.url === pathToFileURL(resolve(process.argv[1])).href) {
-  const fixture = await startFixtureServer(Number(process.env.STRATA_PORT || 4174));
+  const fixture = await startFixtureServer(Number(process.env.ANATOMY_PORT || 4174));
 
   console.log(`Independent React app: ${fixture.url}`);
 }

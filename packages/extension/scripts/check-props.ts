@@ -209,7 +209,7 @@ try {
   );
   assert((await text()).includes('progress: 72'), 'Late response replaced the selected props');
   assert.equal(
-    await page.evaluate(() => window.__STRATA_INSPECTOR_V1__!.propSessions.size),
+    await page.evaluate(() => window.__REACT_ANATOMY_INSPECTOR_V1__!.propSessions.size),
     1,
     'Obsolete prop sessions were retained',
   );

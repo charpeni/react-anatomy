@@ -142,7 +142,7 @@ try {
     await h.clickPage(selector);
 
     const picked = await h.until(
-      () => h.page('window.__STRATA_INSPECTOR_V1__?.picked||null'),
+      () => h.page('window.__REACT_ANATOMY_INSPECTOR_V1__?.picked||null'),
       'The page picker did not record a hit',
     );
 

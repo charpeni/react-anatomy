@@ -47,7 +47,7 @@ export function createTransport(): Transport {
 
       const response: { error?: string; result: PageResponses[typeof request.action] } =
         await chrome.runtime.sendMessage({
-          type: 'strata:page',
+          type: 'anatomy:page',
           tabId: tab,
           request,
         });

@@ -16,7 +16,7 @@ chrome.action.onClicked.addListener((tab) => {
 chrome.runtime.onMessage.addListener((message, sender, reply) => {
   if (
     sender.id !== chrome.runtime.id ||
-    message?.type !== 'strata:page' ||
+    message?.type !== 'anatomy:page' ||
     !Number.isInteger(message.tabId)
   ) {
     return;

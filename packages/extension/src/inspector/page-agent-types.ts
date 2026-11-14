@@ -82,7 +82,7 @@ export interface StoredPropEntry {
 
 declare global {
   interface Window {
-    __STRATA_INSPECTOR_V1__?: AgentState;
+    __REACT_ANATOMY_INSPECTOR_V1__?: AgentState;
     __REACT_DEVTOOLS_GLOBAL_HOOK__?: {
       renderers: Map<number, unknown>;
       getFiberRoots: (rendererId: number) => Set<FiberRoot>;

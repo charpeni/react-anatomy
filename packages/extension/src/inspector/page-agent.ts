@@ -26,7 +26,7 @@ export function pageAgent<Action extends keyof PageRequests>(
   request: { action: Action } & PageRequests[Action],
 ): PageResponses[Action];
 export function pageAgent(request: PageRequest = { action: 'capture' }): PageResponse {
-  const key = '__STRATA_INSPECTOR_V1__';
+  const key = '__REACT_ANATOMY_INSPECTOR_V1__';
   const version = 1;
   const previousState = window[key];
   const state: AgentState =
@@ -120,7 +120,7 @@ export function pageAgent(request: PageRequest = { action: 'capture' }): PageRes
           (r.type !== 'childList' ||
             !Array.from(r.addedNodes)
               .concat(Array.from(r.removedNodes))
-              .every((n) => n instanceof Element && n.hasAttribute('data-strata-overlay'))),
+              .every((n) => n instanceof Element && n.hasAttribute('data-anatomy-overlay'))),
       );
 
       if (real) {
@@ -188,7 +188,7 @@ export function pageAgent(request: PageRequest = { action: 'capture' }): PageRes
 
     const overlay = document.createElement('div');
 
-    overlay.setAttribute('data-strata-overlay', '');
+    overlay.setAttribute('data-anatomy-overlay', '');
     overlay.style.cssText =
       'all:initial;position:fixed;inset:0;pointer-events:none;z-index:2147483647;';
 
@@ -1186,7 +1186,7 @@ export function pageAgent(request: PageRequest = { action: 'capture' }): PageRes
         }
       }
 
-      copy.setAttribute('data-strata-host', hostId(el));
+      copy.setAttribute('data-anatomy-host', hostId(el));
 
       const computed = computedStyle || getComputedStyle(el);
       // Standard property names are the same for every element in this browser.
@@ -1292,7 +1292,7 @@ export function pageAgent(request: PageRequest = { action: 'capture' }): PageRes
       if (context.getImageData(0, 0, 1, 1).data[3] < 255) {
         // Resolve the browser canvas color only if the page's own backgrounds
         // leave it visible. Detached canvases use the default color scheme.
-        canvas.setAttribute('data-strata-overlay', '');
+        canvas.setAttribute('data-anatomy-overlay', '');
         canvas.style.setProperty('display', 'none', 'important');
         canvas.style.setProperty('color', 'Canvas', 'important');
         document.documentElement.appendChild(canvas);
@@ -1323,7 +1323,7 @@ export function pageAgent(request: PageRequest = { action: 'capture' }): PageRes
       const { el, parent } = pending.pop()!;
       if (
         el instanceof Element &&
-        (forbidden.has(el.tagName.toUpperCase()) || el.hasAttribute('data-strata-overlay'))
+        (forbidden.has(el.tagName.toUpperCase()) || el.hasAttribute('data-anatomy-overlay'))
       ) {
         continue;
       }
@@ -1348,7 +1348,7 @@ export function pageAgent(request: PageRequest = { action: 'capture' }): PageRes
           // budget on every card in a long list, including within a focused scope.
           const placeholder = document.createElement('span');
           const style = computed;
-          placeholder.setAttribute('data-strata-host', hostId(el));
+          placeholder.setAttribute('data-anatomy-host', hostId(el));
           placeholder.style.cssText = `display:${style.display};width:${rect.width}px;height:${rect.height}px;box-sizing:border-box;margin:${style.margin};flex:${style.flex};grid-area:${style.gridArea};visibility:hidden`;
           parent.appendChild(placeholder);
           continue;
@@ -1361,7 +1361,7 @@ export function pageAgent(request: PageRequest = { action: 'capture' }): PageRes
         if (el instanceof Element && visualCursor < maxVisualElements * 2) {
           const rect = measure(el);
           const placeholder = document.createElement('span');
-          placeholder.setAttribute('data-strata-host', hostId(el));
+          placeholder.setAttribute('data-anatomy-host', hostId(el));
           placeholder.style.cssText = `display:block;width:${rect.width}px;height:${rect.height}px;box-sizing:border-box;background:#80808012`;
           parent.appendChild(placeholder);
         }

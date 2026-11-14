@@ -32,6 +32,6 @@ export interface PrototypeController {
 
 declare global {
   interface Window {
-    __strata: PrototypeController;
+    __anatomyPrototype: PrototypeController;
   }
 }
