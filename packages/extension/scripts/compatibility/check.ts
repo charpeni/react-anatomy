@@ -137,6 +137,18 @@ try {
     assert(!error, String(error));
   };
 
+  // Focusing a subtree and returning to the whole page each request a fresh
+  // capture. Wait for it instead of reading the panel while it is in flight.
+  const waitForScope = (focused: boolean) =>
+    h.until(
+      () =>
+        run(
+          `Boolean(document.querySelector('.focus-navigation'))===${focused}&&document.querySelector('[aria-label="Capture"]')?.disabled===false`,
+        ),
+      focused ? 'Focused capture did not finish' : 'Whole page capture did not finish',
+      30000,
+    );
+
   const pick = async (selector: string) => {
     await click('Pick on page');
     await h.clickPage(selector);
@@ -276,8 +288,9 @@ try {
           'Nested owner value missing',
         );
         await click('Focus subtree');
-        assert(await run<string>(`Boolean(document.querySelector('.focus-navigation'))`));
+        await waitForScope(true);
         await click('Whole page');
+        await waitForScope(false);
         await pick('[data-check="counter"]');
         await h.until(async () => (await props()).includes('count: 0'), 'Counter props missing');
         await h.clickPage('[data-check="counter"]');
@@ -357,6 +370,7 @@ try {
           `document.querySelector('.inspector-heading h2')?.textContent`,
         );
         await click('Focus subtree');
+        await waitForScope(true);
         assert(
           await run(`document.querySelectorAll('[data-plane]').length>0`),
           'Focused app region has no visible output',

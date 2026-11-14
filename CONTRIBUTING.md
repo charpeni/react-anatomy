@@ -71,15 +71,15 @@ pnpm test:compatibility
 pnpm test:public-apps
 ```
 
-The last command checks public sites over the network. See the [workload guide](packages/extension/validation/README.md) and [support policy](packages/website/src/content/docs/docs/compatibility.md) for coverage and limits.
+The pinned matrix runs in CI and again in `pnpm release:prepare`, so a change that breaks a supported React version cannot reach a store submission. The last command checks public sites over the network and stays manual. See the [workload guide](packages/extension/validation/README.md) and [support policy](packages/website/src/content/docs/docs/compatibility.md) for coverage and limits.
 
 ## Continuous integration
 
-GitHub Actions runs seven independent matrix jobs: Oxlint, Oxfmt, TypeScript, website, Chrome extension, Firefox extension, and release tooling. Failed browser jobs upload diagnostics.
+GitHub Actions runs eight independent matrix jobs: Oxlint, Oxfmt, TypeScript, website, Chrome extension, Firefox extension, React compatibility, and release tooling. Failed browser jobs upload diagnostics.
 
 ## Packaging
 
-`pnpm package:extension` and `pnpm package:firefox` create local ZIPs. `pnpm release:prepare` runs the release checks and creates verified browser and source archives. Preparation does not upload or publish anything.
+`pnpm package:extension` and `pnpm package:firefox` create local ZIPs. `pnpm release:prepare` runs the release checks, including the pinned React compatibility matrix in both browsers, and creates verified browser and source archives. Preparation does not upload or publish anything.
 
 The separate `release:chrome` and `release:firefox` commands provide `plan`, `submit`, and `status` actions. Submission requires store credentials. Chrome submissions publish automatically to all users after approval; a listed Firefox submission may become public after approval.
 

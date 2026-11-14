@@ -44,6 +44,10 @@ jobs:
             name: Firefox extension
             browser: firefox
             command: pnpm run test:firefox
+          - task: compatibility
+            name: React compatibility
+            browser: chromium, firefox
+            command: pnpm run test:compatibility
           - task: release
             name: Release tooling
             command: pnpm run test:release
@@ -59,19 +63,19 @@ jobs:
           cache: true
           require-lockfile: true
       - name: Install compatibility fixture dependencies
-        if: matrix.task == 'types'
+        if: matrix.task == 'types' || matrix.task == 'compatibility'
         run: pnpm run setup:compatibility
       - name: Install Chromium
-        if: matrix.browser == 'chromium'
+        if: contains(matrix.browser, 'chromium')
         run: pnpm --filter @react-anatomy/extension exec playwright install --with-deps chromium
       - name: Install Firefox
-        if: matrix.browser == 'firefox'
+        if: contains(matrix.browser, 'firefox')
         id: firefox
         uses: browser-actions/setup-firefox@8058e910ee76e74bb76b7b2e5b61a55b3a65ed78 # v1.7.2
         with:
           firefox-version: latest
       - name: Select Firefox binary
-        if: matrix.browser == 'firefox'
+        if: contains(matrix.browser, 'firefox')
         env:
           FIREFOX_BINARY: ${{ steps.firefox.outputs.firefox-path }}
         run: echo "FIREFOX_PATH=$FIREFOX_BINARY" >> "$GITHUB_ENV"
@@ -85,6 +89,8 @@ jobs:
           path: |
             packages/extension/artifacts/check-*/
             packages/extension/artifacts/firefox/
+            packages/extension/artifacts/compatibility/results/
+            packages/extension/artifacts/compatibility/next-*.log
             packages/website/artifacts/demo-check/
           if-no-files-found: ignore
           retention-days: 7
