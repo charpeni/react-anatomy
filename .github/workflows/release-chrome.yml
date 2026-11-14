@@ -77,6 +77,8 @@ jobs:
             packages/extension/artifacts/check-*/
             packages/extension/artifacts/firefox/
             packages/extension/artifacts/rendering-fidelity/
+            packages/extension/artifacts/compatibility/results/
+            packages/extension/artifacts/compatibility/next-*.log
           if-no-files-found: ignore
           retention-days: 7
 
