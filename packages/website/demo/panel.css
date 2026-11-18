@@ -14,11 +14,16 @@ html[data-example-motion='instant'] .plane-label {
 /* The panel injects its own stylesheet after this one, so these overrides
    carry an extra `html` to win over rules of otherwise equal weight.
 
-   The example sits in a scrolling page. A vertical swipe over the canvas
-   scrolls that page; a drag that starts sideways rotates the view, and may
-   then continue in any direction. The extension keeps its own `none`. */
+   The example sits in a scrolling page, and its canvas fills most of a phone
+   screen. A touch that starts on the layers themselves rotates the view in
+   any direction. A vertical swipe that starts on the empty canvas around
+   them scrolls the page, so the reader is never held there; a sideways drag
+   from the same place still rotates. The extension keeps `none` throughout. */
 html .stage {
   touch-action: pan-y;
+}
+html .component-plane {
+  touch-action: none;
 }
 /* Phones give the canvas the rows that only describe the capture. */
 @media (max-width: 700px) {

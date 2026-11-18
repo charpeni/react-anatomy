@@ -240,30 +240,72 @@ export async function checkDemoIntroduction(browser: Browser, base: string, shot
       await mobile.screenshot({ path: `${shots}/intro-${width}-exploded.png` });
 
       const panel = mobile.frameLocator('#anatomy-panel');
-      const stage = (await panel.locator('.stage').boundingBox())!;
       const rotation = () =>
         panel
           .locator('.scene')
           .evaluate((element) =>
             (element as HTMLElement).style.transform.match(/rotate[XY]\([^)]+\)/g),
           );
-      const beforeDrag = await rotation();
-      const dragY = Math.min(stage.y + stage.height / 2, 700);
+      // Find one point on the layers and one on the empty canvas around them.
+      const frameBox = (await mobile.locator('#anatomy-panel').boundingBox())!;
+      const spots = await panel.locator('.stage').evaluate((element) => {
+        const box = element.getBoundingClientRect();
+        const layers: { x: number; y: number }[] = [];
+        const empty: { x: number; y: number }[] = [];
 
-      // A drag that starts sideways rotates the canvas and leaves the page alone,
-      // even once it also moves vertically.
-      await swipe(dragY, dragY - 60, stage.x + stage.width * 0.3, stage.x + stage.width * 0.75);
-      assert.notDeepEqual(await rotation(), beforeDrag, 'A sideways canvas drag must rotate');
+        for (let y = box.top + 20; y < box.bottom - 20; y += 12) {
+          for (let x = box.left + 12; x < box.right - 12; x += 12) {
+            const hit = element.ownerDocument.elementFromPoint(x, y);
+
+            if (hit === element) {
+              empty.push({ x, y });
+            } else if (hit?.closest('.component-plane')) {
+              layers.push({ x, y });
+            }
+          }
+        }
+
+        const centre = { x: box.left + box.width / 2, y: box.top + box.height / 2 };
+        const distance = (point: { x: number; y: number }) =>
+          Math.hypot(point.x - centre.x, point.y - centre.y);
+
+        return {
+          layer: layers.sort((first, second) => distance(first) - distance(second))[0],
+          // The lowest empty point leaves the most room for an upward swipe.
+          empty: empty.sort((first, second) => second.y - first.y || first.x - second.x)[0],
+        };
+      });
+      assert(spots.layer && spots.empty, 'The canvas must show layers with empty space around');
+      const layer = { x: frameBox.x + spots.layer.x, y: frameBox.y + spots.layer.y };
+      const empty = { x: frameBox.x + spots.empty.x, y: frameBox.y + spots.empty.y };
+
+      // A touch that starts on the layers rotates the view, even when it moves
+      // straight up, and leaves the page where it is.
+      const beforeDrag = await rotation();
+      await swipe(layer.y, layer.y - 140, layer.x);
+      assert.notDeepEqual(await rotation(), beforeDrag, 'Dragging the layers must rotate');
+      assert.equal(
+        await mobile.evaluate(() => scrollY),
+        held,
+        'Dragging the layers must not scroll the page',
+      );
+
+      // A sideways drag from the empty canvas rotates too.
+      const beforeSideways = await rotation();
+      await swipe(empty.y, empty.y - 20, empty.x, empty.x + (empty.x < width / 2 ? 150 : -150));
+      assert.notDeepEqual(await rotation(), beforeSideways, 'A sideways canvas drag must rotate');
       assert.equal(
         await mobile.evaluate(() => scrollY),
         held,
         'Sideways canvas drags must not scroll',
       );
 
-      // A vertical swipe over the canvas belongs to the page. The canvas fills
-      // most of a phone screen, so holding it there would trap the reader.
+      // A vertical swipe that starts on the empty canvas belongs to the page,
+      // even when it crosses the layers. Gesture ownership is decided at
+      // touchstart. The canvas fills most of a phone screen, so holding every
+      // touch there would trap the reader.
       const beforeSwipe = await rotation();
-      await swipe(dragY + 70, dragY - 130);
+      await swipe(empty.y, empty.y - 200, empty.x);
       await mobile.waitForFunction((y) => scrollY > y + 120, held);
       await mobile.waitForTimeout(300);
       assert.deepEqual(
