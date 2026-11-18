@@ -248,11 +248,35 @@ export async function checkDemoIntroduction(browser: Browser, base: string, shot
             (element as HTMLElement).style.transform.match(/rotate[XY]\([^)]+\)/g),
           );
       const beforeDrag = await rotation();
-      const dragX = stage.x + stage.width * 0.65;
-      const dragY = Math.min(stage.y + stage.height - 50, 760);
-      await swipe(dragY, dragY - 140, dragX, dragX - 10);
-      assert.notDeepEqual(await rotation(), beforeDrag, 'A canvas drag must rotate the view');
-      assert.equal(await mobile.evaluate(() => scrollY), held, 'Canvas drags must not scroll');
+      const dragY = Math.min(stage.y + stage.height / 2, 700);
+
+      // A drag that starts sideways rotates the canvas and leaves the page alone,
+      // even once it also moves vertically.
+      await swipe(dragY, dragY - 60, stage.x + stage.width * 0.3, stage.x + stage.width * 0.75);
+      assert.notDeepEqual(await rotation(), beforeDrag, 'A sideways canvas drag must rotate');
+      assert.equal(
+        await mobile.evaluate(() => scrollY),
+        held,
+        'Sideways canvas drags must not scroll',
+      );
+
+      // A vertical swipe over the canvas belongs to the page. The canvas fills
+      // most of a phone screen, so holding it there would trap the reader.
+      const beforeSwipe = await rotation();
+      await swipe(dragY + 70, dragY - 130);
+      await mobile.waitForFunction((y) => scrollY > y + 120, held);
+      await mobile.waitForTimeout(300);
+      assert.deepEqual(
+        await rotation(),
+        beforeSwipe,
+        'Scrolling past the canvas must leave the view as it was',
+      );
+      assert.equal(
+        await panel.locator('.show-details').count(),
+        0,
+        'Scrolling past the canvas must not select a layer',
+      );
+      await mobile.evaluate((y) => window.scrollTo({ top: y, behavior: 'instant' }), held);
 
       // A touch starting outside the canvas still scrolls, even when it crosses
       // into the canvas. Gesture ownership is decided at touchstart.
@@ -269,6 +293,42 @@ export async function checkDemoIntroduction(browser: Browser, base: string, shot
       const outsideScroll = await mobile.evaluate(() => scrollY);
       await swipe(650, 400, 2);
       await mobile.waitForFunction((y) => scrollY > y + 100, outsideScroll);
+
+      // The props list is longer than its pane. It scrolls itself first, then
+      // hands the next swipe to the page instead of holding the reader inside.
+      await mobile.locator('[data-step="props"]').tap();
+      await panel.locator('[data-prop-path="props.project"]').waitFor();
+      await mobile.locator('#demo').evaluate((element) =>
+        window.scrollTo({
+          top: scrollY + element.getBoundingClientRect().top - 12,
+          behavior: 'instant',
+        }),
+      );
+      await mobile.waitForTimeout(100);
+      const list = panel.locator('.inspector-scroll');
+      const listBox = (await list.boundingBox())!;
+      const listX = listBox.x + listBox.width / 2;
+      const listHidden = await list.evaluate(
+        (element) => element.scrollHeight - element.clientHeight,
+      );
+      assert(listHidden > 0, 'The sample props must overflow the phone-sized pane');
+      const beforeList = await mobile.evaluate(() => scrollY);
+      await swipe(listBox.y + listBox.height - 30, listBox.y + 30, listX);
+      await mobile.waitForFunction(
+        () =>
+          document
+            .querySelector<HTMLIFrameElement>('#anatomy-panel')!
+            .contentDocument!.querySelector('.inspector-scroll')!.scrollTop > 60,
+      );
+      assert.equal(
+        await mobile.evaluate(() => scrollY),
+        beforeList,
+        'Scrolling the props list must not also scroll the page',
+      );
+      await mobile.waitForTimeout(300);
+      await list.evaluate((element) => element.scrollTo({ top: element.scrollHeight }));
+      await swipe(listBox.y + listBox.height - 30, listBox.y + 30, listX);
+      await mobile.waitForFunction((y) => scrollY > y + 100, beforeList);
 
       // Orbit should scroll like the surrounding page. Measuring just whether
       // it moves misses the iframe feedback bug: alternating stalls/backward
@@ -317,6 +377,6 @@ export async function checkDemoIntroduction(browser: Browser, base: string, shot
 
   assert.deepEqual(errors, []);
   console.log(
-    'Passed: one-time scroll introduction, cursor click, scroll release, session persistence, cancellation, loading timeout, keyboard bypass, reduced motion, canvas touch rotation, and smooth Orbit touch scrolling.',
+    'Passed: one-time scroll introduction, cursor click, scroll release, session persistence, cancellation, loading timeout, keyboard bypass, reduced motion, canvas touch rotation and scroll-through, props list touch scrolling, and smooth Orbit touch scrolling.',
   );
 }

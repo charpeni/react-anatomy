@@ -86,7 +86,8 @@ export function mountExample(root: HTMLElement) {
 
     scrollDocuments.add(doc);
     // Orbit uses native touch scrolling (its root is clipped in source.css).
-    // Only the inspector needs forwarding around its canvas and drag controls.
+    // The inspector's fixed bars need forwarding; its canvas, lists, and drag
+    // controls keep the browser's own gesture handling.
     if (frame === panel) {
       let touch: { x: number; y: number } | undefined;
 
@@ -94,11 +95,13 @@ export function mountExample(root: HTMLElement) {
         'touchstart',
         (event) => {
           const point = event.touches.length === 1 ? event.touches[0] : undefined;
-          // Reserve gestures that start on the canvas or a drag control for the
-          // inspector. Its pointer handlers already rotate or resize the view;
-          // forwarding the same touch gesture would also scroll the landing page.
+          // Leave gestures that start on the canvas, a drag control, or a list to
+          // the browser. The canvas (touch-action: pan-y in panel.css) scrolls the
+          // page on a vertical swipe and rotates on a sideways drag. The tree and
+          // props lists scroll themselves, then hand over to the page at their end.
+          // Forwarding the same gesture would scroll the landing page twice.
           const inspectorGesture = (event.target as Element | null)?.closest(
-            '.stage, .splitter, input[type="range"]',
+            '.stage, .splitter, input[type="range"], .tree-scroll, .inspector-scroll',
           );
           touch = point && !inspectorGesture ? { x: point.screenX, y: point.screenY } : undefined;
         },
@@ -398,7 +401,9 @@ export function mountExample(root: HTMLElement) {
 
         hint.textContent = 'These are live props. Expand a value, or focus the selected subtree.';
       } else {
-        hint.textContent = 'Drag to rotate. Select a layer or a component in the tree.';
+        hint.textContent = matchMedia('(pointer: coarse)').matches
+          ? 'Drag sideways to rotate. Tap a layer to see its props.'
+          : 'Drag to rotate. Select a layer or a component in the tree.';
       }
     } catch (cause) {
       if (request !== action || version !== generation) {

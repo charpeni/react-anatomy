@@ -11,3 +11,19 @@ html[data-example-motion='instant'] .component-plane,
 html[data-example-motion='instant'] .plane-label {
   transition: none;
 }
+/* The panel injects its own stylesheet after this one, so these overrides
+   carry an extra `html` to win over rules of otherwise equal weight.
+
+   The example sits in a scrolling page. A vertical swipe over the canvas
+   scrolls that page; a drag that starts sideways rotates the view, and may
+   then continue in any direction. The extension keeps its own `none`. */
+html .stage {
+  touch-action: pan-y;
+}
+/* Phones give the canvas the rows that only describe the capture. */
+@media (max-width: 700px) {
+  html .breadcrumb,
+  html .extension-footer {
+    display: none;
+  }
+}

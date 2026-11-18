@@ -316,14 +316,16 @@
     padding-inline: 16px;
   }
   .demo-viewport {
+    /* Keep the whole example on one phone screen, with room left to scroll past it. */
     height: 490px;
+    height: clamp(320px, calc(100svh - 190px), 490px);
   }
   .demo-reset span {
     display: none;
   }
   .demo-walkthrough {
-    padding: 12px 10px;
-    gap: 10px;
+    padding: 8px 10px;
+    gap: 4px;
   }
   .demo-steps {
     justify-content: space-between;
@@ -429,6 +431,37 @@
 }
 @media (prefers-reduced-motion: reduce) {
   .demo-intro-cursor {
+    display: none;
+  }
+}
+
+/* Phones drop the browser frame's title row and give its height to the example. */
+@media (max-width: 720px) {
+  .demo-window {
+    position: relative;
+  }
+  .demo-chrome {
+    display: contents;
+  }
+  .demo-window-dots,
+  .demo-address,
+  .demo-badge {
+    display: none;
+  }
+  /* Skip intro covers Restart, which is disabled or unneeded while the introduction plays. */
+  .demo-intro-skip {
+    position: absolute;
+    z-index: 5;
+    top: 0;
+    right: 0;
+    height: 43px;
+    padding: 0 14px;
+    background: #fafbfc;
+    color: #1967d2;
+    font-size: 12px;
+  }
+  .interactive-demo[data-introduction='playing'] .demo-start-hint,
+  .interactive-demo[data-introduction='opening'] .demo-start-hint {
     display: none;
   }
 }
