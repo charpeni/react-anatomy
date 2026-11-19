@@ -86,19 +86,29 @@ export function mountExample(root: HTMLElement) {
 
     scrollDocuments.add(doc);
     // Orbit uses native touch scrolling (its root is clipped in source.css).
-    // Only the inspector needs forwarding around its canvas and drag controls.
+    // The inspector's fixed bars need forwarding; its canvas, lists, and drag
+    // controls keep the browser's own gesture handling.
     if (frame === panel) {
       let touch: { x: number; y: number } | undefined;
+      let rotating = false;
 
       doc.addEventListener(
         'touchstart',
         (event) => {
           const point = event.touches.length === 1 ? event.touches[0] : undefined;
-          // Reserve gestures that start on the canvas or a drag control for the
-          // inspector. Its pointer handlers already rotate or resize the view;
-          // forwarding the same touch gesture would also scroll the landing page.
-          const inspectorGesture = (event.target as Element | null)?.closest(
-            '.stage, .splitter, input[type="range"]',
+          const target = event.target as Element | null;
+          // A touch that starts on the layers themselves rotates the view, in any
+          // direction. panel.css says so with touch-action; cancelling the moves
+          // below keeps the page still without relying on how a browser maps
+          // touch-action onto 3D-transformed layers.
+          rotating = !!point && !!target?.closest('.component-plane');
+          // Leave gestures that start on the empty canvas, a drag control, or a
+          // list to the browser. The empty canvas (touch-action: pan-y) scrolls the
+          // page on a vertical swipe and rotates on a sideways drag. The tree and
+          // props lists scroll themselves, then hand over to the page at their end.
+          // Forwarding the same gesture would scroll the landing page twice.
+          const inspectorGesture = target?.closest(
+            '.stage, .splitter, input[type="range"], .tree-scroll, .inspector-scroll',
           );
           touch = point && !inspectorGesture ? { x: point.screenX, y: point.screenY } : undefined;
         },
@@ -107,6 +117,13 @@ export function mountExample(root: HTMLElement) {
       doc.addEventListener(
         'touchmove',
         (event) => {
+          if (rotating) {
+            if (event.touches.length === 1 && event.cancelable) {
+              event.preventDefault();
+            }
+            return;
+          }
+
           const point = event.touches.length === 1 ? event.touches[0] : undefined;
           if (!touch || !point) {
             touch = undefined;
@@ -134,6 +151,7 @@ export function mountExample(root: HTMLElement) {
           type,
           () => {
             touch = undefined;
+            rotating = false;
           },
           { passive: true },
         );
@@ -398,7 +416,9 @@ export function mountExample(root: HTMLElement) {
 
         hint.textContent = 'These are live props. Expand a value, or focus the selected subtree.';
       } else {
-        hint.textContent = 'Drag to rotate. Select a layer or a component in the tree.';
+        hint.textContent = matchMedia('(pointer: coarse)').matches
+          ? 'Drag the layers to rotate. Tap one to see its props.'
+          : 'Drag to rotate. Select a layer or a component in the tree.';
       }
     } catch (cause) {
       if (request !== action || version !== generation) {

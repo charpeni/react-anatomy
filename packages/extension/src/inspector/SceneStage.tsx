@@ -105,6 +105,18 @@ export function SceneStage({
     onDragging(false);
   }
 
+  // The browser cancels a pointer when it claims the gesture for itself, such
+  // as a page scroll on a host that lets touches pan over the stage. Undo the
+  // rotation the gesture began, and never treat it as a tap on a plane.
+  function cancel() {
+    if (drag.current?.moved) {
+      onRotate({ x: drag.current.rx, y: drag.current.ry });
+    }
+
+    drag.current = null;
+    onDragging(false);
+  }
+
   return (
     <div
       className="stage"
@@ -112,7 +124,7 @@ export function SceneStage({
       onPointerDown={down}
       onPointerMove={move}
       onPointerUp={up}
-      onPointerCancel={up}
+      onPointerCancel={cancel}
       onWheel={(e) => onZoom((z) => Math.max(0.4, Math.min(2.5, z - e.deltaY * 0.001)))}
     >
       <div className="stage-meta">
