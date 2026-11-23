@@ -1,15 +1,15 @@
 ---
 title: Privacy policy
-description: How the React Anatomy browser extension handles page data, component props, and inspection sessions.
+description: How the React Anatomy extension handles inspection data and how the website measures visits.
 prev: false
 next: false
 ---
 
-Last updated: November 3, 2026
+Last updated: November 23, 2026
 
 React Anatomy is a browser extension developed by [Nicolas Charpentier](https://github.com/charpeni). It inspects React pages locally in your browser. **We do not receive your captures or component props.** The extension has no accounts, analytics, advertising, or remote error reporting.
 
-This policy covers the browser extension. Privacy questions can be sent to [info@react-anatomy.com](mailto:info@react-anatomy.com).
+This policy covers the browser extension and react-anatomy.com. Privacy questions can be sent to [info@react-anatomy.com](mailto:info@react-anatomy.com).
 
 ## What the extension accesses
 
@@ -41,6 +41,12 @@ Close DevTools or the Anatomy window to stop inspection, then reload the inspect
 Recreating a page can reload its images, backgrounds, and fonts from their original URLs. Those requests go directly to the sites or asset providers, without passing through a React Anatomy server. They can expose the requested URL, your IP address, and normal browser request headers to those providers. Browser caching and cookie rules apply, and providers may keep their own request logs.
 
 We do not sell inspection data or use it for advertising or analytics. React Anatomy’s use of information obtained through Chrome APIs follows the [Chrome Web Store User Data Policy](https://developer.chrome.com/docs/webstore/program-policies/policies#protecting-user-privacy), including the Limited Use requirements.
+
+## Website analytics
+
+React-anatomy.com uses Pirsch and InsightFlare to understand which pages people visit. Both services process page, referrer, browser, and device information. InsightFlare also measures visit duration and page performance. The page addresses it records can include query strings and fragments. When you follow a link to another website, InsightFlare records the page you clicked from and the full destination URL.
+
+The website uses InsightFlare’s Weak tracking mode, which counts visits without saving a persistent visitor ID in your browser’s local storage. These tools run on the website. The extension keeps captures and inspected component props local to your browser.
 
 ## Website example
 
