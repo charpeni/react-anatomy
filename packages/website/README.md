@@ -60,7 +60,7 @@ Compatibility facts for future wording, checked against MDN browser-compat-data 
 
 The install section sits immediately below the live example and uses the selected “Two routes” layout: Chrome Web Store and Firefox Add-ons each have an install action, with the Brave/Edge logos and compatibility note inside the Chrome route. The routes sit side by side on wider screens and stack on phones. Store labels and controls use Instrument Sans; the browser icons are hosted locally. Keep the quiet Compatibility notes link beside the section heading. The “Add to Chrome” / “Add to Firefox” actions link directly to the live store listings, without development or validation labels. Keep detailed implementation and validation records in the local, ignored `docs/validation/` notes. Icon sources and attribution are in `public/media/browsers/README.md`.
 
-There are no store badges, signup forms, or placeholder social accounts. Production pages load Pirsch page analytics from `pirsch.react-anatomy.com` (`src/components/Pirsch.astro`, production builds only); this is separate from the browser extension, which has no analytics. The production `site` URL is `https://react-anatomy.com`; setting it generates canonical URLs and the sitemap but does not deploy the site.
+There are no store badges, signup forms, or placeholder social accounts. Production pages load Pirsch and InsightFlare through `src/components/Analytics.astro`. The browser extension has no analytics. The production `site` URL is `https://react-anatomy.com`; setting it generates canonical URLs and the sitemap but does not deploy the site.
 
 Pagefind is pinned to 1.5.2 at the workspace root. Its 1.6 Linux binary crashes with an illegal instruction on the current host CPU, while 1.5.2 works and satisfies Starlight’s supported range. `scripts/check-build.ts` verifies that the generated search assets exist, because the upstream service failure can otherwise let Astro exit successfully without an index.
 
@@ -104,7 +104,7 @@ Once the domain is connected, verify `react-anatomy.com` in Google Search Consol
 
 ## Privacy policy
 
-The extension policy is at `/privacy/`, authored in `src/content/docs/privacy.md`, and linked from the landing and documentation footers. Its production address is `https://react-anatomy.com/privacy/`, with `info@react-anatomy.com` as the contact. Keep the wording aligned with extension behavior, especially persistence, external page assets, and props that may contain sensitive data.
+The extension and website privacy policy is at `/privacy/`, authored in `src/content/docs/privacy.md`, and linked from the landing and documentation footers. Its production address is `https://react-anatomy.com/privacy/`, with `info@react-anatomy.com` as the contact. Keep the wording aligned with extension behavior, especially persistence, external page assets, and props that may contain sensitive data.
 
 ## Deployment
 
