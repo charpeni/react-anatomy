@@ -46,7 +46,7 @@ We do not sell inspection data or use it for advertising or analytics. React Ana
 
 React-anatomy.com uses Pirsch and InsightFlare to understand which pages people visit. Both services process page, referrer, browser, and device information. InsightFlare also measures visit duration and page performance. The page addresses it records can include query strings and fragments. When you follow a link to another website, InsightFlare records the page you clicked from and the full destination URL.
 
-Depending on the tracking mode, InsightFlare may save a random visitor ID in your browser’s local storage to recognize repeat visits. These tools run on the website. The extension keeps captures and inspected component props local to your browser.
+The website uses InsightFlare’s Weak tracking mode, which counts visits without saving a persistent visitor ID in your browser’s local storage. These tools run on the website. The extension keeps captures and inspected component props local to your browser.
 
 ## Website example
 
