@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import { createPortal } from 'react-dom';
 import styles from './app.css';
+import nicolasAvatar from './charpeni.jpg';
 
 document.head.appendChild(Object.assign(document.createElement('style'), { textContent: styles }));
 
@@ -148,7 +149,7 @@ function Navigation({ count }: { count: number }) {
 function UserProfile() {
   return (
     <div className="user-profile">
-      <span className="avatar">NC</span>
+      <img className="avatar" src={nicolasAvatar} alt="" />
       <div>
         <b>Nicolas Charpentier</b>
         <small>Engineering team</small>
