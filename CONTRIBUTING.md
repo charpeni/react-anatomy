@@ -93,6 +93,8 @@ Configure `CHROME_WORKLOAD_IDENTITY_PROVIDER` and `CHROME_SERVICE_ACCOUNT` in th
 
 Website deployment is documented in the [website guide](packages/website/README.md#deployment). It is independent of browser-store submissions.
 
-## README screenshot
+## README animation and panel screenshot
+
+The README uses [extension.gif](packages/extension/assets/extension.gif). Its final frame holds for three seconds before the animation repeats.
 
 Run `pnpm --filter @react-anatomy/extension run screenshot:readme` to capture the real DevTools panel against the sample app. Review `packages/extension/assets/extension.png` before committing it.
