@@ -32,7 +32,7 @@ _The image uses the camera angle, separation, and layers you see in the panel._
 
 Repeat for other components. They are numbered in the order you include them; each number appears on the component’s layer and on its props in the image. Your choices stay while you focus other parts of the page or capture again, and turning **Include in image** off and on keeps the values you hid. Reloading the page clears them, because its components are new.
 
-The image never reads props again when you export. If you hid an entry of a list, Map, or Set and another value later takes its place, the props inspector flags the collection, and the image masks all of it until you check its hidden values and choose **Keep hidden values**.
+The image never reads props again when you export. If you hid an entry of a list, Map, or Set, or a value inside one, and another value later takes its place, the props inspector flags the collection, and the image masks all of it until you check its hidden values and choose **Keep hidden values**.
 
 ## 4. Export the image
 
@@ -71,4 +71,4 @@ Useful details to mention:
 
 The image is one capture of one state. It does not show other routes, empty or error states, or components that are imported but not rendered. It also doesn’t show source files: point reviewers to the files in the diff for that.
 
-Props in the image are read when you export. If the page changed after the capture, the export dialog says so; capture again for an image whose layers and props match.
+Props in the image are the ones you last reviewed in the inspector; exporting does not read them again. If the page changed after the capture, or props changed after you reviewed them, the export dialog says so: capture again, and select each included component to review its props.

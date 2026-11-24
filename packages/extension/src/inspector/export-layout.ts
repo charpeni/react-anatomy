@@ -38,8 +38,8 @@ interface Box extends Point {
 }
 
 function overlap(a: Box, b: Box, gap: number) {
-  const x = Math.min(a.x + a.width + gap, b.x + b.width) - Math.max(a.x, b.x - gap);
-  const y = Math.min(a.y + a.height + gap, b.y + b.height) - Math.max(a.y, b.y - gap);
+  const x = Math.min(a.x + a.width + gap, b.x + b.width) - Math.max(a.x - gap, b.x);
+  const y = Math.min(a.y + a.height + gap, b.y + b.height) - Math.max(a.y - gap, b.y);
 
   return x > 0 && y > 0 ? x * y : 0;
 }

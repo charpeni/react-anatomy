@@ -1,4 +1,12 @@
-import type { HiddenValue, ImageProps, ImageRow, PropEntry, PropPage, PropValue } from './types.ts';
+import type {
+  HiddenValue,
+  ImageProps,
+  ImageRow,
+  PropEntry,
+  PropPage,
+  PropPosition,
+  PropValue,
+} from './types.ts';
 
 // What a props card in an exported image shows. The image draws the rows the
 // author last saw in the inspector; it never reads the page again at export.
@@ -61,9 +69,36 @@ function entryAt(pages: LoadedPages, container: string, path: string) {
   return pages.get(container)?.entries?.find((entry) => propertyPath(container, entry) === path);
 }
 
+// The list items and Map entries a path passes through. A value hidden at
+// `users[0].email` moves if another user is inserted, just as `users[0]` would.
+function enclosing(path: string, pages: LoadedPages): PropPosition[] {
+  const positions: PropPosition[] = [];
+
+  for (const [container, page] of pages) {
+    for (const entry of page.entries ?? []) {
+      const entryPath = propertyPath(container, entry);
+      const next = path[entryPath.length];
+
+      if (isPositional(entryPath) && path.startsWith(entryPath) && (next === '.' || next === '[')) {
+        positions.push({
+          path: entryPath,
+          container,
+          fingerprint: fingerprint(entry.value),
+          siblings: page.total,
+        });
+      }
+    }
+  }
+
+  return positions;
+}
+
 function rematch(hidden: HiddenValue, pages: LoadedPages): HiddenValue {
   const page = pages.get(hidden.container);
   const entry = entryAt(pages, hidden.container, hidden.path);
+  // Collapsed collections are not loaded; keep what was recorded for them.
+  const kept = (hidden.enclosing ?? []).filter((p) => !pages.get(p.container)?.entries);
+  const around = [...kept, ...enclosing(hidden.path, pages)];
 
   return page && entry
     ? {
@@ -71,8 +106,16 @@ function rematch(hidden: HiddenValue, pages: LoadedPages): HiddenValue {
         fingerprint: fingerprint(entry.value),
         siblings: page.total,
         text: hiddenText(entry.value),
+        enclosing: around,
       }
-    : hidden;
+    : { ...hidden, enclosing: around };
+}
+
+function within(hidden: HiddenValue, containers: string[]) {
+  return (
+    containers.includes(hidden.container) ||
+    !!hidden.enclosing?.some((p) => containers.includes(p.container))
+  );
 }
 
 /**
@@ -98,33 +141,43 @@ export function changeHidden(
       fingerprint: fingerprint(value),
       siblings: pages.get(container)?.total ?? 0,
       text: hiddenText(value),
+      enclosing: enclosing(path, pages),
     });
   }
 
-  return next.map((h) => (h.container === container ? rematch(h, pages) : h));
+  return next.map((h) => (within(h, [container]) ? rematch(h, pages) : h));
 }
 
 /** Confirms masked collections: their hidden entries are matched to what is there now. */
 export function confirmHidden(hidden: HiddenValue[], pages: LoadedPages, containers: string[]) {
-  return hidden.map((h) => (containers.includes(h.container) ? rematch(h, pages) : h));
+  return hidden.map((h) => (within(h, containers) ? rematch(h, pages) : h));
 }
 
-/** Collections whose hidden entries may now hold different values. */
+/**
+ * Collections whose hidden entries may now hold different values: either the
+ * hidden entry itself, or a list item or Map entry it sits inside, moved.
+ */
 export function staleContainers(hidden: HiddenValue[], pages: LoadedPages) {
   const stale = new Set<string>();
 
   for (const h of hidden) {
-    const page = pages.get(h.container);
+    for (const position of [...(isPositional(h.path) ? [h] : []), ...(h.enclosing ?? [])]) {
+      const page = pages.get(position.container);
 
-    // A collapsed collection is not drawn, so it cannot reveal anything.
-    if (!isPositional(h.path) || !page?.entries) {
-      continue;
-    }
+      // A collapsed collection is not drawn, so it cannot reveal anything.
+      if (!page?.entries) {
+        continue;
+      }
 
-    const entry = entryAt(pages, h.container, h.path);
+      const entry = entryAt(pages, position.container, position.path);
 
-    if (!entry || page.total !== h.siblings || fingerprint(entry.value) !== h.fingerprint) {
-      stale.add(h.container);
+      if (
+        !entry ||
+        page.total !== position.siblings ||
+        fingerprint(entry.value) !== position.fingerprint
+      ) {
+        stale.add(position.container);
+      }
     }
   }
 

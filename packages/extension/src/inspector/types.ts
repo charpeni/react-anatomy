@@ -117,15 +117,21 @@ export interface PropPage {
   limited: boolean;
 }
 
-/** A value hidden in exported props cards. */
-export interface HiddenValue {
+/** A prop entry and what it held, to notice when another value takes its place. */
+export interface PropPosition {
   path: string;
-  /** The array, Map, Set, or object that holds the value. */
+  /** The array, Map, Set, or object that holds the entry. */
   container: string;
-  /** Identifies the value when it was hidden, to notice when another takes its place. */
+  /** Identifies the entry's value when it was recorded. */
   fingerprint: string;
   /** How many entries the container had then. */
   siblings: number;
+}
+
+/** A value hidden in exported props cards. */
+export interface HiddenValue extends PropPosition {
+  /** The list items and Map entries the value sits inside, which can move too. */
+  enclosing?: PropPosition[];
   /** The start of a hidden text value, to warn when it also appears in page text. Never drawn. */
   text?: string;
 }

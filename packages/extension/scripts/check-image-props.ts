@@ -113,6 +113,47 @@ const root = page([
   assert.equal(collapsed.rows.length, 3);
 }
 
+// A value hidden inside a list item fails closed too: its path ends in a
+// name, but the item around it is tracked by position.
+{
+  const user = (name: string) =>
+    page([
+      ['name', text(name)],
+      ['email', text(`${name}@example.com`)],
+    ]);
+  const before = new Map([
+    ['props', root],
+    ['props.users', users('alice', 'bob')],
+    ['props.users[0]', user('alice')],
+    ['props.users[1]', user('bob')],
+  ]);
+  const hidden = changeHidden([], before, {
+    path: 'props.users[0].email',
+    container: 'props.users[0]',
+    value: text('alice@example.com'),
+    hide: true,
+  });
+  const image = { expanded: ['props.users', 'props.users[0]', 'props.users[1]'], hidden };
+
+  assert.deepEqual(reviewRows(before, image)!.stale, []);
+
+  // Carol is inserted first: alice moves to [1], with her email unhidden there.
+  const after = new Map([
+    ['props', root],
+    ['props.users', users('carol', 'alice', 'bob')],
+    ['props.users[0]', user('carol')],
+    ['props.users[1]', user('alice')],
+    ['props.users[2]', user('bob')],
+  ]);
+  const review = reviewRows(after, image)!;
+
+  assert.deepEqual(review.stale, ['props.users']);
+  assert(!JSON.stringify(review.rows).includes('alice@'), 'A hidden email was drawn');
+
+  // Confirming re-records the item around it, as well as the value.
+  assert.deepEqual(staleContainers(confirmHidden(hidden, after, review.stale), after), []);
+}
+
 // A hidden named prop stays hidden whatever its value becomes: names, unlike
 // positions, keep meaning the same thing.
 {

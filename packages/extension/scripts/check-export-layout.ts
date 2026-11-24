@@ -50,6 +50,21 @@ function assertInside(tags: PlacedTag[], margin = 8) {
   assertInside(placed);
 }
 
+// Spacing is the same on both sides: neighbours 10px apart stay on one row
+// whichever of them is placed first.
+for (const [first, second] of [
+  [300, 410],
+  [410, 300],
+]) {
+  const pair = placeTags([tag('first', first, 300, 100), tag('second', second, 300, 100)], bounds);
+
+  assert.deepEqual(
+    pair.map((t) => t.y),
+    [266, 266],
+    `A neighbour ${second < first ? 'on the left' : 'on the right'} was pushed to another row`,
+  );
+}
+
 // Tags near an edge stay inside the image, and the leader still reaches the
 // edge facing the anchor.
 {
