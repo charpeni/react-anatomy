@@ -60,7 +60,9 @@
   const scene = document.querySelector<HTMLElement>('.hero-scene');
   const reducedMotion = matchMedia('(prefers-reduced-motion: reduce)');
 
-  if (stage) enableHeroDrift(stage);
+  if (stage) {
+    enableHeroDrift(stage);
+  }
 
   if (scene && !reducedMotion.matches && !scene.contains(document.activeElement)) {
     const finishEntrance = () => scene.classList.remove('is-entering');

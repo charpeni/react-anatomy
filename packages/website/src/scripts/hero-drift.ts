@@ -34,10 +34,14 @@ export function enableHeroDrift(stage: HTMLElement) {
   }
 
   stage.addEventListener('pointermove', (event) => {
-    if (!motion.matches || event.pointerType === 'touch' || event.buttons !== 0) return;
+    if (!motion.matches || event.pointerType === 'touch' || event.buttons !== 0) {
+      return;
+    }
     pointerX = event.clientX;
     pointerY = event.clientY;
-    if (!frame) frame = requestAnimationFrame(drift);
+    if (!frame) {
+      frame = requestAnimationFrame(drift);
+    }
   });
   stage.addEventListener('pointerleave', settle);
   stage.addEventListener('pointercancel', settle);
