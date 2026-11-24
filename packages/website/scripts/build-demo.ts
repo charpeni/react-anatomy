@@ -13,7 +13,7 @@ const options: BuildOptions = {
   format: 'iife',
   minify: false,
   define: { 'process.env.NODE_ENV': '"production"' },
-  loader: { '.css': 'text' },
+  loader: { '.css': 'text', '.jpg': 'dataurl' },
   legalComments: 'inline',
 };
 

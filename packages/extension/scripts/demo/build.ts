@@ -11,7 +11,7 @@ const result = await build({
   keepNames: true,
   minify: true,
   define: { 'process.env.NODE_ENV': '"development"' },
-  loader: { '.css': 'text' },
+  loader: { '.css': 'text', '.jpg': 'dataurl' },
 });
 
 await writeFile(
