@@ -150,6 +150,17 @@ const root = page([
   assert.deepEqual(review.stale, ['props.users']);
   assert(!JSON.stringify(review.rows).includes('alice@'), 'A hidden email was drawn');
 
+  // Hiding another value inside the item confirms that item only, not the
+  // list around it: the list stays masked.
+  const more = changeHidden(hidden, after, {
+    path: 'props.users[0].name',
+    container: 'props.users[0]',
+    value: text('carol'),
+    hide: true,
+  });
+
+  assert.deepEqual(staleContainers(more, after), ['props.users']);
+
   // Confirming re-records the item around it, as well as the value.
   assert.deepEqual(staleContainers(confirmHidden(hidden, after, review.stale), after), []);
 }

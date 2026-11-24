@@ -93,14 +93,20 @@ function enclosing(path: string, pages: LoadedPages): PropPosition[] {
   return positions;
 }
 
-function rematch(hidden: HiddenValue, pages: LoadedPages): HiddenValue {
+// Records again only what is recorded in the confirmed collections. A change
+// inside one list item does not confirm the list around it, and collapsed
+// collections, which are not loaded, keep their record.
+function rematch(hidden: HiddenValue, pages: LoadedPages, containers: string[]): HiddenValue {
   const page = pages.get(hidden.container);
   const entry = entryAt(pages, hidden.container, hidden.path);
-  // Collapsed collections are not loaded; keep what was recorded for them.
-  const kept = (hidden.enclosing ?? []).filter((p) => !pages.get(p.container)?.entries);
-  const around = [...kept, ...enclosing(hidden.path, pages)];
+  const confirmed = (p: PropPosition) =>
+    containers.includes(p.container) && !!pages.get(p.container)?.entries;
+  const around = [
+    ...(hidden.enclosing ?? []).filter((p) => !confirmed(p)),
+    ...enclosing(hidden.path, pages).filter(confirmed),
+  ];
 
-  return page && entry
+  return containers.includes(hidden.container) && page && entry
     ? {
         ...hidden,
         fingerprint: fingerprint(entry.value),
@@ -120,7 +126,8 @@ function within(hidden: HiddenValue, containers: string[]) {
 
 /**
  * Hides or shows one value. Changing a value in a collection also confirms the
- * rest of it: its other hidden entries are matched to what is there now.
+ * rest of that collection: its other hidden entries are matched to what is
+ * there now. Collections around it are not confirmed.
  */
 export function changeHidden(
   hidden: HiddenValue[],
@@ -145,12 +152,12 @@ export function changeHidden(
     });
   }
 
-  return next.map((h) => (within(h, [container]) ? rematch(h, pages) : h));
+  return next.map((h) => (within(h, [container]) ? rematch(h, pages, [container]) : h));
 }
 
 /** Confirms masked collections: their hidden entries are matched to what is there now. */
 export function confirmHidden(hidden: HiddenValue[], pages: LoadedPages, containers: string[]) {
-  return hidden.map((h) => (within(h, containers) ? rematch(h, pages) : h));
+  return hidden.map((h) => (within(h, containers) ? rematch(h, pages, containers) : h));
 }
 
 /**
