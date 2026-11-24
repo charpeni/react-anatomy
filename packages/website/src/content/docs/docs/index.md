@@ -5,7 +5,19 @@ description: Understand how a React page is composed. React Anatomy connects a r
 
 React Anatomy is a browser extension for understanding how a React page is composed. It adds an **Anatomy** panel to DevTools that connects what you see on a running page with the components React rendered for it, and separates the page into layers you can explore in 3D.
 
-Install React Anatomy from the [Chrome Web Store](https://chromewebstore.google.com/detail/react-anatomy/cllgnlljmehhoemdlfngkkpienkglkml) or [Firefox Add-ons](https://addons.mozilla.org/en-US/firefox/addon/react-anatomy/), open a React page, then choose **Anatomy** in DevTools. You can also [explore the interactive example](/#demo), which runs the inspector against a bundled sample app without installing the extension.
+You can [try the interactive example](/#demo) in your browser or follow the steps below to use the extension.
+
+## Make your first capture
+
+1. Install React Anatomy from the [Chrome Web Store](https://chromewebstore.google.com/detail/react-anatomy/cllgnlljmehhoemdlfngkkpienkglkml) or [Firefox Add-ons](https://addons.mozilla.org/en-US/firefox/addon/react-anatomy/).
+2. <a href="/interactive/source.html" target="_blank" rel="noopener">Open the Orbit sample in a new tab</a>. Open DevTools on that tab and choose **Anatomy**. If DevTools was open during installation, close and reopen it. Look under **»** if the tab is hidden. The first capture runs automatically.
+3. Choose **Pick on page** and click just inside the edge of a project card. Look for **ProjectCard** in the component tree, then expand its **project** prop in the inspector.
+
+Prefer a separate inspector window? Click the React Anatomy extension button while viewing Orbit.
+
+### No React components to inspect
+
+The landing page embeds Orbit in an iframe. The extension captures the top-level page, so use the standalone sample in step 2 to inspect Orbit. If the sample works but your app shows this message, check its [React DOM version](/docs/compatibility/#react). For a server-rendered app, wait for hydration to finish, then choose **Capture page**.
 
 ## The mental model
 
@@ -31,6 +43,7 @@ Anatomy shows the components that rendered **for this page, in its current state
 | ---------------------------------------------------------------- | ------------------------------------------------------------- |
 | Function and class components, including `memo` and `forwardRef` | Imports, modules, files, or package dependencies              |
 | Each rendered instance, with its own key and props               | Components that are imported but not rendered right now       |
+| Props received by the selected component                         | State, Hooks, and context values as separate inspector fields |
 | How components nest at runtime                                   | Where a component is defined in your source                   |
 | Which part of the page each component’s DOM output covers        | DOM elements as tree rows (they are the output of components) |
 
