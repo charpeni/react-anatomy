@@ -1,10 +1,10 @@
 ---
 import mark from '@react-anatomy/brand/svg/mark-light.svg?url';
+import animatedMark from '@react-anatomy/brand/svg/mark-light-animated.svg?url';
 import '../styles/landing.css';
 import InteractiveDemo from '../components/InteractiveDemo.astro';
 import ExplodedHero from '../components/ExplodedHero.astro';
 import ImageLightbox from '../components/ImageLightbox.astro';
-import BrandMark from '../components/BrandMark.astro';
 import AuthorCredit from '../components/AuthorCredit.astro';
 import Seo from '../components/Seo.astro';
 import Analytics from '../components/Analytics.astro';
@@ -38,7 +38,7 @@ import autoDepth from '../../public/media/auto-depth.png';
     <div class="shell">
       <header class="site-header">
         <a class="brand" href="/" aria-label="React Anatomy home">
-          <BrandMark size={32} animate />
+          <img class="brand-mark" src={animatedMark} width="32" height="32" alt="" />
           <span>
             React <strong>Anatomy</strong>
           </span>

@@ -1,6 +1,6 @@
 <picture>
-  <source media="(prefers-color-scheme: dark)" srcset="packages/brand/svg/mark-dark.svg" />
-  <img src="packages/brand/svg/mark-light.svg" alt="React Anatomy logo" width="80" height="80" align="right" />
+  <source media="(prefers-color-scheme: dark)" srcset="packages/brand/svg/mark-dark-animated.svg" />
+  <img src="packages/brand/svg/mark-light-animated.svg" alt="React Anatomy logo" width="80" height="80" align="right" />
 </picture>
 
 # React Anatomy

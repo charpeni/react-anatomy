@@ -85,27 +85,6 @@ p {
 .brand-mark {
   display: block;
   flex-shrink: 0;
-  overflow: visible;
-}
-/* First render: the stack starts assembled behind the back slab, then separates into
-   the approved exploded position. One shot, no loop; the final frame is the static mark. */
-.brand-mark-animate :is(.mark-middle, .mark-front) {
-  animation: brand-mark-separate 620ms cubic-bezier(0.22, 1, 0.36, 1) 120ms both;
-}
-.brand-mark-animate .mark-middle {
-  --brand-mark-from: -26px;
-}
-.brand-mark-animate .mark-front {
-  --brand-mark-from: -52px;
-  animation-delay: 190ms;
-}
-@keyframes brand-mark-separate {
-  from {
-    transform: translateX(var(--brand-mark-from));
-  }
-  to {
-    transform: none;
-  }
 }
 nav {
   display: flex;
@@ -669,9 +648,6 @@ footer p {
   *::before,
   *::after {
     transition: none !important;
-  }
-  .brand-mark-animate :is(.mark-middle, .mark-front) {
-    animation: none;
   }
   .install-button,
   .demo-steps button {
