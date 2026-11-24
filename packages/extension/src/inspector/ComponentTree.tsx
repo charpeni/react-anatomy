@@ -3,6 +3,46 @@ import React, { useEffect, useLayoutEffect, useMemo, useRef, useState } from 're
 import { Glyph } from './Glyph.tsx';
 
 const ROW_HEIGHT = 21;
+const indent = (level: number) => 4 + level * 14;
+
+// Reserve the full horizontal extent even when the widest row is offscreen.
+// The row has a 14px toggle, 8px end padding and an 80px minimum select button.
+function measureTreeWidth(rows: { node: ComponentNode; level: number }[], fontFamily: string) {
+  const measure = document.createElement('canvas').getContext('2d');
+  function measureLabels(size: number) {
+    const cache = new Map<string, number>();
+    return (text: string) => {
+      let width = cache.get(text);
+      if (width === undefined) {
+        if (measure) {
+          measure.font = `${size}px ${fontFamily}`;
+        }
+        width = measure ? Math.ceil(measure.measureText(text).width) : text.length * size * 2;
+        cache.set(text, width);
+      }
+      return width;
+    };
+  }
+  const nameWidth = measureLabels(11);
+  const keyWidth = measureLabels(10);
+  const badgeWidth = measureLabels((11 * 5) / 6);
+  let widest = 0;
+  for (const { node, level } of rows) {
+    // Button padding, the component glyph and the gap before the name.
+    let content = 4 + 12 + 4 + Math.min(240, nameWidth(node.name));
+    if (node.key) {
+      content += 4 + Math.min(140, keyWidth(`key="${node.key}"`));
+    }
+    if (node.hasMore) {
+      content += 4 + badgeWidth('…');
+    }
+    if (!node.frame) {
+      content += 4 + badgeWidth('○');
+    }
+    widest = Math.max(widest, indent(level) + 14 + Math.max(80, content) + 8);
+  }
+  return widest;
+}
 
 // The tree panel: every captured component, a page-side search for components
 // beyond the capture, and keyboard navigation. Long trees render only the rows
@@ -99,6 +139,8 @@ export function ComponentTree({
   }, [search, scopeId, nodes, call]);
 
   const treeScroll = useRef<HTMLDivElement | null>(null);
+  const widthSpacer = useRef<HTMLDivElement | null>(null);
+  const [focusedId, setFocusedId] = useState<string | null>(null);
   const [treeViewport, setTreeViewport] = useState({ top: 0, height: 600 });
   const treeRows = useMemo(() => {
     const result: { node: ComponentNode; level: number }[] = [];
@@ -116,11 +158,45 @@ export function ComponentTree({
     }
     return result;
   }, [roots, byId, collapsed]);
-  const virtual = treeRows.length > 500;
+  const virtual = treeRows.length > 100;
+  const rowIndexes = useMemo(
+    () => new Map(treeRows.map(({ node }, i) => [node.id, i])),
+    [treeRows],
+  );
   const firstRow = virtual ? Math.max(0, Math.floor(treeViewport.top / ROW_HEIGHT) - 8) : 0;
   const lastRow = virtual
     ? Math.min(treeRows.length, firstRow + Math.ceil(treeViewport.height / ROW_HEIGHT) + 16)
     : treeRows.length;
+  const visibleIndexes = Array.from(
+    { length: Math.max(0, lastRow - firstRow) },
+    (_, i) => firstRow + i,
+  );
+  // Keep selection available to scrollIntoView, and preserve the actual DOM focus
+  // if the user scrolls away or selects a different component from the stage.
+  for (const id of new Set([selectedId, focusedId])) {
+    const i = id === null ? undefined : rowIndexes.get(id);
+    if (i !== undefined && (i < firstRow || i >= lastRow)) {
+      visibleIndexes.push(i);
+    }
+  }
+  if (visibleIndexes.length > lastRow - firstRow) {
+    visibleIndexes.sort((a, b) => a - b);
+  }
+  const searching = !!search.trim();
+  useLayoutEffect(() => {
+    const spacer = widthSpacer.current;
+    const row = treeScroll.current?.querySelector('.tree-row');
+    if (!spacer || !row) {
+      return;
+    }
+    const fontFamily = getComputedStyle(row).fontFamily;
+    const measure = () => {
+      spacer.style.width = measureTreeWidth(treeRows, fontFamily) + 'px';
+    };
+    measure();
+    document.fonts.addEventListener('loadingdone', measure);
+    return () => document.fonts.removeEventListener('loadingdone', measure);
+  }, [virtual, treeRows, searching]);
   useLayoutEffect(() => {
     const element = treeScroll.current;
     if (!element) {
@@ -134,7 +210,7 @@ export function ComponentTree({
   }, []);
 
   function treeKey(e: React.KeyboardEvent<HTMLButtonElement>, node: ComponentNode) {
-    const index = treeRows.findIndex((row) => row.node.id === node.id);
+    const index = rowIndexes.get(node.id)!;
     let next: ComponentNode | undefined;
     if (e.key === 'ArrowDown') {
       next = treeRows[Math.min(treeRows.length - 1, index + 1)]?.node;
@@ -173,88 +249,77 @@ export function ComponentTree({
         onSelect(next.id);
         const target = next.id;
         requestAnimationFrame(() =>
-          document.querySelector<HTMLButtonElement>(`[data-tree="${target}"]`)?.focus(),
+          treeScroll.current
+            ?.querySelector<HTMLButtonElement>(`[data-tree="${target}"]`)
+            ?.focus({ preventScroll: true }),
         );
       }
     }
   }
 
   useLayoutEffect(() => {
-    if (virtual && treeScroll.current) {
-      const index = treeRows.findIndex((row) => row.node.id === selectedId);
-      const element = treeScroll.current;
-      if (
-        index >= 0 &&
-        (index * ROW_HEIGHT < element.scrollTop ||
-          (index + 1) * ROW_HEIGHT > element.scrollTop + element.clientHeight)
-      ) {
-        element.scrollTop = Math.max(0, index * ROW_HEIGHT - element.clientHeight / 2);
-        setTreeViewport({ top: element.scrollTop, height: element.clientHeight });
-      }
-    } else {
-      document
-        .querySelector('.tree-row.selected .tree-select')
-        ?.scrollIntoView({ block: 'nearest', inline: 'nearest' });
-    }
-  }, [selectedId, picked, virtual, treeRows]);
+    const button = treeScroll.current?.querySelector('.tree-row.selected .tree-select');
+    button?.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+    button?.querySelector('.node-name')?.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+  }, [selectedId, picked, treeRows, searching]);
 
-  function row(node: ComponentNode, level = 0): React.ReactNode {
+  function row(index: number): React.ReactNode {
+    const { node, level } = treeRows[index];
     const closed = collapsed.has(node.id);
 
     return (
-      <React.Fragment key={node.id}>
-        <div
-          className={`tree-row ${selectedId === node.id ? 'selected ' : ''}${hovered === node.id ? 'hovered ' : ''}${!isShown(node.id) ? 'dimmed' : ''}`}
-          style={{ paddingLeft: 4 + level * 14 }}
-          onMouseEnter={() => onHover(node.id)}
-          onMouseLeave={() => onHover(null)}
+      <div
+        key={node.id}
+        className={`tree-row ${selectedId === node.id ? 'selected ' : ''}${hovered === node.id ? 'hovered ' : ''}${!isShown(node.id) ? 'dimmed' : ''}`}
+        style={{ paddingLeft: indent(level), top: virtual ? index * ROW_HEIGHT : undefined }}
+        onFocus={() => setFocusedId(node.id)}
+        onBlur={() => setFocusedId(null)}
+        onMouseEnter={() => onHover(node.id)}
+        onMouseLeave={() => onHover(null)}
+      >
+        <button
+          tabIndex={-1}
+          className={'tree-toggle ' + (!node.children.length && !node.hasMore ? 'empty' : '')}
+          aria-label={(closed ? 'Expand ' : 'Collapse ') + node.name}
+          disabled={!node.children.length && !node.hasMore}
+          onClick={() =>
+            node.hasMore && !node.children.length ? onFocus(node.id) : onToggle(node.id)
+          }
         >
-          <button
-            tabIndex={-1}
-            className={'tree-toggle ' + (!node.children.length && !node.hasMore ? 'empty' : '')}
-            aria-label={(closed ? 'Expand ' : 'Collapse ') + node.name}
-            disabled={!node.children.length && !node.hasMore}
-            onClick={() =>
-              node.hasMore && !node.children.length ? onFocus(node.id) : onToggle(node.id)
-            }
-          >
-            {(node.children.length > 0 || node.hasMore) && (
-              <Glyph type={closed || !node.children.length ? 'chevron' : 'chevronDown'} size={12} />
-            )}
-          </button>
-          <button
-            role="treeitem"
-            aria-level={level + 1}
-            aria-selected={selectedId === node.id}
-            aria-expanded={node.children.length ? !closed : undefined}
-            tabIndex={selectedId === node.id ? 0 : -1}
-            className="tree-select"
-            data-tree={node.id}
-            title={`${node.name}${node.key ? ` key="${node.key}"` : ''}${!node.frame ? ' · No output in the current viewport' : ''}`}
-            onKeyDown={(e) => treeKey(e, node)}
-            onClick={() => onSelect(node.id)}
-            onDoubleClick={() => onFocus(node.id)}
-          >
-            <span className="node-icon">
-              <Glyph type="component" size={12} />
-            </span>
-            <span className="node-name">{node.name}</span>
-            {node.hasMore && (
-              <small title="More descendants available. Focus this component to capture them.">
-                …
-              </small>
-            )}
-            {node.key && <small className="tree-key">key="{node.key}"</small>}
-            {!node.frame && (
-              <small
-                title={node.bounds ? 'Outside the captured viewport' : 'No visible DOM output'}
-              >
-                ○
-              </small>
-            )}
-          </button>
-        </div>
-      </React.Fragment>
+          {(node.children.length > 0 || node.hasMore) && (
+            <Glyph type={closed || !node.children.length ? 'chevron' : 'chevronDown'} size={12} />
+          )}
+        </button>
+        <button
+          role="treeitem"
+          aria-level={level + 1}
+          aria-selected={selectedId === node.id}
+          aria-expanded={node.children.length ? !closed : undefined}
+          tabIndex={selectedId === node.id ? 0 : -1}
+          className="tree-select"
+          data-tree={node.id}
+          title={`${node.name}${node.key ? ` key="${node.key}"` : ''}${!node.frame ? ' · No output in the current viewport' : ''}`}
+          onKeyDown={(e) => treeKey(e, node)}
+          onClick={() => onSelect(node.id)}
+          onDoubleClick={() => onFocus(node.id)}
+        >
+          <span className="node-icon">
+            <Glyph type="component" size={12} />
+          </span>
+          <span className="node-name">{node.name}</span>
+          {node.hasMore && (
+            <small title="More descendants available. Focus this component to capture them.">
+              …
+            </small>
+          )}
+          {node.key && <small className="tree-key">key="{node.key}"</small>}
+          {!node.frame && (
+            <small title={node.bounds ? 'Outside the captured viewport' : 'No visible DOM output'}>
+              ○
+            </small>
+          )}
+        </button>
+      </div>
     );
   }
 
@@ -328,16 +393,13 @@ export function ComponentTree({
             ))}
           </>
         ) : (
-          <>
-            {virtual && <div aria-hidden="true" style={{ height: firstRow * ROW_HEIGHT }} />}
-            {treeRows.slice(firstRow, lastRow).map(({ node, level }) => row(node, level))}
-            {virtual && (
-              <div
-                aria-hidden="true"
-                style={{ height: Math.max(0, treeRows.length - lastRow) * ROW_HEIGHT }}
-              />
-            )}
-          </>
+          <div
+            className={virtual ? 'virtual-tree' : undefined}
+            style={{ height: virtual ? treeRows.length * ROW_HEIGHT : undefined }}
+          >
+            {virtual && <div aria-hidden="true" ref={widthSpacer} className="tree-width-spacer" />}
+            {visibleIndexes.map(row)}
+          </div>
         )}
       </div>
       <div className="tree-footer">

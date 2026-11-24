@@ -234,7 +234,7 @@ try {
 
       await capture();
       result.capture = await run<CaptureSummary>(
-        `({components:document.querySelectorAll('.tree-select').length,planes:document.querySelectorAll('[data-plane]').length,partial:document.querySelector('.capture-limit-banner')?.textContent||null,footer:document.querySelector('.extension-footer')?.textContent})`,
+        `({components:Number(document.querySelector('.tree-scroll')?.dataset.componentCount),planes:document.querySelectorAll('[data-plane]').length,partial:document.querySelector('.capture-limit-banner')?.textContent||null,footer:document.querySelector('.extension-footer')?.textContent})`,
       );
       assert(result.capture.components > 5, 'No useful component hierarchy');
       assert(result.capture.planes > 0, 'No visible component planes');
@@ -261,7 +261,7 @@ try {
         }
 
         result.expandedCapture = await run<CaptureSummary>(
-          `({components:document.querySelectorAll('.tree-select').length,partial:document.querySelector('.capture-limit-banner')?.textContent||null})`,
+          `({components:Number(document.querySelector('.tree-scroll')?.dataset.componentCount),partial:document.querySelector('.capture-limit-banner')?.textContent||null})`,
         );
         assert(
           result.expandedCapture.components > result.capture.components,

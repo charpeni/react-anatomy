@@ -44,6 +44,7 @@ export interface Snapshot {
   rootCount: number;
   message?: string;
   html?: string;
+  styleTable?: string[];
   fonts?: string;
   backgroundColor?: string;
   hostRects?: Record<string, Frame>;

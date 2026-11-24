@@ -706,13 +706,14 @@ export function pageAgent(request: PageRequest = { action: 'capture' }): PageRes
     const started = performance.now();
     let step: IteratorResult<void, Snapshot>;
     let count = 0;
+    // A coarse or frozen page clock must still yield control for cancellation.
     do {
       step = job.iterator.next();
       if (step.done) {
         state.captureJob = undefined;
         return { done: true, snapshot: step.value };
       }
-    } while (++count < 250 && performance.now() - started < 8);
+    } while (++count < 2000 && performance.now() - started < 8);
     return { done: false };
   }
   if (request.action === 'capture-start') {
@@ -1145,6 +1146,42 @@ export function pageAgent(request: PageRequest = { action: 'capture' }): PageRes
     let bytes = 0;
     let visualLimited = false;
     let styleProperties: string[] | undefined;
+    const styleTable: string[] = [];
+    const styles = new Map<string, { index: number; byteLength: number }>();
+    let remainingStyleChars = maxBytes / 2;
+
+    function writeStyle(copy: Element & ElementCSSInlineStyle, declarations: string) {
+      const cached = styles.get(declarations);
+      let index: number;
+      if (cached) {
+        bytes += cached.byteLength;
+        index = cached.index;
+        if (styleTable[index].length > remainingStyleChars) {
+          copy.setAttribute('style', styleTable[index]);
+          return;
+        }
+      } else {
+        copy.style.cssText = declarations;
+        const byteLength = copy.style.cssText.length * 2;
+        // Charge the same normalized declarations for every element, including cache hits.
+        bytes += byteLength;
+        copy.style.setProperty('pointer-events', 'none', 'important');
+        copy.style.setProperty('animation', 'none', 'important');
+        copy.style.setProperty('transition', 'none', 'important');
+        const css = copy.getAttribute('style')!;
+        // Keep overflow inline so a valid final element survives the decoder's expansion limit.
+        if (css.length > remainingStyleChars) {
+          return;
+        }
+        index = styleTable.length;
+        styleTable.push(css);
+        styles.set(declarations, { index, byteLength });
+        copy.removeAttribute('style');
+      }
+      remainingStyleChars -= styleTable[index].length;
+      copy.setAttribute('data-anatomy-style', String(index));
+    }
+
     function clone(el: Node, computedStyle?: CSSStyleDeclaration): Node {
       if (el.nodeType === Node.TEXT_NODE) {
         return document.createTextNode((el.textContent ?? '').slice(0, 20000));
@@ -1211,11 +1248,7 @@ export function pageAgent(request: PageRequest = { action: 'capture' }): PageRes
         declarations.push(`${prop}:${value}`);
       }
 
-      copy.style.cssText = declarations.join(';');
-      bytes += copy.style.cssText.length * 2;
-      copy.style.setProperty('pointer-events', 'none', 'important');
-      copy.style.setProperty('animation', 'none', 'important');
-      copy.style.setProperty('transition', 'none', 'important');
+      writeStyle(copy, declarations.join(';'));
 
       if (el instanceof HTMLImageElement) {
         copy.setAttribute('src', safeAsset(el.currentSrc || el.src));
@@ -1451,6 +1484,7 @@ export function pageAgent(request: PageRequest = { action: 'capture' }): PageRes
       ...meta,
       nodes,
       html: holder.innerHTML,
+      styleTable,
       fonts: fontRules.join('\n'),
       backgroundColor,
       hostRects,
