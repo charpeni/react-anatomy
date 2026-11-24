@@ -9,7 +9,7 @@ See how a React page is composed, in 3D, inside DevTools.
 
 Explore the rendered component tree, pull the layout apart into layers, focus a subtree, and inspect live props. React Anatomy works with an already running React page, without code changes or a reload.
 
-![The Anatomy DevTools panel showing the component tree, exploded layout, and live props of a React page.](packages/extension/assets/extension.png)
+![The React layers separate. The camera orbits to a top view, eases back toward the starting angle, then zooms to 130% and shows ProjectCard’s props.](packages/extension/assets/extension.gif)
 
 ## Install
 
