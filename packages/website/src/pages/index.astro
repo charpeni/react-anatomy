@@ -5,6 +5,7 @@ import InteractiveDemo from '../components/InteractiveDemo.astro';
 import ExplodedHero from '../components/ExplodedHero.astro';
 import ImageLightbox from '../components/ImageLightbox.astro';
 import BrandMark from '../components/BrandMark.astro';
+import AuthorCredit from '../components/AuthorCredit.astro';
 import Seo from '../components/Seo.astro';
 import Analytics from '../components/Analytics.astro';
 import { site } from '../lib/site.ts';
@@ -323,7 +324,9 @@ import autoDepth from '../../public/media/auto-depth.png';
             React <strong>Anatomy</strong>
           </span>
         </a>
-        <p>A clearer picture of how your page is composed.</p>
+        <p>
+          <AuthorCredit />
+        </p>
         <nav class="footer-links" aria-label="Footer navigation">
           <a href="/docs/">
             Documentation <span aria-hidden="true">↗</span>

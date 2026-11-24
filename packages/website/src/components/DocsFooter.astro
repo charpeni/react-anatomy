@@ -1,23 +1,28 @@
 ---
 import DefaultFooter from '@astrojs/starlight/components/Footer.astro';
+import AuthorCredit from './AuthorCredit.astro';
 import ImageLightbox from './ImageLightbox.astro';
 import { documentPath } from '../lib/documentation.ts';
 ---
 
 <DefaultFooter />
-<p class="privacy-link">
-  <a href="/privacy/">Privacy policy</a>
-  <span aria-hidden="true"> · </span>
-  <a href={`/${documentPath(Astro.locals.starlightRoute.entry)}.md`}>View as Markdown</a>
-</p>
+<footer class="site-footer">
+  <AuthorCredit />
+  <p>
+    <a href="/privacy/">Privacy policy</a>
+    <span aria-hidden="true"> · </span>
+    <a href={`/${documentPath(Astro.locals.starlightRoute.entry)}.md`}>View as Markdown</a>
+  </p>
+</footer>
 <ImageLightbox />
 
 <style>
-  .privacy-link {
+  .site-footer {
     margin-top: 1.5rem;
     font-size: var(--sl-text-sm);
-  }
-  .privacy-link a {
     color: var(--sl-color-gray-2);
+  }
+  .site-footer a {
+    color: inherit;
   }
 </style>
