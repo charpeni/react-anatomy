@@ -45,9 +45,15 @@ import autoDepth from '../../public/media/auto-depth.png';
         </a>
         <nav aria-label="Main navigation">
           <a href="/docs/release-notes/">Release Notes</a>
-          <a href="/docs/">Documentation</a>
+          <a href="/docs/">
+            <span class="nav-label-full">Documentation</span>
+            <span class="nav-label-short">Docs</span>
+          </a>
           <a href={site.repository}>
-            GitHub <span aria-hidden="true">↗</span>
+            GitHub{' '}
+            <span class="nav-arrow" aria-hidden="true">
+              ↗
+            </span>
           </a>
         </nav>
       </header>
