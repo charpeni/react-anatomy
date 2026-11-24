@@ -1,4 +1,4 @@
-import type { CaptureBudget, Snapshot } from './types.ts';
+import type { CaptureBudget, ImageProps, Snapshot } from './types.ts';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import { createTransport } from './transport.ts';
@@ -52,6 +52,10 @@ function friendlyError(error: unknown) {
   return text;
 }
 
+const noImageChoices: { document?: string; props: ReadonlyMap<string, ImageProps> } = {
+  props: new Map(),
+};
+
 function App() {
   const [snapshot, setSnapshot] = useState<Snapshot | null>(null);
   const [busy, setBusy] = useState(false);
@@ -62,6 +66,16 @@ function App() {
   const [picked, setPicked] = useState<{ id: string; time: number } | null>(null);
   const [count, setCount] = useState(0);
   const [overviewSelection, setOverviewSelection] = useState<string>();
+  // Components whose props appear in exported images. Fiber IDs stay stable
+  // across captures and subtree focus, so the choices do too. IDs restart when
+  // the page reloads, even at the same URL, so the choices belong to the
+  // document they were made in and apply only to captures of it.
+  const [imageChoices, setImageChoices] = useState<{
+    document?: string;
+    props: ReadonlyMap<string, ImageProps>;
+  }>(noImageChoices);
+  const imageProps =
+    imageChoices.document === snapshot?.document ? imageChoices.props : noImageChoices.props;
   const current = useRef<Snapshot | null>(null);
   const inFlight = useRef(false);
   const alive = useRef(true);
@@ -146,6 +160,7 @@ function App() {
       setPicking(false);
       setPicked(null);
       setError(null);
+      setImageChoices(noImageChoices);
       clearTimeout(navigationTimer);
 
       let attempts = 0;
@@ -220,7 +235,11 @@ function App() {
             setPicked({ id: status.picked, time: Date.now() });
           }
 
-          const newPage = status.url !== current.current.url;
+          // A reload keeps the URL but starts a new document. The toolbar
+          // window has no navigation event, so the document ID reveals it.
+          const newPage =
+            status.url !== current.current.url ||
+            (!!status.document && status.document !== current.current.document);
           const dirty =
             newPage ||
             (status.expired && current.current.status === 'ready') ||
@@ -236,6 +255,7 @@ function App() {
               current.current = null;
               captureBudget.current = {};
               setSnapshot(null);
+              setImageChoices(noImageChoices);
             }
 
             await capture();
@@ -399,6 +419,24 @@ function App() {
           }}
           initialSelection={overviewSelection}
           busy={busy}
+          changed={changed}
+          imageProps={imageProps}
+          onImageProps={(id, image) =>
+            setImageChoices((previous) => {
+              const choices =
+                previous.document === snapshot.document ? previous.props : noImageChoices.props;
+              const next = new Map(choices);
+
+              // Numbers follow inclusion order, so including again moves to the end.
+              if (image.included && !choices.get(id)?.included) {
+                next.delete(id);
+              }
+
+              next.set(id, image);
+
+              return { document: snapshot.document, props: next };
+            })
+          }
         />
       ) : (
         <div className="empty-state">

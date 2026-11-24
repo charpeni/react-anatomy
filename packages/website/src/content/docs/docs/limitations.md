@@ -33,6 +33,19 @@ A capture starts with a budget of **2,000 components** and **300 nested levels**
 
 Increasing Layer depth does not capture missing components. Depth changes how an existing capture is displayed; **Capture more** changes the traversal budget.
 
+## Exported images
+
+**Export image** draws the current view inside the panel. An image cannot load anything by itself, so page images and fonts are embedded first:
+
+- Images the page has loaded and can read, from its own origin or from servers that allow cross-origin access, are included. Others appear as gray boxes, and the export dialog says how many.
+- CSS background images are included only from servers that allow cross-origin access.
+- Page fonts are included when the panel can load them, only for the characters the image shows. Otherwise, their text uses a fallback font, as it does in the panel.
+- Embedded images and fonts are limited to 16 MB in total, and are loaded for up to 15 seconds. Closing the dialog stops loading.
+
+Name tags sit on their layer’s top edge. Where layers crowd, a tag moves aside with a line back to its layer, and tags without room near their layer are left out, except for included and selected components. Props cards show up to 40 lines each.
+
+In Firefox, text that exactly fits its box on the page can wrap differently in the image.
+
 ## Privacy
 
-No capture or props data is uploaded to a service by the extension. The reconstructed page can load images and fonts from the original page’s asset URLs. Sensitive values can be visible in the inspector, just as they can in other local debugging tools.
+No capture or props data is uploaded to a service by the extension. Exported images are created in the panel and leave your browser only when you paste or attach them. The reconstructed page can load images and fonts from the original page’s asset URLs. Sensitive values can be visible in the inspector, just as they can in other local debugging tools.

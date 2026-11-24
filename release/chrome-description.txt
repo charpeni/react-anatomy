@@ -5,6 +5,7 @@ React Anatomy helps you see how a React page is composed. It adds an Anatomy pan
 • Follow parents, children, and repeated component instances in the tree.
 • Focus on a subtree to understand one part of a layout.
 • Inspect live props, including nested objects and arrays.
+• Export an image of a subtree, with component names and the props you choose, for pull requests.
 
 Use it to find your way around an unfamiliar codebase, learn how React composes a page, investigate unexpected behavior, or explain a component's place in a pull request. It also helps you understand the structure of pages written by coding agents.
 

@@ -69,6 +69,26 @@ export function Glyph({ type = 'layers', size = 18 }: { type?: string; size?: nu
         <circle cx="12" cy="12" r="3" />
       </>
     ),
+    eyeOff: (
+      <>
+        <path d="M10.6 5.1A9.8 9.8 0 0 1 12 5c6 0 10 7 10 7a17.6 17.6 0 0 1-2.9 3.7M6.6 6.6C3.8 8.3 2 12 2 12s4 7 10 7c1.8 0 3.4-.6 4.7-1.4" />
+        <path d="M9.9 9.9a3 3 0 0 0 4.2 4.2M3 3l18 18" />
+      </>
+    ),
+    image: (
+      <>
+        <rect x="3" y="4" width="18" height="16" rx="1" />
+        <circle cx="9" cy="10" r="2" />
+        <path d="m21 16-5-5-9 9" />
+      </>
+    ),
+    copy: (
+      <>
+        <rect x="8" y="8" width="13" height="13" rx="1" />
+        <path d="M16 8V4a1 1 0 0 0-1-1H4a1 1 0 0 0-1 1v11a1 1 0 0 0 1 1h4" />
+      </>
+    ),
+    download: <path d="M12 3v12m-5-5 5 5 5-5M4 21h16" />,
     arrow: <path d="m9 5 7 7-7 7" />,
     minus: <path d="M5 12h14" />,
     plus: <path d="M5 12h14m-7-7v14" />,

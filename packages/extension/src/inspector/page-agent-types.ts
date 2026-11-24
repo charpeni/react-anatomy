@@ -39,6 +39,11 @@ export interface PropSession {
 
 export interface AgentState {
   version: number;
+  /** Identifies this document. A reload starts a new agent, and component IDs restart. */
+  document?: string;
+  /** Stable identities for object prop values, so a moved value can be recognised. */
+  valueIds?: WeakMap<object, string>;
+  valueSequence?: number;
   revision: number;
   sequence: number;
   hostSequence: number;

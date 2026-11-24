@@ -1,4 +1,4 @@
-import type { ComponentNode, PageCall } from './types.ts';
+import type { ComponentNode, ImageProps, PageCall } from './types.ts';
 import { Glyph } from './Glyph.tsx';
 import { PropsInspector } from './PropsInspector.tsx';
 
@@ -11,6 +11,8 @@ export function ComponentDetails({
   warnings,
   call,
   canInspect,
+  image,
+  onImage,
   onFocus,
   onAction,
   onSelect,
@@ -22,6 +24,8 @@ export function ComponentDetails({
   warnings: string[];
   call: PageCall;
   canInspect: boolean;
+  image?: ImageProps;
+  onImage: (image: ImageProps) => void;
   onFocus: (id: string) => void;
   onAction: (action: 'inspect' | 'highlight', id: string) => void;
   onSelect: (id: string) => void;
@@ -73,7 +77,14 @@ export function ComponentDetails({
         )}
       </div>
       <div className="inspector-scroll">
-        <PropsInspector key={node.id} componentId={node.id} capturedAt={capturedAt} call={call} />
+        <PropsInspector
+          key={node.id}
+          componentId={node.id}
+          capturedAt={capturedAt}
+          call={call}
+          image={image}
+          onImage={onImage}
+        />
         <details className="inspector-section" open>
           <summary>Layout</summary>
           <div className="section-body">

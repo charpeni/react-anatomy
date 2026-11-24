@@ -11,6 +11,7 @@ export function StageHeading({
   onToggleWrappers,
   onRotate,
   onReset,
+  onExport,
   onToggleDetails,
 }: {
   title: string;
@@ -22,6 +23,7 @@ export function StageHeading({
   onToggleWrappers: () => void;
   onRotate: (rotation: { x: number; y: number }) => void;
   onReset: () => void;
+  onExport: () => void;
   onToggleDetails: () => void;
 }) {
   return (
@@ -62,6 +64,14 @@ export function StageHeading({
           3D
         </button>
         <span className="toolbar-separator" />
+        <button
+          className="icon-button"
+          aria-label="Export image"
+          title="Export an image with component names and chosen props (E)"
+          onClick={onExport}
+        >
+          <Glyph type="image" size={15} />
+        </button>
         <button
           className="icon-button"
           aria-label="Reset view"

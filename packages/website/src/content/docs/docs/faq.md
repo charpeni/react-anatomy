@@ -49,11 +49,11 @@ The inspector reads props; it does not edit them or invoke their functions or ge
 
 No. The extension does not upload captures or component props to a service and has no analytics or remote error reporting. Inspection runs locally in your browser.
 
-Reconstructed page images and fonts can still load from the original page’s asset URLs. Sensitive values can be visible in the props inspector and in screenshots you take. The [privacy policy](/privacy/) explains what the extension accesses and how inspection sessions work.
+Reconstructed page images and fonts can still load from the original page’s asset URLs. Sensitive values can be visible in the props inspector, in images you export, and in screenshots you take. The [privacy policy](/privacy/) explains what the extension accesses and how inspection sessions work.
 
-## Can I export a diagram for a pull request?
+## Can I export an image for a pull request?
 
-There is no built-in diagram export or capture comparison. Focus the relevant subtree, take a screenshot with your operating system’s capture tool, and add it beside your explanation. [Explain a change](/docs/explain-a-change/) walks through that workflow.
+Yes. Focus the relevant subtree, choose **Include in image** for the components whose props matter, and use **Export image** to copy or download a PNG with component names and those props. Paste it beside your explanation. [Explain a change](/docs/explain-a-change/) walks through that workflow. There is no capture comparison: export the base branch separately for a before-and-after.
 
 ## Who maintains React Anatomy?
 

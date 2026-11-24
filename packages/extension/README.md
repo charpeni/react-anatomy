@@ -108,7 +108,7 @@ The supported target is React DOM 18.2, 18.3, and 19.0–19.3 on desktop Chrome 
 
 Capture is for the top document and current viewport. The visual snapshot includes the rendered content of open shadow roots, such as web components; iframe contents and closed shadow roots are not captured. DOM cloning approximates the painted result: pseudo-elements, complex clipping/transforms, video, cross-origin fonts, SVG references, and tainted canvas can differ from the original page. Relevant capture limits and font/canvas issues appear under **Capture notes**. Ordinary visible controls are captured, but password values are excluded.
 
-Follow mode observes rendered DOM and viewport changes; it is not a complete React commit profiler. A React-only change with no DOM mutation may require a manual capture. Source-map navigation, full-page capture, editing props, and persistent exports are not implemented.
+Follow mode observes rendered DOM and viewport changes; it is not a complete React commit profiler. A React-only change with no DOM mutation may require a manual capture. Source-map navigation, full-page capture, editing props, and saving or reopening captures are not implemented.
 
 ## Original experience studies
 

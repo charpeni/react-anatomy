@@ -19,6 +19,14 @@ Props are read as you expand their branches. They are not a historical snapshot 
 
 Use **Refresh props** to reread values without capturing the whole page. A new capture refreshes the selection’s props and keeps expanded paths. If the props object changes or the component unmounts, the inspector asks you to refresh or recapture.
 
+## Props in exported images
+
+Choose **Include in image** in the **Props** section to show a component’s props in [exported images](/docs/explain-a-change/). The image lists its top-level props and the branches you expanded, as the inspector last showed them; it does not read the page again when you export. Hover a value and use its eye button, **Hide in props card**, to hide it; its name stays. Page text on the layers is not affected.
+
+A hidden entry of a list, Map, or Set is tracked by its position. If another value takes that position, the inspector flags the collection and the image masks all of it, until you check it and choose **Keep hidden values**.
+
+Included components are numbered in the order you add them. The choice stays with the component across subtree focus and recapture, and turning **Include in image** off and on keeps its hidden values. Navigating or reloading the page clears the choices.
+
 ## Read-only inspection
 
 The inspector does not call getters, callbacks, or `toJSON`. Accessors are shown as unevaluated getters. Circular references are marked, and values such as `undefined`, bigint, `NaN`, and symbols stay distinguishable.
