@@ -65,7 +65,19 @@ function releaseSection(release: PublishedRelease) {
       node.label = `${release.id}-${node.label ?? ''}`;
     }
     if (node.type === 'html' && parent && index !== undefined) {
-      parent.children[index] = { type: 'text', value: node.value };
+      const text = { type: 'text' as const, value: node.value };
+      // These containers hold blocks. A bare text child makes the Markdown
+      // serializer run the surrounding headings and paragraphs together.
+      switch (parent.type) {
+        case 'root':
+        case 'blockquote':
+        case 'listItem':
+        case 'footnoteDefinition':
+          parent.children[index] = { type: 'paragraph', children: [text] };
+          break;
+        default:
+          parent.children[index] = text;
+      }
     }
   });
 

@@ -56,6 +56,24 @@ test('collects all public releases and preserves Markdown in the combined docume
   assert(notes.includes('```md\n# Literal\n```'));
 });
 
+test('keeps release headings and paragraphs separate when escaping HTML', async () => {
+  const body = [
+    '## Changes',
+    'Press <kbd>Tab</kbd>.',
+    '<details>',
+    'First paragraph.',
+    '</details>',
+    '> <img src="screenshot.png">\n>\n> Last paragraph.',
+  ].join('\n\n');
+  const notes = await fetchReleaseNotes(async () => Response.json([{ ...release, body }]));
+
+  assert.match(notes, /^## v1$/m);
+  assert(notes.includes('#### Changes\n\nPress \\<kbd>Tab\\</kbd>.'));
+  assert(notes.includes('\\<details>\n\nFirst paragraph.\n\n\\</details>'));
+  assert(notes.includes('> \\<img src="screenshot.png">\n'));
+  assert.match(notes, /^> Last paragraph\.$/m);
+});
+
 test('distinguishes an empty release history from an incomplete fetch', async () => {
   assert.match(
     await fetchReleaseNotes(async () => Response.json([])),
