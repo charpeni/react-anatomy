@@ -87,7 +87,7 @@ const summary = {
     'Chrome builds are Chrome for Testing.',
     'Firefox source page errors are not collected; behavior assertions run in both browsers.',
     'Public React versions are unknown; deployed Next.js versions are reported by the pages.',
-    'Next.js 16.4.4 reports its bundled React canary version.',
+    'Next.js 16.4.6 reports its bundled React canary version.',
     'This validates client React DOM inspection, not a server component tree or pixel-perfect reconstruction.',
   ],
   browsers,

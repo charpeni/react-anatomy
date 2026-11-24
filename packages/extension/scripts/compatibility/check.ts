@@ -68,7 +68,7 @@ try {
           id: `next-${mode}`,
           kind: 'next',
           mode,
-          application: 'Next.js 16.4.4 App Router',
+          application: 'Next.js 16.4.6 App Router',
         })),
       ];
 
