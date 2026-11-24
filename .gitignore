@@ -20,6 +20,9 @@ secrets/
 # Bundled interactive website example
 packages/website/public/interactive/
 
+# Built from the public GitHub Releases feed by Astro
+packages/website/src/content/docs/docs/release-notes.md
+
 # Local planning, research, and release notes
 /docs/
 

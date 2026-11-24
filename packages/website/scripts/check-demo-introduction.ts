@@ -240,19 +240,85 @@ export async function checkDemoIntroduction(browser: Browser, base: string, shot
       await mobile.screenshot({ path: `${shots}/intro-${width}-exploded.png` });
 
       const panel = mobile.frameLocator('#anatomy-panel');
-      const stage = (await panel.locator('.stage').boundingBox())!;
       const rotation = () =>
         panel
           .locator('.scene')
           .evaluate((element) =>
             (element as HTMLElement).style.transform.match(/rotate[XY]\([^)]+\)/g),
           );
+      // Find one point on the layers and one on the empty canvas around them.
+      const frameBox = (await mobile.locator('#anatomy-panel').boundingBox())!;
+      const spots = await panel.locator('.stage').evaluate((element) => {
+        const box = element.getBoundingClientRect();
+        const layers: { x: number; y: number }[] = [];
+        const empty: { x: number; y: number }[] = [];
+
+        for (let y = box.top + 20; y < box.bottom - 20; y += 12) {
+          for (let x = box.left + 12; x < box.right - 12; x += 12) {
+            const hit = element.ownerDocument.elementFromPoint(x, y);
+
+            if (hit === element) {
+              empty.push({ x, y });
+            } else if (hit?.closest('.component-plane')) {
+              layers.push({ x, y });
+            }
+          }
+        }
+
+        const centre = { x: box.left + box.width / 2, y: box.top + box.height / 2 };
+        const distance = (point: { x: number; y: number }) =>
+          Math.hypot(point.x - centre.x, point.y - centre.y);
+
+        return {
+          layer: layers.sort((first, second) => distance(first) - distance(second))[0],
+          // The lowest empty point leaves the most room for an upward swipe.
+          empty: empty.sort((first, second) => second.y - first.y || first.x - second.x)[0],
+        };
+      });
+      assert(spots.layer && spots.empty, 'The canvas must show layers with empty space around');
+      const layer = { x: frameBox.x + spots.layer.x, y: frameBox.y + spots.layer.y };
+      const empty = { x: frameBox.x + spots.empty.x, y: frameBox.y + spots.empty.y };
+
+      // A touch that starts on the layers rotates the view, even when it moves
+      // straight up, and leaves the page where it is.
       const beforeDrag = await rotation();
-      const dragX = stage.x + stage.width * 0.65;
-      const dragY = Math.min(stage.y + stage.height - 50, 760);
-      await swipe(dragY, dragY - 140, dragX, dragX - 10);
-      assert.notDeepEqual(await rotation(), beforeDrag, 'A canvas drag must rotate the view');
-      assert.equal(await mobile.evaluate(() => scrollY), held, 'Canvas drags must not scroll');
+      await swipe(layer.y, layer.y - 140, layer.x);
+      assert.notDeepEqual(await rotation(), beforeDrag, 'Dragging the layers must rotate');
+      assert.equal(
+        await mobile.evaluate(() => scrollY),
+        held,
+        'Dragging the layers must not scroll the page',
+      );
+
+      // A sideways drag from the empty canvas rotates too.
+      const beforeSideways = await rotation();
+      await swipe(empty.y, empty.y - 20, empty.x, empty.x + (empty.x < width / 2 ? 150 : -150));
+      assert.notDeepEqual(await rotation(), beforeSideways, 'A sideways canvas drag must rotate');
+      assert.equal(
+        await mobile.evaluate(() => scrollY),
+        held,
+        'Sideways canvas drags must not scroll',
+      );
+
+      // A vertical swipe that starts on the empty canvas belongs to the page,
+      // even when it crosses the layers. Gesture ownership is decided at
+      // touchstart. The canvas fills most of a phone screen, so holding every
+      // touch there would trap the reader.
+      const beforeSwipe = await rotation();
+      await swipe(empty.y, empty.y - 200, empty.x);
+      await mobile.waitForFunction((y) => scrollY > y + 120, held);
+      await mobile.waitForTimeout(300);
+      assert.deepEqual(
+        await rotation(),
+        beforeSwipe,
+        'Scrolling past the canvas must leave the view as it was',
+      );
+      assert.equal(
+        await panel.locator('.show-details').count(),
+        0,
+        'Scrolling past the canvas must not select a layer',
+      );
+      await mobile.evaluate((y) => window.scrollTo({ top: y, behavior: 'instant' }), held);
 
       // A touch starting outside the canvas still scrolls, even when it crosses
       // into the canvas. Gesture ownership is decided at touchstart.
@@ -269,6 +335,42 @@ export async function checkDemoIntroduction(browser: Browser, base: string, shot
       const outsideScroll = await mobile.evaluate(() => scrollY);
       await swipe(650, 400, 2);
       await mobile.waitForFunction((y) => scrollY > y + 100, outsideScroll);
+
+      // The props list is longer than its pane. It scrolls itself first, then
+      // hands the next swipe to the page instead of holding the reader inside.
+      await mobile.locator('[data-step="props"]').tap();
+      await panel.locator('[data-prop-path="props.project"]').waitFor();
+      await mobile.locator('#demo').evaluate((element) =>
+        window.scrollTo({
+          top: scrollY + element.getBoundingClientRect().top - 12,
+          behavior: 'instant',
+        }),
+      );
+      await mobile.waitForTimeout(100);
+      const list = panel.locator('.inspector-scroll');
+      const listBox = (await list.boundingBox())!;
+      const listX = listBox.x + listBox.width / 2;
+      const listHidden = await list.evaluate(
+        (element) => element.scrollHeight - element.clientHeight,
+      );
+      assert(listHidden > 0, 'The sample props must overflow the phone-sized pane');
+      const beforeList = await mobile.evaluate(() => scrollY);
+      await swipe(listBox.y + listBox.height - 30, listBox.y + 30, listX);
+      await mobile.waitForFunction(
+        () =>
+          document
+            .querySelector<HTMLIFrameElement>('#anatomy-panel')!
+            .contentDocument!.querySelector('.inspector-scroll')!.scrollTop > 60,
+      );
+      assert.equal(
+        await mobile.evaluate(() => scrollY),
+        beforeList,
+        'Scrolling the props list must not also scroll the page',
+      );
+      await mobile.waitForTimeout(300);
+      await list.evaluate((element) => element.scrollTo({ top: element.scrollHeight }));
+      await swipe(listBox.y + listBox.height - 30, listBox.y + 30, listX);
+      await mobile.waitForFunction((y) => scrollY > y + 100, beforeList);
 
       // Orbit should scroll like the surrounding page. Measuring just whether
       // it moves misses the iframe feedback bug: alternating stalls/backward
@@ -317,6 +419,6 @@ export async function checkDemoIntroduction(browser: Browser, base: string, shot
 
   assert.deepEqual(errors, []);
   console.log(
-    'Passed: one-time scroll introduction, cursor click, scroll release, session persistence, cancellation, loading timeout, keyboard bypass, reduced motion, canvas touch rotation, and smooth Orbit touch scrolling.',
+    'Passed: one-time scroll introduction, cursor click, scroll release, session persistence, cancellation, loading timeout, keyboard bypass, reduced motion, canvas touch rotation and scroll-through, props list touch scrolling, and smooth Orbit touch scrolling.',
   );
 }

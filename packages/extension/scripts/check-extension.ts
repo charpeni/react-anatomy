@@ -455,6 +455,34 @@ try {
   assert.equal(sanitization.active, 0);
   assert.equal(sanitization.passwordLeaked, false);
   assert(!sanitization.fonts.includes('body'));
+  const styleReferences = await isolated.evaluate(() => {
+    const frame = { x: 0, y: 0, w: 100, h: 100 };
+    function readStyles(styleTable?: string[]) {
+      const render = makeSnapshotRenderer({
+        html: '<div data-anatomy-host="h1"><i data-anatomy-style="0"></i><i data-anatomy-style="99"></i><i data-anatomy-style=""></i><i data-anatomy-style="length"></i><i style="color:blue"></i></div>',
+        hostRects: { h1: frame },
+        styleTable,
+      });
+      const root = document.createElement('template');
+      root.innerHTML = render({ id: 'c1', hosts: ['h1'], frame }, []);
+      return {
+        refs: root.content.querySelectorAll('[data-anatomy-style]').length,
+        colors: [...root.content.querySelectorAll('i')].map((el) => el.style.color),
+      };
+    }
+    return {
+      valid: readStyles(['color:red']),
+      missing: readStyles(),
+      nonString: readStyles(JSON.parse('[null]')),
+      oversized: readStyles(Array(3001).fill('color:red')),
+      oversizedStyle: readStyles(['color:red;' + ' '.repeat(3 * 1024 * 1024)]),
+    };
+  });
+  assert.deepEqual(styleReferences.valid, { refs: 0, colors: ['red', '', '', '', 'blue'] });
+  assert.deepEqual(styleReferences.missing, { refs: 0, colors: ['', '', '', '', 'blue'] });
+  assert.deepEqual(styleReferences.oversized, styleReferences.missing);
+  assert.deepEqual(styleReferences.nonString, styleReferences.missing);
+  assert.deepEqual(styleReferences.oversizedStyle, styleReferences.missing);
   await isolated.close();
   console.log('Passed: independent viewer-side markup and font sanitization.');
   console.log('Real DevTools panel capture passed.');

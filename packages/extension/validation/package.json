@@ -7,7 +7,7 @@
     "type-check": "tsc --noEmit"
   },
   "dependencies": {
-    "next": "16.4.4",
+    "next": "16.4.6",
     "react": "19.3.1",
     "react-18-2": "npm:react@18.2.0",
     "react-18-3": "npm:react@18.3.1",

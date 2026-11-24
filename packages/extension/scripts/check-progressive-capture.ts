@@ -197,11 +197,14 @@ try {
     'A large CSS theme must not exhaust capture before visible card text is copied',
   );
   assert(!themed.visualLimited);
-  const titleColor = await themedPage.evaluate((html) => {
+  assert(themed.styleTable?.length && themed.styleTable.length < themed.elementCount!);
+  const titleColor = await themedPage.evaluate(`(() => {
+    const snapshot = ${JSON.stringify(themed)};
+    const render = (${makeSnapshotRenderer.toString()})(snapshot);
     const template = document.createElement('template');
-    template.innerHTML = html!;
+    template.innerHTML = render(snapshot.nodes[0], []);
     return template.content.querySelector('h3')?.style.color;
-  }, themed.html);
+  })()`);
   assert.equal(
     titleColor,
     'rgb(37, 78, 219)',
@@ -263,8 +266,16 @@ try {
     action: 'capture-cancel';
     token: string;
   }) => PageResponses['capture-cancel'] = pageAgent;
+  await page.evaluate(() => {
+    Object.defineProperty(performance, 'now', { configurable: true, value: () => 0 });
+  });
   const cancelled = await page.evaluate(start, { action: 'capture-start' as const });
-  await page.evaluate(step, { action: 'capture-step' as const, token: cancelled.token });
+  const firstStep = await page.evaluate(step, {
+    action: 'capture-step' as const,
+    token: cancelled.token,
+  });
+  assert.equal(firstStep.done, false, 'Capture must yield even when the page clock is frozen');
+  await page.evaluate(() => Reflect.deleteProperty(performance, 'now'));
   await page.evaluate(cancel, { action: 'capture-cancel' as const, token: cancelled.token });
   await assert.rejects(
     page.evaluate(step, { action: 'capture-step' as const, token: cancelled.token }),

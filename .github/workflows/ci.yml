@@ -80,6 +80,8 @@ jobs:
           FIREFOX_BINARY: ${{ steps.firefox.outputs.firefox-path }}
         run: echo "FIREFOX_PATH=$FIREFOX_BINARY" >> "$GITHUB_ENV"
       - name: Run ${{ matrix.name }}
+        env:
+          GITHUB_TOKEN: ${{ (matrix.task == 'website' || matrix.task == 'types') && github.token || '' }}
         run: ${{ matrix.command }}
       - name: Upload failure diagnostics
         if: failure() && matrix.browser

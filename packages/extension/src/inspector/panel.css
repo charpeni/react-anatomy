@@ -317,6 +317,16 @@ kbd {
 .tree-row.selected {
   background: var(--selection);
 }
+.virtual-tree {
+  position: relative;
+}
+.tree-width-spacer {
+  /* A zero-area box does not contribute to scrollable overflow in Chromium. */
+  height: 1px;
+}
+.virtual-tree > .tree-row {
+  position: absolute;
+}
 .tree-row.hovered:not(.selected) {
   background: var(--hover);
 }

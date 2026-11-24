@@ -10,12 +10,15 @@ window.anatomyExample = {
   },
 };
 
-document.addEventListener(
-  'keydown',
-  (event) => {
-    if (event.key === 'Escape') {
-      queueMicrotask(() => window.parent.dispatchEvent(new Event('anatomy-example-cancel-pick')));
-    }
-  },
-  true,
-);
+if (window.parent !== window) {
+  document.documentElement.classList.add('embedded');
+  document.addEventListener(
+    'keydown',
+    (event) => {
+      if (event.key === 'Escape') {
+        queueMicrotask(() => window.parent.dispatchEvent(new Event('anatomy-example-cancel-pick')));
+      }
+    },
+    true,
+  );
+}

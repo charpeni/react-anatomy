@@ -1,0 +1,18 @@
+---
+import { site } from '../lib/site.ts';
+---
+
+<span>
+  Built by{' '}
+  <a href={site.author.url} rel="author">
+    {site.author.name}
+  </a>
+</span>
+
+<style>
+  a {
+    color: inherit;
+    text-decoration: underline;
+    text-underline-offset: 0.15em;
+  }
+</style>

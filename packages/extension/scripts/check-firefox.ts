@@ -348,17 +348,17 @@ try {
   await h.screenshot(artifacts + '/devtools.png');
   await h.navigate(fixture.url + '/deep');
   await h.until(
-    () => run(`document.querySelectorAll('.tree-select').length>100`),
+    () => run(`Number(document.querySelector('.tree-scroll')?.dataset.componentCount)>100`),
     'Production tree did not load',
   );
 
   const production = await run<{ count: number; error?: string }>(
-    `({count:document.querySelectorAll('.tree-select').length,text:document.body.textContent,error:document.querySelector('[role=alert]')?.textContent})`,
+    `({count:Number(document.querySelector('.tree-scroll').dataset.componentCount),error:document.querySelector('[role=alert]')?.textContent})`,
   );
 
   assert(!production.error, production.error ?? 'Unexpected capture error');
   console.log(
-    `Passed: navigation, empty state, reconnect, native theme and production capture (${production.count} visible rows).`,
+    `Passed: navigation, empty state, reconnect, native theme and production capture (${production.count} components).`,
   );
 
   await h.navigate(fixture.url + '/');

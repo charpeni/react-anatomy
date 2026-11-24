@@ -1,8 +1,9 @@
 /* Only the bundled sample uses these viewport adjustments. */
 html {
   color-scheme: light;
-  /* Keep the sample at its initial viewport and let touch scrolling chain to
-     the landing page, with the browser's normal gesture handling. */
+}
+/* In the live demo, swipes scroll the landing page. In its own tab, Orbit scrolls normally. */
+html.embedded {
   overflow: clip;
 }
 html body .workspace {

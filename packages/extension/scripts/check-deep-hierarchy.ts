@@ -23,7 +23,7 @@ try {
     harness.evaluate<T>(expression, panelSession);
 
   await harness.until(
-    () => evaluate(`document.querySelectorAll('.tree-select').length>100`),
+    () => evaluate(`Number(document.querySelector('.tree-scroll')?.dataset.componentCount)>100`),
     'Deep tree did not load',
   );
   await harness.send(
@@ -52,7 +52,7 @@ try {
     depth: string;
     planes: { id: string; width: number; height: number; text: string }[];
   }>(
-    `({tree:document.querySelectorAll('.tree-select').length,planes:Array.from(document.querySelectorAll('[data-plane]')).map(p=>({id:p.dataset.plane,width:parseFloat(p.style.width),height:parseFloat(p.style.height),text:p.textContent})),depth:document.querySelector('.depth-control output').textContent})`,
+    `({tree:Number(document.querySelector('.tree-scroll').dataset.componentCount),planes:Array.from(document.querySelectorAll('[data-plane]')).map(p=>({id:p.dataset.plane,width:parseFloat(p.style.width),height:parseFloat(p.style.height),text:p.textContent})),depth:document.querySelector('.depth-control output').textContent})`,
   );
 
   console.log(
@@ -217,6 +217,99 @@ try {
     'Truncated captures must be visibly identified',
   );
   console.log('Passed: capture-limit warning is visible without opening details.');
+
+  for (const projects of [40, 20]) {
+    await page.goto(fixture.url + '/deep?projects=' + projects);
+    await harness.until(
+      () =>
+        evaluate(
+          `Number(document.querySelector('.tree-scroll')?.dataset.componentCount)===${105 + projects * 18}`,
+        ),
+      'Project tree did not finish capturing',
+    );
+    assert(
+      await evaluate(`document.querySelectorAll('.tree-select').length < 100`),
+      'Only the window of rows and focus targets should mount',
+    );
+    const width = await evaluate<number>(`document.querySelector('.tree-scroll').scrollWidth`);
+    const widthAtBottom = await evaluate<number>(`(async () => {
+      const box = document.querySelector('.tree-scroll');
+      box.scrollTop = box.scrollHeight;
+      await new Promise(requestAnimationFrame);
+      await new Promise(requestAnimationFrame);
+      const width = box.scrollWidth;
+      box.scrollTop = 0;
+      await new Promise(requestAnimationFrame);
+      await new Promise(requestAnimationFrame);
+      return width;
+    })()`);
+    assert.equal(
+      widthAtBottom,
+      width,
+      'The scrollbar must include deep rows before the user selects one',
+    );
+    await evaluate(`(() => {
+      const input = document.querySelector('.tree-search input');
+      Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value').set.call(input, 'Project 12');
+      input.dispatchEvent(new Event('input', {bubbles: true}));
+    })()`);
+    const id = await harness.until(
+      () =>
+        evaluate<string>(`document.querySelector('[data-search-result]')?.dataset.searchResult`),
+      'Missing search result for Project 12',
+    );
+    await evaluate(`document.querySelector('[data-search-result]').click()`);
+    await harness.until(
+      () =>
+        evaluate(
+          `document.querySelector('.tree-row.selected .tree-select')?.dataset.tree===${JSON.stringify(id)}`,
+        ),
+      'Search did not select the component',
+    );
+    const position = await evaluate<{
+      labelVisible: boolean;
+      bottomGap: number;
+      width: number;
+    }>(`(() => {
+      const box = document.querySelector('.tree-scroll');
+      const button = document.querySelector('.tree-row.selected .tree-select');
+      const label = button.querySelector('.node-name').getBoundingClientRect();
+      const pane = box.getBoundingClientRect();
+      return {labelVisible:label.left >= pane.left - 1 && label.right <= pane.left + box.clientWidth + 1,
+        bottomGap:pane.top + box.clientHeight - button.getBoundingClientRect().bottom, width:box.scrollWidth};
+    })()`);
+    assert(position.labelVisible, 'The selected component name must scroll into view horizontally');
+    assert(Math.abs(position.bottomGap) <= 2, 'Scroll only far enough to reveal the selected row');
+    assert.equal(position.width, width, 'Horizontal scrolling range must be stable across windows');
+    const successor = await harness.until(
+      () =>
+        evaluate<string>(
+          `document.querySelector('.tree-row.selected')?.nextElementSibling?.querySelector('.tree-select')?.dataset.tree`,
+        ),
+      'Selected row has no mounted successor',
+    );
+    await evaluate(`(async () => {
+      document.querySelector('.tree-row.selected .tree-select').focus();
+      document.querySelector('.tree-scroll').scrollTop = 0;
+      await new Promise(requestAnimationFrame);
+      await new Promise(requestAnimationFrame);
+    })()`);
+    assert.equal(
+      await evaluate(`document.activeElement.dataset.tree`),
+      id,
+      'Scrolling a focused row offscreen must preserve focus',
+    );
+    await evaluate(
+      `document.activeElement.dispatchEvent(new KeyboardEvent('keydown',{key:'ArrowDown',bubbles:true}))`,
+    );
+    await harness.until(
+      () =>
+        evaluate(
+          `document.activeElement.matches('.tree-select[aria-selected="true"]') && document.activeElement.dataset.tree===${JSON.stringify(successor)} && document.querySelector('.tree-scroll').scrollTop>0`,
+        ),
+      'Arrow Down must navigate from the offscreen row and reveal its successor',
+    );
+  }
 } finally {
   await harness.close();
   await fixture.close();

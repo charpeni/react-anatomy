@@ -28,7 +28,9 @@ Brand assets are imported from `@react-anatomy/brand`. The logo and favicon are 
 
 The sample loads with the page; the heavier inspector loads when a visitor opens Anatomy. The `predev` and `prebuild` scripts generate both bundles. After editing inspector or demo source while the Astro dev server is already running, run `pnpm --filter @react-anatomy/website exec node scripts/build-demo.ts` and reload the page.
 
-Wheel and trackpad scrolling over either example frame moves the landing page. The website intercepts wheel events before they reach the shared inspector, including over the tree and props pane; zoom buttons and mouse dragging remain available. On touch devices, Orbit uses native browser scrolling: its clipped document cannot scroll internally, so swipes scroll the landing page with normal gesture handling. In the inspector, drags starting in the 3D canvas rotate the view without scrolling the page; swipes elsewhere are forwarded using screen coordinates, which stay stable as the iframe moves. Splitters and sliders also keep their own touch gestures. The extension itself keeps its normal scroll-to-zoom behaviour. Browser zoom gestures retain their default handling. The forwarding is reattached when either frame reloads or the example restarts.
+Wheel and trackpad scrolling over either example frame moves the landing page. The website intercepts wheel events before they reach the shared inspector, including over the tree and props pane; zoom buttons and mouse dragging remain available. On touch devices, swiping the embedded Orbit sample scrolls the landing page. The first-capture guide opens the same sample at `/interactive/source.html` in its own tab, where it scrolls normally. In the inspector, a touch that starts on the layers themselves rotates the view in any direction and never scrolls the page: the planes use `touch-action: none`, and the website also cancels those touch moves so this does not depend on how a browser maps `touch-action` onto 3D-transformed layers. The empty canvas around the layers uses `touch-action: pan-y`: a vertical swipe that starts there scrolls the landing page, and a sideways drag still rotates. The canvas fills most of a phone screen, so reserving every touch for rotation would trap the reader. Both rules are set in `demo/panel.css` for the example only. When the browser claims a swipe, the canvas restores the rotation that gesture began and does not select a layer. The component tree and props list scroll natively, then pass further swipes to the page at their end. Swipes on the inspector’s fixed bars are forwarded using screen coordinates, which stay stable as the iframe moves. Splitters and sliders keep their own touch gestures.
+
+At 720px and narrower, the example fits one phone screen with room left to scroll past it: the browser frame’s title row is hidden, the viewport height follows the small viewport height (`100svh`) between 320px and 490px, and the inspector hides its breadcrumb and capture footer. While the introduction plays, Skip intro takes Restart’s place in the tab bar. The extension itself keeps its normal scroll-to-zoom behaviour. Browser zoom gestures retain their default handling. The forwarding is reattached when either frame reloads or the example restarts.
 
 Run `pnpm run test:website` at the repository root for the browser checks. Tests start their own static server against the production build. As with the extension tests, install Playwright Chromium or provide `CHROME_PATH` and optionally `CHROME_SYSROOT`.
 
@@ -58,11 +60,11 @@ Compatibility facts for future wording, checked against MDN browser-compat-data 
 
 The install section sits immediately below the live example and uses the selected “Two routes” layout: Chrome Web Store and Firefox Add-ons each have an install action, with the Brave/Edge logos and compatibility note inside the Chrome route. The routes sit side by side on wider screens and stack on phones. Store labels and controls use Instrument Sans; the browser icons are hosted locally. Keep the quiet Compatibility notes link beside the section heading. The “Add to Chrome” / “Add to Firefox” actions link directly to the live store listings, without development or validation labels. Keep detailed implementation and validation records in the local, ignored `docs/validation/` notes. Icon sources and attribution are in `public/media/browsers/README.md`.
 
-There are no store badges, signup forms, or placeholder social accounts. Production pages load Pirsch page analytics from `pirsch.react-anatomy.com` (`src/components/Pirsch.astro`, production builds only); this is separate from the browser extension, which has no analytics. The production `site` URL is `https://react-anatomy.com`; setting it generates canonical URLs and the sitemap but does not deploy the site.
+There are no store badges, signup forms, or placeholder social accounts. Production pages load Pirsch and InsightFlare through `src/components/Analytics.astro`. The browser extension has no analytics. The production `site` URL is `https://react-anatomy.com`; setting it generates canonical URLs and the sitemap but does not deploy the site.
 
 Pagefind is pinned to 1.5.2 at the workspace root. Its 1.6 Linux binary crashes with an illegal instruction on the current host CPU, while 1.5.2 works and satisfies Starlight’s supported range. `scripts/check-build.ts` verifies that the generated search assets exist, because the upstream service failure can otherwise let Astro exit successfully without an index.
 
-The header GitHub link points to the public repository at `https://github.com/charpeni/react-anatomy`. Browser install links remain their existing placeholders. The public `/docs/compatibility/` page covers browser and React requirements plus practical limits. Keep exact build numbers, test counts, dated results, and remaining QA work in the local, ignored `docs/validation/` notes.
+The header GitHub link points to the public repository at `https://github.com/charpeni/react-anatomy`. The install buttons link directly to the published React Anatomy listings on the Chrome Web Store and Firefox Add-ons. The public `/docs/compatibility/` page covers browser and React requirements plus practical limits. Keep exact build numbers, test counts, dated results, and remaining QA work in the local, ignored `docs/validation/` notes.
 
 ## Typography
 
@@ -72,7 +74,7 @@ The website and documentation use **Instrument Sans**, self-hosted as variable W
 
 `ExplodedHero.astro` presents the introduction as a fixed, front-facing composition of HTML layers. The component labels are a hand-authored illustration, with Emphasis nested inside Heading. There is no camera interaction or extra keyboard stop; the text stays selectable and the links remain ordinary links.
 
-The layers separate once on load using CSS transforms. Reduced motion and JavaScript-disabled browsers show the completed view immediately; focusing a hero link finishes the entrance. Keep this illustration separate from the live React capture in the example below it.
+The layers separate once on load using CSS transforms. As the pointer moves, nearby layers drift away from it and ease back into place. The backplate and links stay anchored. Reduced motion and JavaScript-disabled browsers show the completed view immediately. Focusing a hero link finishes the entrance. Keep this illustration separate from the live React capture in the example below it.
 
 ## 404 page
 
@@ -102,7 +104,7 @@ Once the domain is connected, verify `react-anatomy.com` in Google Search Consol
 
 ## Privacy policy
 
-The extension policy is at `/privacy/`, authored in `src/content/docs/privacy.md`, and linked from the landing and documentation footers. Its production address is `https://react-anatomy.com/privacy/`, with `info@react-anatomy.com` as the contact. Keep the wording aligned with extension behavior, especially persistence, external page assets, and props that may contain sensitive data.
+The extension and website privacy policy is at `/privacy/`, authored in `src/content/docs/privacy.md`, and linked from the landing and documentation footers. Its production address is `https://react-anatomy.com/privacy/`, with `info@react-anatomy.com` as the contact. Keep the wording aligned with extension behavior, especially persistence, external page assets, and props that may contain sensitive data.
 
 ## Deployment
 
@@ -125,3 +127,9 @@ The Worker name must match `name` in `wrangler.jsonc`. Wrangler is pinned in the
 After deployment succeeds, add `react-anatomy.com` under the Worker's **Settings → Domains & Routes → Add → Custom domain**. Check the landing page, `/docs/`, `/privacy/`, the live example, search, screenshot viewers, and a nonexistent URL. Unknown paths must return the site's 404 page, not the landing page.
 
 GitHub integration deploys `main`; it does not publish the browser extensions.
+
+### Release Notes
+
+Astro generates `/docs/release-notes/` and its Markdown export from the repository’s public GitHub Releases during each build. Edit the release on GitHub to correct its notes. Development and type checks can use the last locally generated copy if GitHub is unavailable. Production builds require a successful fetch. For production, we recommend setting `GITHUB_TOKEN` as a secret in the Cloudflare build environment. Use a fine-grained GitHub token scoped to this repository with read-only Contents permission. Unauthenticated requests share a limit of 60 per hour per IP address, so another build on the same IP can exhaust the quota and block a deployment. [GitHub Releases](https://github.com/charpeni/react-anatomy/releases)
+
+To rebuild when a release changes between pushes to `main`, create a Deploy Hook for the `main` branch under the Worker's **Settings → Builds → Deploy Hooks**. In the GitHub repository's **Settings → Webhooks**, add that URL with content type `application/json` and select only **Releases**. The URL grants permission to start a build, so keep it in the webhook settings. On the next publication, edit, or deletion, verify the delivery in GitHub and the completed build in Cloudflare. [Cloudflare Deploy Hooks](https://developers.cloudflare.com/workers/ci-cd/builds/deploy-hooks/) · [GitHub webhooks](https://docs.github.com/en/webhooks/using-webhooks/creating-webhooks)

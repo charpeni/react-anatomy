@@ -1,7 +1,7 @@
 import type { Snapshot, ComponentNode } from './types.ts';
 
 export function makeSnapshotRenderer(
-  snapshot: Pick<Snapshot, 'html' | 'hostRects' | 'backgroundColor'>,
+  snapshot: Pick<Snapshot, 'html' | 'styleTable' | 'hostRects' | 'backgroundColor'>,
 ) {
   const template = document.createElement('template');
 
@@ -25,6 +25,7 @@ export function makeSnapshotRenderer(
   const attributes = new Set([
     'style',
     'data-anatomy-host',
+    'data-anatomy-style',
     'src',
     'viewBox',
     'd',
@@ -59,6 +60,10 @@ export function makeSnapshotRenderer(
     'disabled',
   ]);
 
+  // The agent clones at most 3,000 elements and encodes at most 6 MiB of expanded styles.
+  const styles = snapshot.styleTable;
+  const styleTable = Array.isArray(styles) && styles.length <= 3000 ? styles : undefined;
+  let remainingStyleChars = 3 * 1024 * 1024;
   for (const el of template.content.querySelectorAll('*')) {
     if (forbidden.has(el.tagName.toUpperCase())) {
       el.remove();
@@ -66,7 +71,23 @@ export function makeSnapshotRenderer(
     }
 
     for (const attr of Array.from(el.attributes)) {
-      if (!attributes.has(attr.name)) {
+      if (attr.name === 'data-anatomy-style') {
+        el.removeAttribute(attr.name);
+        const index = Number(attr.value);
+        if (
+          styleTable &&
+          Number.isInteger(index) &&
+          index >= 0 &&
+          index < styleTable.length &&
+          String(index) === attr.value
+        ) {
+          const css = styleTable[index];
+          if (typeof css === 'string' && css.length <= remainingStyleChars) {
+            remainingStyleChars -= css.length;
+            el.setAttribute('style', css);
+          }
+        }
+      } else if (!attributes.has(attr.name)) {
         el.removeAttribute(attr.name);
       }
     }

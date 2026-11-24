@@ -217,9 +217,12 @@ try {
     'Passed: live sample updates, real component capture, lazy loading, nested props, focus, recapture, picker/cancellation, restart, and interrupted navigation.',
   );
 
-  for (const width of [390, 320]) {
+  for (const [width, height] of [
+    [390, 844],
+    [320, 568],
+  ]) {
     const mobile = await browser.newPage({
-      viewport: { width, height: 844 },
+      viewport: { width, height },
       reducedMotion: 'reduce',
       hasTouch: true,
     });
@@ -239,6 +242,13 @@ try {
       'none',
     );
     assert(await noOverflow(mobile));
+    assert.equal(await mobile.locator('.demo-address').isVisible(), false);
+    assert(
+      await mobile
+        .locator('.demo-window')
+        .evaluate((element) => element.getBoundingClientRect().height < innerHeight - 40),
+      'The whole example must fit a phone screen with room to scroll past it',
+    );
     await mobile.locator('#demo').screenshot({ path: `${shots}/mobile-${width}-start.png` });
     await mobile.locator('[data-step="explode"]').click();
 
@@ -268,7 +278,9 @@ try {
     await mobile.close();
   }
 
-  console.log('Passed: 390px/320px layouts, touch controls, mobile props, and reduced motion.');
+  console.log(
+    'Passed: 390px/320px layouts that fit one screen, touch controls, mobile props, and reduced motion.',
+  );
 
   await page.reload();
   await page.waitForFunction(
@@ -365,6 +377,20 @@ try {
   console.log(
     'Passed: image viewer, unchanged URLs, zoom, gallery keys, focus, backdrop close, and touch.',
   );
+
+  await page.goto(base + '/docs/');
+  const [orbit] = await Promise.all([
+    page.waitForEvent('popup'),
+    page.getByRole('link', { name: 'Open the Orbit sample in a new tab' }).click(),
+  ]);
+  try {
+    await orbit.setViewportSize({ width: 900, height: 400 });
+    await orbit.locator('.project-card').first().waitFor();
+    await orbit.mouse.wheel(0, 400);
+    await orbit.waitForFunction(() => window.scrollY > 0);
+  } finally {
+    await orbit.close();
+  }
 
   const docsWithScreenshots = [
     '/docs/',
