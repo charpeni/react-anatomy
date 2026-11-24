@@ -378,6 +378,20 @@ try {
     'Passed: image viewer, unchanged URLs, zoom, gallery keys, focus, backdrop close, and touch.',
   );
 
+  await page.goto(base + '/docs/');
+  const [orbit] = await Promise.all([
+    page.waitForEvent('popup'),
+    page.getByRole('link', { name: 'Open the Orbit sample in a new tab' }).click(),
+  ]);
+  try {
+    await orbit.setViewportSize({ width: 900, height: 400 });
+    await orbit.locator('.project-card').first().waitFor();
+    await orbit.mouse.wheel(0, 400);
+    await orbit.waitForFunction(() => window.scrollY > 0);
+  } finally {
+    await orbit.close();
+  }
+
   const docsWithScreenshots = [
     '/docs/',
     '/docs/understand/',

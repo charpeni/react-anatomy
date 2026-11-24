@@ -88,7 +88,7 @@ for (const [, address] of documents) {
   } else {
     assert(markdown.length > 300, 'Markdown must contain the document, not just a summary.');
   }
-  assert(!/\]\(\//.test(markdown), 'Markdown links must work outside the website.');
+  assert(!/\]\(\/|href="\//.test(markdown), 'Markdown links must work outside the website.');
   assert(headers.includes(`Link: <${canonical}>; rel="canonical"`));
 }
 

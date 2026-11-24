@@ -11,9 +11,9 @@ Use it to understand an unfamiliar layout, learn React composition, investigate 
 
 ## How is it different from React DevTools?
 
-React Anatomy focuses on where components appear on the page and how their rendered output fits together. Its component tree, 3D scene, and props inspector share the same selection. You can pick a region on the page and focus the component subtree behind it.
+Use Anatomy when you can point to something on screen and want to see which component rendered it and where it fits in the layout. Pick a region on the page to select its component in the tree, see its layer in 3D, and read its props.
 
-[React Developer Tools](https://react.dev/learn/react-developer-tools) also lets you inspect components and props, and provides editing and profiling tools. React Anatomy does not replace those tools or require them to be installed. See [Understand a page](/docs/understand/) for the spatial inspection workflow.
+Use [React Developer Tools](https://react.dev/learn/react-developer-tools) to inspect state and Hooks, edit props, or profile a render. You can use either extension on its own. See [Understand a page](/docs/understand/) for a walkthrough of picking a component in Anatomy.
 
 ## Does it work on production React pages?
 

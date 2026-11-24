@@ -67,7 +67,7 @@ This builds and checks six pinned React versions, Excalidraw, and Next.js App Ro
 
 `pnpm run test:public-apps` separately checks react.dev and shadcn/ui over the network. Results and screenshots are written to `packages/extension/artifacts/compatibility/results/`. Public deployments supplement the pinned workloads; their changes or availability can fail the public-site check without changing the repeatable local matrix.
 
-The [Compatibility page](/docs/compatibility/) summarizes browser and React requirements. Detailed test results and release checks live in the repository’s `docs/validation/` notes.
+The [Compatibility page](/docs/compatibility/) summarizes browser and React requirements.
 
 ## Package a local build
 

@@ -78,6 +78,14 @@ export async function checkHero(browser: Browser, base: string, shots: string) {
       });
 
       if (options.javaScriptEnabled === false) {
+        await page.getByRole('link', { name: 'Install the extension' }).click();
+        await page.waitForURL(base + '/#install');
+        assert(
+          await page.locator('#browser-support-title').evaluate((heading) => {
+            const { top, bottom } = heading.getBoundingClientRect();
+            return top >= 0 && bottom <= innerHeight;
+          }),
+        );
         await page.getByRole('link', { name: 'Read the guide' }).click();
         await page.waitForURL(base + '/docs/');
       } else if (options.viewport!.width === 1440) {
