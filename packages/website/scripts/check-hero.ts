@@ -81,6 +81,31 @@ export async function checkHero(browser: Browser, base: string, shots: string) {
         await page.getByRole('link', { name: 'Read the guide' }).click();
         await page.waitForURL(base + '/docs/');
       } else if (options.viewport!.width === 1440) {
+        const heading = await page.locator('#hero-title').boundingBox();
+        assert.ok(heading);
+
+        // Cross the heading in a single hover. Each side should push it the other way.
+        for (const fraction of [0.2, 0.8]) {
+          await page.mouse.move(
+            heading.x + heading.width * fraction,
+            heading.y + heading.height / 2,
+          );
+          await page.waitForFunction(
+            ({ origin, direction }) => {
+              const current = document.getElementById('hero-title')!.getBoundingClientRect().x;
+              return (current - origin) * direction > 2;
+            },
+            { origin: heading.x, direction: fraction < 0.5 ? 1 : -1 },
+          );
+        }
+        await page.mouse.move(0, 0);
+        await page.waitForFunction(
+          (origin) =>
+            Math.abs(document.getElementById('hero-title')!.getBoundingClientRect().x - origin) <
+            0.1,
+          heading.x,
+        );
+
         await page.getByRole('link', { name: 'Explore the example' }).focus();
         await page.keyboard.press('Enter');
         await page.frameLocator('#anatomy-panel').locator('.tree-select').first().waitFor();
