@@ -106,7 +106,9 @@ function rematch(hidden: HiddenValue, pages: LoadedPages, containers: string[]):
     ...enclosing(hidden.path, pages).filter(confirmed),
   ];
 
-  return containers.includes(hidden.container) && page && entry
+  // The value's own record always follows what is at its path now, so the
+  // page-text warning looks for the value that is actually hidden.
+  return page && entry
     ? {
         ...hidden,
         fingerprint: fingerprint(entry.value),

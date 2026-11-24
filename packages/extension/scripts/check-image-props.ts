@@ -162,7 +162,14 @@ const root = page([
   assert.deepEqual(staleContainers(more, after), ['props.users']);
 
   // Confirming re-records the item around it, as well as the value.
-  assert.deepEqual(staleContainers(confirmHidden(hidden, after, review.stale), after), []);
+  const confirmed = confirmHidden(hidden, after, review.stale);
+
+  assert.deepEqual(staleContainers(confirmed, after), []);
+  assert.equal(
+    confirmed[0].text,
+    'carol@example.com',
+    'The page-text warning would look for alice',
+  );
 }
 
 // A hidden named prop stays hidden whatever its value becomes: names, unlike
