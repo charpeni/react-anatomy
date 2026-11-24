@@ -4,7 +4,11 @@ import { createPortal } from 'react-dom';
 
 function Counter({ count, onIncrement }: { count: number; onIncrement: () => void }) {
   return (
-    <button data-check="counter" onClick={onIncrement}>
+    <button
+      data-check="counter"
+      ref={(button) => button?.setAttribute('data-hydrated', '')}
+      onClick={onIncrement}
+    >
       Reviewed {count} times
     </button>
   );

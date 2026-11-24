@@ -18,7 +18,7 @@ This is a separate pnpm workspace with its own lockfile. Automatic peer installa
 
 - `workspace.tsx`: a routed issue workspace using React Router 7.18.5. Six React versions are built in development and minified production. It exercises Strict Mode, context, a class boundary, memoization, live props, portals, and navigation.
 - `excalidraw.tsx`: the actual published Excalidraw 0.18.1 editor, with a small local scene, on React 18.3.1 and 19.3.1. Excalidraw's package assets are served locally. This is an editor integration, not a clone of its UI or a test of its hosted collaboration service.
-- `next-app/`: Next.js 16.4.4 App Router, in development and production. Server rendering, Suspense streaming, hydration, client props, portals, and navigation are exercised. Next's bundled renderer reports a canary version independently of the installed `react` package; the report records its actual version.
+- `next-app/`: Next.js 16.4.6 App Router, in development and production. Server rendering, Suspense streaming, hydration, client props, portals, and navigation are exercised. Next's bundled renderer reports a canary version independently of the installed `react` package; the report records its actual version.
 
 The apps do not import Anatomy or install a React DevTools hook. The test driver installs the real browser extension, opens its native DevTools panel, and interacts with that panel and the inspected page. It waits for hydration independently of the inspector, then requests an explicit capture. Picker checks compare the page's actual hit ID to the selected tree row and wait for that component's props to finish loading.
 
