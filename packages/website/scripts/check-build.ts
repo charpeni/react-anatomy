@@ -19,6 +19,8 @@ for (const path of [
   'docs/generated-code/index.html',
   'docs/compatibility/index.html',
   'docs/faq/index.html',
+  'docs/release-notes/index.html',
+  'docs/release-notes.md',
   'privacy/index.html',
   'robots.txt',
   'llms.txt',
@@ -81,7 +83,11 @@ for (const [, address] of documents) {
     urls.some((url) => url.href === canonical),
     'Markdown must point to a real HTML page.',
   );
-  assert(markdown.length > 300, 'Markdown must contain the document, not just a summary.');
+  if (url.pathname === '/docs/release-notes.md') {
+    assert.match(markdown, /\n## .+|No releases have been published yet\./);
+  } else {
+    assert(markdown.length > 300, 'Markdown must contain the document, not just a summary.');
+  }
   assert(!/\]\(\//.test(markdown), 'Markdown links must work outside the website.');
   assert(headers.includes(`Link: <${canonical}>; rel="canonical"`));
 }

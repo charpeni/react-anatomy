@@ -127,3 +127,9 @@ The Worker name must match `name` in `wrangler.jsonc`. Wrangler is pinned in the
 After deployment succeeds, add `react-anatomy.com` under the Worker's **Settings → Domains & Routes → Add → Custom domain**. Check the landing page, `/docs/`, `/privacy/`, the live example, search, screenshot viewers, and a nonexistent URL. Unknown paths must return the site's 404 page, not the landing page.
 
 GitHub integration deploys `main`; it does not publish the browser extensions.
+
+### Release Notes
+
+Astro generates `/docs/release-notes/` and its Markdown export from the repository’s public GitHub Releases during each build. Edit the release on GitHub to correct its notes. Development and type checks can use the last locally generated copy if GitHub is unavailable. Production builds require a successful fetch. For production, we recommend setting `GITHUB_TOKEN` as a secret in the Cloudflare build environment. Use a fine-grained GitHub token scoped to this repository with read-only Contents permission. Unauthenticated requests share a limit of 60 per hour per IP address, so another build on the same IP can exhaust the quota and block a deployment. [GitHub Releases](https://github.com/charpeni/react-anatomy/releases)
+
+To rebuild when a release changes between pushes to `main`, create a Deploy Hook for the `main` branch under the Worker's **Settings → Builds → Deploy Hooks**. In the GitHub repository's **Settings → Webhooks**, add that URL with content type `application/json` and select only **Releases**. The URL grants permission to start a build, so keep it in the webhook settings. On the next publication, edit, or deletion, verify the delivery in GitHub and the completed build in Cloudflare. [Cloudflare Deploy Hooks](https://developers.cloudflare.com/workers/ci-cd/builds/deploy-hooks/) · [GitHub webhooks](https://docs.github.com/en/webhooks/using-webhooks/creating-webhooks)
