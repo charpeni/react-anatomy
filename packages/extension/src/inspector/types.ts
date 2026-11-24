@@ -40,6 +40,8 @@ export interface Snapshot {
   title: string;
   capturedAt: number;
   revision: number;
+  /** The document this capture came from; a reload changes it even at the same URL. */
+  document?: string;
   viewport: { width: number; height: number; scrollX: number; scrollY: number };
   rootCount: number;
   message?: string;
@@ -88,6 +90,8 @@ export interface PropValue {
   preview: string;
   handle?: string;
   expandable?: boolean;
+  /** Stays the same for the same object across reads; primitives have none. */
+  identity?: string;
 }
 
 export interface PropEntry {
@@ -113,6 +117,53 @@ export interface PropPage {
   limited: boolean;
 }
 
+/** A prop entry and what it held, to notice when another value takes its place. */
+export interface PropPosition {
+  path: string;
+  /** The array, Map, Set, or object that holds the entry. */
+  container: string;
+  /** Identifies the entry's value when it was recorded. */
+  fingerprint: string;
+  /** How many entries the container had then. */
+  siblings: number;
+}
+
+/** A value hidden in exported props cards. */
+export interface HiddenValue extends PropPosition {
+  /** The list items and Map entries the value sits inside, which can move too. */
+  enclosing?: PropPosition[];
+  /** The start of a hidden text value, to warn when it also appears in page text. Never drawn. */
+  text?: string;
+}
+
+/** One line of a props card, as the author reviewed it. Hidden lines carry no value. */
+export interface ImageRow {
+  depth: number;
+  name: string;
+  type: string;
+  preview?: string;
+  hidden?: boolean;
+}
+
+/** A component's props in exported images. */
+export interface ImageProps {
+  /** Excluded components keep their choices, so including them again restores them. */
+  included: boolean;
+  expanded: string[];
+  hidden: HiddenValue[];
+  /** The rows the inspector last showed. The image draws these, never a later read. */
+  rows: ImageRow[];
+  /** How many entries each shown branch had, so a later read can be compared like for like. */
+  counts: Record<string, number>;
+  /** When the rows were read from the page. */
+  reviewedAt: number;
+  /** Collections masked because a hidden value in them may have moved. */
+  stale: string[];
+}
+
+/** Components and their image props, in the order they were included. */
+export type ImagePropsByComponent = ReadonlyMap<string, ImageProps>;
+
 export interface PageRequests {
   capture: CaptureBudget;
   'capture-start': CaptureBudget;
@@ -128,6 +179,8 @@ export interface PageRequests {
   clear: object;
   dispose: object;
   pick: object;
+  /** `sizes[i]` is the largest drawn size of `urls[i]`, in CSS pixels. */
+  images: { urls: string[]; sizes?: number[] };
 }
 
 export interface PageResponses {
@@ -143,6 +196,7 @@ export interface PageResponses {
     url: string;
     title: string;
     expired: boolean;
+    document?: string;
   };
   props: Result<PropInspection>;
   'props-read': Result<PropPage>;
@@ -152,6 +206,8 @@ export interface PageResponses {
   clear: Result;
   dispose: Result;
   pick: Result;
+  /** Data URLs for the requested image URLs that the page could read. */
+  images: { images: Record<string, string> };
 }
 
 export type PageCall = <Action extends keyof PageRequests>(

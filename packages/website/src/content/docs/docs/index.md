@@ -51,7 +51,7 @@ A component rendered three times by a list appears three times. A conditional br
 
 ## What it is, and what it isn’t
 
-React Anatomy is an inspector. It helps you read and explain structure. It does not review code, judge whether a structure is good, open source files, export diagrams, or compare two captures. Those decisions and explanations stay with you, and the guides show manual workflows for them.
+React Anatomy is an inspector. It helps you read and explain structure. It does not review code, judge whether a structure is good, open source files, or compare two captures. Those decisions and explanations stay with you, and the guides show manual workflows for them.
 
 ## Choose a guide
 

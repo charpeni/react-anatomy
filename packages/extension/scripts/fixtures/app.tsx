@@ -100,19 +100,31 @@ function PropsFixture(
 function PropsExamples() {
   const [version, setVersion] = useState(1);
   const [mounted, setMounted] = useState(true);
+  const [inserted, setInserted] = useState<typeof inspectionData.items>([]);
 
   useEffect(() => {
     window.updateInspectedProps = () => setVersion((v) => v + 1);
     window.unmountInspectedProps = () => setMounted(false);
+    // Shifts every item along, as a list that gains an entry at the top does.
+    window.prependInspectedItem = () =>
+      setInserted((items) => [
+        { id: -items.length - 1, label: `Inserted ${items.length + 1}`, enabled: true },
+        ...items,
+      ]);
 
     return () => {
       delete window.updateInspectedProps;
       delete window.unmountInspectedProps;
+      delete window.prependInspectedItem;
     };
   }, []);
 
   return mounted ? (
-    <PropsFixture {...inspectionData} version={version}>
+    <PropsFixture
+      {...inspectionData}
+      items={inserted.length ? [...inserted, ...inspectionData.items] : inspectionData.items}
+      version={version}
+    >
       <span>Child prop content</span>
     </PropsFixture>
   ) : null;

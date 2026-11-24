@@ -5,7 +5,7 @@ prev: false
 next: false
 ---
 
-Last updated: November 23, 2026
+Last updated: November 24, 2026
 
 React Anatomy is a browser extension developed by [Nicolas Charpentier](https://github.com/charpeni). It inspects React pages locally in your browser. **We do not receive your captures or component props.** The extension has no accounts, analytics, advertising, or remote error reporting.
 
@@ -34,11 +34,11 @@ In DevTools, Anatomy uses the browser’s inspected-page APIs. Its toolbar entry
 
 Captures and inspected props are held in memory during inspection. The extension does not save them to persistent extension storage, synchronize them across devices, or upload them to a service.
 
-Close DevTools or the Anatomy window to stop inspection, then reload the inspected page to clear any remaining inspection state. Uninstalling the extension removes its ability to inspect pages. Any screenshots or recordings you make remain under your control; check their contents before sharing them.
+Close DevTools or the Anatomy window to stop inspection, then reload the inspected page to clear any remaining inspection state. Uninstalling the extension removes its ability to inspect pages. Images you export, and any screenshots or recordings you make, remain under your control. An exported image is created locally and leaves your browser only when you paste or attach it somewhere. Check its contents before sharing it.
 
 ## Requests for page assets
 
-Recreating a page can reload its images, backgrounds, and fonts from their original URLs. Those requests go directly to the sites or asset providers, without passing through a React Anatomy server. They can expose the requested URL, your IP address, and normal browser request headers to those providers. Browser caching and cookie rules apply, and providers may keep their own request logs.
+Recreating a page can reload its images, backgrounds, and fonts from their original URLs. Exporting an image can request them again, to include them in the image. Those requests go directly to the sites or asset providers, without passing through a React Anatomy server. They can expose the requested URL, your IP address, and normal browser request headers to those providers. Browser caching and cookie rules apply, and providers may keep their own request logs.
 
 We do not sell inspection data or use it for advertising or analytics. React Anatomy’s use of information obtained through Chrome APIs follows the [Chrome Web Store User Data Policy](https://developer.chrome.com/docs/webstore/program-policies/policies#protecting-user-privacy), including the Limited Use requirements.
 

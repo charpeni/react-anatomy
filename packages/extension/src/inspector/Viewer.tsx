@@ -1,4 +1,10 @@
-import type { ComponentNode, PageCall, Snapshot } from './types.ts';
+import type {
+  ComponentNode,
+  ImageProps,
+  ImagePropsByComponent,
+  PageCall,
+  Snapshot,
+} from './types.ts';
 import React, {
   useEffect,
   useEffectEvent,
@@ -16,6 +22,7 @@ import { ComponentDetails } from './ComponentDetails.tsx';
 import { SceneStage } from './SceneStage.tsx';
 import { LayerControls, StageHeading } from './StageControls.tsx';
 import { Splitter } from './Splitter.tsx';
+import { ExportDialog } from './ExportDialog.tsx';
 
 // Keep slider percentages independent from the scene's spacing units.
 const SEPARATION_SCALE = 1.5;
@@ -45,6 +52,9 @@ export function Viewer({
   onScope,
   busy,
   initialSelection,
+  changed,
+  imageProps,
+  onImageProps,
 }: {
   snapshot: Snapshot;
   picked: { id: string; time: number } | null;
@@ -56,6 +66,10 @@ export function Viewer({
   onScope: (id: string | null) => void;
   busy: boolean;
   initialSelection?: string;
+  /** The page changed after this capture. */
+  changed: boolean;
+  imageProps: ImagePropsByComponent;
+  onImageProps: (id: string, image: ImageProps) => void;
 }) {
   const nodes = snapshot.nodes;
 
@@ -89,6 +103,7 @@ export function Viewer({
   const [treeWidth, setTreeWidth] = useState(252);
   const [inspectorWidth, setInspectorWidth] = useState(264);
   const [treeHidden, setTreeHidden] = useState(false);
+  const [exporting, setExporting] = useState(false);
   const stageRef = useRef<HTMLDivElement | null>(null);
   const searchRef = useRef<HTMLInputElement | null>(null);
   const [size, setSize] = useState({ width: 900, height: 600 });
@@ -180,9 +195,11 @@ export function Viewer({
 
   const distance = explode * 1.6;
 
+  const maxScale = focusNode ? 1.8 : 1.2;
+
   const fit = useMemo(
-    () => fitScene(planes, { frame, size, rotation, distance, maxScale: focusNode ? 1.8 : 1.2 }),
-    [planes, frame, size, rotation, distance, focusNode],
+    () => fitScene(planes, { frame, size, rotation, distance, maxScale }),
+    [planes, frame, size, rotation, distance, maxScale],
   );
 
   // The plane that currently paints a component, which may belong to an ancestor.
@@ -273,6 +290,7 @@ export function Viewer({
   // is registered once and reads the latest state through an Effect Event.
   const shortcut = useEffectEvent((e: KeyboardEvent) => {
     if (
+      exporting ||
       (e.target instanceof Element && e.target.closest('input,textarea,[contenteditable]')) ||
       e.metaKey ||
       e.ctrlKey ||
@@ -298,6 +316,10 @@ export function Viewer({
 
     if (e.key.toLowerCase() === 'c') {
       onPick();
+    }
+
+    if (e.key.toLowerCase() === 'e') {
+      setExporting(true);
     }
 
     if (e.key === '0') {
@@ -376,6 +398,7 @@ export function Viewer({
           onToggleWrappers={toggleWrappers}
           onRotate={setRotation}
           onReset={reset}
+          onExport={() => setExporting(true)}
           onToggleDetails={() => setDetails((v) => !v)}
         />
         {focusNode && (
@@ -457,11 +480,37 @@ export function Viewer({
         warnings={snapshot.warnings ?? []}
         call={call}
         canInspect={canInspect}
+        image={imageProps.get(selectedNode.id)}
+        onImage={(image) => onImageProps(selectedNode.id, image)}
         onFocus={isolate}
         onAction={onAction}
         onSelect={select}
         onClose={() => setDetails(false)}
       />
+      {exporting && (
+        <ExportDialog
+          view={{
+            snapshot,
+            planes,
+            textures,
+            frame,
+            size,
+            zoom,
+            rotation,
+            explode,
+            distance,
+            maxScale,
+            labels,
+            selectedPlane: planeOf(selectedNode.id),
+            byId,
+            planeOf,
+          }}
+          imageProps={imageProps}
+          call={call}
+          changed={changed}
+          onClose={() => setExporting(false)}
+        />
+      )}
     </div>
   );
 }

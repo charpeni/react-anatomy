@@ -6,5 +6,6 @@ declare global {
     propCallbackCalls?: number;
     updateInspectedProps?: () => void;
     unmountInspectedProps?: () => void;
+    prependInspectedItem?: () => void;
   }
 }

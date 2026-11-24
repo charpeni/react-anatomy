@@ -55,6 +55,9 @@ export function pageAgent(request: PageRequest = { action: 'capture' }): PageRes
   }
 
   // A panel upgrade can attach to an agent installed by an earlier preview.
+  state.document ||= Date.now().toString(36) + '-' + Math.random().toString(36).slice(2);
+  state.valueIds ||= new WeakMap();
+  state.valueSequence ||= 0;
   state.propSessions ||= new Map();
   state.rootHandles ||= [];
   state.propSequence ||= 0;
@@ -232,6 +235,52 @@ export function pageAgent(request: PageRequest = { action: 'capture' }): PageRes
     return state.elements.get(request.id)?.[0] || null;
   }
 
+  // Exported images cannot load remote URLs, and the panel's own origin cannot
+  // read most page assets. Copy images the page has already loaded and can read
+  // (same-origin or CORS-enabled) into bounded data URLs. Others are skipped.
+  if (request.action === 'images') {
+    const urls = Array.isArray(request.urls) ? request.urls.slice(0, 200) : [];
+    const sizes = Array.isArray(request.sizes) ? request.sizes : [];
+    const wanted = new Map(urls.map((url, index) => [url, Number(sizes[index]) || 800]));
+    const images: Record<string, string> = {};
+    let bytes = 0;
+
+    for (const image of Array.from(document.images)) {
+      const url = image.currentSrc || image.src;
+      const drawn = wanted.get(url);
+
+      if (!drawn || images[url] || !image.complete || !image.naturalWidth) {
+        continue;
+      }
+
+      // Twice the drawn size is enough for a 2x export, and keeps photos small.
+      const longest = Math.max(image.naturalWidth, image.naturalHeight);
+      const scale = Math.min(1, Math.max(16, Math.min(1600, drawn * 2)) / longest);
+      const canvas = document.createElement('canvas');
+
+      canvas.width = Math.max(1, Math.round(image.naturalWidth * scale));
+      canvas.height = Math.max(1, Math.round(image.naturalHeight * scale));
+
+      try {
+        canvas.getContext('2d')?.drawImage(image, 0, 0, canvas.width, canvas.height);
+
+        const data = canvas.toDataURL('image/png');
+
+        // Skip an image that does not fit; smaller ones after it may still fit.
+        if (bytes + data.length > 12 * 1024 * 1024) {
+          continue;
+        }
+
+        bytes += data.length;
+        images[url] = data;
+      } catch {
+        // A cross-origin image without CORS taints the canvas and stays unreadable.
+      }
+    }
+
+    return { images };
+  }
+
   if (request.action === 'pick') {
     stopPicking();
     state.picked = null;
@@ -317,6 +366,7 @@ export function pageAgent(request: PageRequest = { action: 'capture' }): PageRes
       url: location.href,
       title: document.title,
       expired: !state.elements.size,
+      document: state.document,
     };
   }
 
@@ -351,6 +401,29 @@ export function pageAgent(request: PageRequest = { action: 'capture' }): PageRes
     const descriptor = Object.getOwnPropertyDescriptor(object, name);
 
     return descriptor && 'value' in descriptor ? descriptor.value : undefined;
+  }
+
+  // A WeakMap lookup performs no reflection, so it cannot run an app's proxy
+  // traps. Identities let the panel notice that a hidden value has moved.
+  function identityOf(value: object) {
+    let id = state.valueIds!.get(value);
+
+    if (!id) {
+      id = `o${++state.valueSequence!}`;
+      state.valueIds!.set(value, id);
+    }
+
+    return id;
+  }
+
+  function entryIdentity(...parts: unknown[]) {
+    return parts
+      .map((part) =>
+        part !== null && (typeof part === 'object' || typeof part === 'function')
+          ? identityOf(part)
+          : typeof part + ':' + String(part).slice(0, 200),
+      )
+      .join('|');
   }
 
   function propDescriptor(value: unknown, session: PropSession): PropValue {
@@ -447,7 +520,13 @@ export function pageAgent(request: PageRequest = { action: 'capture' }): PageRes
         }
       }
 
-      return { type: kind, preview, handle, expandable: true };
+      return {
+        type: kind,
+        preview,
+        handle,
+        expandable: true,
+        ...(typeof value === 'object' ? { identity: identityOf(value as object) } : {}),
+      };
     } catch {
       return { type: 'unavailable', preview: '[Unavailable]' };
     }
@@ -509,10 +588,14 @@ export function pageAgent(request: PageRequest = { action: 'capture' }): PageRes
             entries.push({
               key: String(i),
               name: String(i),
-              value: propDescriptor(
-                kind === 'map' ? { key: item.value[0], value: item.value[1] } : item.value[0],
-                session,
-              ),
+              // Each read wraps a Map entry in a new object; identify it by its parts.
+              value:
+                kind === 'map'
+                  ? {
+                      ...propDescriptor({ key: item.value[0], value: item.value[1] }, session),
+                      identity: entryIdentity(item.value[0], item.value[1]),
+                    }
+                  : propDescriptor(item.value[0], session),
             });
           }
         }
@@ -855,6 +938,7 @@ export function pageAgent(request: PageRequest = { action: 'capture' }): PageRes
       title: document.title,
       capturedAt: Date.now(),
       revision: state.revision,
+      document: state.document,
       viewport: { width: innerWidth, height: innerHeight, scrollX, scrollY },
       rootCount: roots.size,
       ...(scoped ? { scope: { id: options.scopeId!, path: scopePath } } : {}),

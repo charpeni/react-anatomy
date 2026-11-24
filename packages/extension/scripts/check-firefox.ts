@@ -97,6 +97,54 @@ try {
   await h.until(async () => (await props()).includes('Orbit design system'), 'Card props missing');
   await settle();
   await h.screenshot(artifacts + '/focused.png');
+
+  // Firefox lays exported images out at 2x so its 3D planes stay sharp.
+  await click('Include in image');
+  await click('Export image');
+  await h.until(
+    () =>
+      run(
+        `!!document.querySelector('.export-preview img')||document.querySelector('.export-preview [role="alert"]')?.textContent`,
+      ),
+    'The export did not render',
+  );
+
+  const exported = await run<{
+    size: number[];
+    expected: number[];
+    corner: number[];
+    card: string;
+    png: string;
+  }>(`(async()=>{
+    const img=document.querySelector('.export-preview img');
+    if(!img)return {card:document.querySelector('.export-preview').textContent};
+    const blob=await (await fetch(img.src)).blob();
+    const bitmap=await createImageBitmap(blob);
+    const canvas=new OffscreenCanvas(bitmap.width,bitmap.height);
+    const context=canvas.getContext('2d');
+    context.drawImage(bitmap,0,0);
+    const root=document.querySelector('.export-composition');
+    const png=await new Promise(resolve=>{const reader=new FileReader();reader.onload=()=>resolve(reader.result);reader.readAsDataURL(blob);});
+    return {
+      size:[bitmap.width,bitmap.height],
+      expected:[root.offsetWidth*2,root.offsetHeight*2],
+      corner:Array.from(context.getImageData(0,0,1,1).data.slice(0,3)),
+      card:document.querySelector('.export-card')?.textContent||'',
+      png,
+    };
+  })()`);
+
+  assert(exported.png, exported.card);
+  assert.deepEqual(exported.size, exported.expected);
+  assert(
+    exported.corner.every((channel) => channel > 230),
+    `Export is not light: ${exported.corner}`,
+  );
+  assert(exported.card.includes('name: "Orbit design system"'), exported.card);
+  await writeFile(artifacts + '/export.png', Buffer.from(exported.png.split(',')[1], 'base64'));
+  await click('Close export');
+  await click('Include in image');
+  console.log(`Passed: exported a ${exported.size.join(' × ')} image in Firefox.`);
   await click('Whole page');
   await h.until(
     () =>

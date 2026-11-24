@@ -50,6 +50,10 @@ With **Follow changes** on, rendered DOM, scrolling, and viewport changes trigge
 
 Props can change without a DOM change. Use **Refresh props** in the inspector for those updates.
 
+## Export an image
+
+**Export image** above the scene, or **E**, turns the current view into a PNG sized for a pull request: the layers with readable component names on their edges, and the props of components you chose with **Include in image**. Preview it at **100%**, then copy it into a pull request or download it. [Explain a change](/docs/explain-a-change/) walks through the workflow.
+
 ## Keyboard controls
 
 | Key        | Action                                   |
@@ -59,6 +63,7 @@ Props can change without a DOM change. Use **Refresh props** in the inspector fo
 | Escape     | Return from focus or cancel page picking |
 | R          | Capture again                            |
 | C          | Toggle the page picker                   |
+| E          | Export an image of the current view      |
 | /          | Focus component search                   |
 | 0          | Reset the view                           |
 

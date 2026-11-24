@@ -14,6 +14,20 @@ export async function startFixtureServer(port = 0) {
       return;
     }
 
+    // A same-origin image without CORS headers: only the page can read it.
+    if (path === '/fixture-image.png') {
+      res
+        .writeHead(200, { 'Content-Type': 'image/png', 'Cache-Control': 'no-store' })
+        .end(
+          Buffer.from(
+            'iVBORw0KGgoAAAANSUhEUgAAABgAAAAYCAIAAABvFaqvAAAAH0lEQVR42mN4KqNMFcQwatCoQaMGjRo0atCoQQNvEABrLpEfVkZo7AAAAABJRU5ErkJggg==',
+            'base64',
+          ),
+        );
+
+      return;
+    }
+
     const file =
       path === '/'
         ? 'dist/test-app.html'

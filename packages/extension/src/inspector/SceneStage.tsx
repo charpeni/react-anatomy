@@ -2,6 +2,109 @@ import type { Frame, SceneLayer, Snapshot } from './types.ts';
 import React, { useRef } from 'react';
 import { Glyph } from './Glyph.tsx';
 
+// The planes in 3D, positioned for one camera. The stage below adds orbiting,
+// selection and controls; exported images render the same markup without them.
+export function Scene({
+  planes,
+  textures,
+  frame,
+  scale,
+  rotation,
+  explode,
+  distance,
+  labels,
+  selectedPlane,
+  hoveredPlane,
+  tints,
+  anchors = false,
+  interaction,
+}: {
+  planes: SceneLayer[];
+  textures: Record<string, string>;
+  frame: Frame;
+  scale: number;
+  rotation: { x: number; y: number };
+  explode: number;
+  distance: number;
+  labels: boolean;
+  selectedPlane?: string | null;
+  hoveredPlane?: string | null;
+  /** Outline colors for planes that exported images call out. */
+  tints?: Record<string, string>;
+  /** Marks each plane's top corners so their projected positions can be measured. */
+  anchors?: boolean;
+  interaction?: {
+    onSelect: (id: string) => void;
+    onFocus: (id: string) => void;
+    onHover: (id: string | null) => void;
+    isDragging: () => boolean;
+  };
+}) {
+  const levels = Math.max(1, ...planes.map((n) => n.sceneDepth));
+
+  return (
+    <div className="scene-anchor">
+      <div
+        className="scene"
+        style={{
+          width: frame.w,
+          height: frame.h,
+          transform: `translate(-50%,-50%) scale3d(${scale},${scale},${scale}) rotateX(${rotation.x}deg) rotateY(${rotation.y}deg)`,
+          // Labels annotate the scene: when the camera backs away they stay near their screen size instead of shrinking with the page.
+          '--label-scale': Math.min(2.2, Math.max(1, 0.9 / scale)).toFixed(3),
+        }}
+      >
+        {planes.map((n) => (
+          <div
+            key={n.id}
+            data-plane={n.id}
+            data-layer-depth={n.layerDepth}
+            data-scene-depth={n.sceneDepth}
+            {...(interaction && {
+              role: 'button',
+              tabIndex: 0,
+              'aria-label': 'Select ' + n.name,
+              onKeyDown: (e: React.KeyboardEvent) => {
+                if (e.key === 'Enter') {
+                  interaction.onSelect(n.id);
+                }
+              },
+              onDoubleClick: () => interaction.onFocus(n.id),
+              onMouseEnter: () => !interaction.isDragging() && interaction.onHover(n.id),
+              onMouseLeave: () => interaction.onHover(null),
+            })}
+            className={`component-plane ${explode > 2 ? 'separated' : 'assembled'} ${selectedPlane === n.id || hoveredPlane === n.id ? 'active' : ''} ${tints?.[n.id] ? 'tinted' : ''}`}
+            style={{
+              width: n.frame.w,
+              height: n.frame.h,
+              transform: `translate3d(${n.frame.x - frame.x}px,${n.frame.y - frame.y}px,${(n.sceneDepth - levels / 2) * distance}px)`,
+              ...(tints?.[n.id] ? { outlineColor: tints[n.id] } : {}),
+            }}
+          >
+            <div
+              className="plane-content"
+              inert
+              dangerouslySetInnerHTML={{ __html: textures[n.id] }}
+            />
+            {labels && explode > 5 && (
+              <div className="plane-label">
+                {n.name}
+                {n.key && <em>{n.key}</em>}
+              </div>
+            )}
+            {anchors && (
+              <>
+                <span className="plane-anchor" />
+                <span className="plane-anchor end" />
+              </>
+            )}
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 // The CSS 3D scene: one plane per displayed layer, orbit by dragging, zoom by
 // scrolling. Which layers are displayed is decided by the caller.
 export function SceneStage({
@@ -57,7 +160,6 @@ export function SceneStage({
     id?: string;
     moved: boolean;
   } | null>(null);
-  const levels = Math.max(1, ...planes.map((n) => n.sceneDepth));
 
   function down(e: React.PointerEvent<HTMLDivElement>) {
     if (e.button !== 0 || (e.target instanceof Element && e.target.closest('button,input'))) {
@@ -134,56 +236,19 @@ export function SceneStage({
         </span>
         {combined > 0 && <span>{combined} wrappers combined</span>}
       </div>
-      <div className="scene-anchor">
-        <div
-          className="scene"
-          style={{
-            width: frame.w,
-            height: frame.h,
-            transform: `translate(-50%,-50%) scale3d(${fit * zoom},${fit * zoom},${fit * zoom}) rotateX(${rotation.x}deg) rotateY(${rotation.y}deg)`,
-            // Labels annotate the scene: when the camera backs away they stay near their screen size instead of shrinking with the page.
-            '--label-scale': Math.min(2.2, Math.max(1, 0.9 / (fit * zoom))).toFixed(3),
-          }}
-        >
-          {planes.map((n) => (
-            <div
-              key={n.id}
-              role="button"
-              tabIndex={0}
-              data-plane={n.id}
-              data-layer-depth={n.layerDepth}
-              data-scene-depth={n.sceneDepth}
-              aria-label={'Select ' + n.name}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter') {
-                  onSelect(n.id);
-                }
-              }}
-              onDoubleClick={() => onFocus(n.id)}
-              onMouseEnter={() => !drag.current && onHover(n.id)}
-              onMouseLeave={() => onHover(null)}
-              className={`component-plane ${explode > 2 ? 'separated' : 'assembled'} ${selectedPlane === n.id || hoveredPlane === n.id ? 'active' : ''}`}
-              style={{
-                width: n.frame.w,
-                height: n.frame.h,
-                transform: `translate3d(${n.frame.x - frame.x}px,${n.frame.y - frame.y}px,${(n.sceneDepth - levels / 2) * distance}px)`,
-              }}
-            >
-              <div
-                className="plane-content"
-                inert
-                dangerouslySetInnerHTML={{ __html: textures[n.id] }}
-              />
-              {labels && explode > 5 && (
-                <div className="plane-label">
-                  {n.name}
-                  {n.key && <em>{n.key}</em>}
-                </div>
-              )}
-            </div>
-          ))}
-        </div>
-      </div>
+      <Scene
+        planes={planes}
+        textures={textures}
+        frame={frame}
+        scale={fit * zoom}
+        rotation={rotation}
+        explode={explode}
+        distance={distance}
+        labels={labels}
+        selectedPlane={selectedPlane}
+        hoveredPlane={hoveredPlane}
+        interaction={{ onSelect, onFocus, onHover, isDragging: () => !!drag.current }}
+      />
       {!planes.length && (
         <div className="no-plane-message">
           No visible output in the captured viewport.
