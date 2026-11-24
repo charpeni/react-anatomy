@@ -11,7 +11,7 @@
     "check": "astro check",
     "predev": "node scripts/build-demo.ts",
     "prebuild": "node scripts/build-demo.ts",
-    "test": "pnpm run build && node scripts/check-demo.ts",
+    "test": "node --test scripts/check-release-notes.ts && pnpm run build && node scripts/check-demo.ts",
     "export:diagram": "node scripts/export-diagram.ts",
     "generate:social": "node scripts/generate-social-card.ts",
     "type-check": "astro check"
@@ -21,7 +21,12 @@
     "@astrojs/starlight": "0.42.8",
     "@react-anatomy/brand": "workspace:*",
     "astro": "7.4.5",
-    "photoswipe": "5.4.4"
+    "photoswipe": "5.4.4",
+    "remark-gfm": "4.0.1",
+    "remark-parse": "11.0.0",
+    "remark-stringify": "11.0.0",
+    "unified": "11.0.5",
+    "unist-util-visit": "5.2.0"
   },
   "devDependencies": {
     "@astrojs/check": "^0.9.4",

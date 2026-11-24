@@ -2,11 +2,13 @@ import { defineConfig } from 'astro/config';
 import starlight from '@astrojs/starlight';
 import { site } from './src/lib/site.ts';
 import { staticHeaders } from './src/integrations/static-headers.ts';
+import { releaseNotes } from './src/integrations/release-notes.ts';
 
 export default defineConfig({
   site: site.url,
   trailingSlash: 'always',
   integrations: [
+    releaseNotes(),
     staticHeaders(),
     starlight({
       title: 'React Anatomy',
@@ -48,6 +50,7 @@ export default defineConfig({
             { label: 'Layers, focus, and controls', slug: 'docs/explore' },
             { label: 'Props inspector', slug: 'docs/props' },
             { label: 'Compatibility', slug: 'docs/compatibility' },
+            { label: 'Release Notes', slug: 'docs/release-notes' },
             { label: 'Common questions', slug: 'docs/faq' },
             { label: 'Current limitations', slug: 'docs/limitations' },
             { label: 'Local development', slug: 'docs/development' },
