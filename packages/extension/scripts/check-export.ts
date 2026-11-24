@@ -87,9 +87,12 @@ try {
     );
   };
 
+  // The dialog closes at once, but the panel learns of it from the close event
+  // and a later render. Shortcuts are ignored until then, so wait for the
+  // dialog to be removed, not only closed.
   const closeExport = async () => {
     await click('[aria-label="Close export"]');
-    await h.until(() => run(`!document.querySelector('dialog[open]')`), 'Export did not close');
+    await h.until(() => run(`!document.querySelector('.export-dialog')`), 'Export did not close');
   };
 
   const exported = () =>
