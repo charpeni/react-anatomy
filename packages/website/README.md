@@ -74,7 +74,7 @@ The website and documentation use **Instrument Sans**, self-hosted as variable W
 
 `ExplodedHero.astro` presents the introduction as a fixed, front-facing composition of HTML layers. The component labels are a hand-authored illustration, with Emphasis nested inside Heading. There is no camera interaction or extra keyboard stop; the text stays selectable and the links remain ordinary links.
 
-The layers separate once on load using CSS transforms. Reduced motion and JavaScript-disabled browsers show the completed view immediately; focusing a hero link finishes the entrance. Keep this illustration separate from the live React capture in the example below it.
+The layers separate once on load using CSS transforms. As the pointer moves, nearby layers drift away from it and ease back into place. The backplate and links stay anchored. Reduced motion and JavaScript-disabled browsers show the completed view immediately. Focusing a hero link finishes the entrance. Keep this illustration separate from the live React capture in the example below it.
 
 ## 404 page
 

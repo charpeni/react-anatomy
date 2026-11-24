@@ -54,8 +54,15 @@
 </section>
 
 <script>
+  import { enableHeroDrift } from '../scripts/hero-drift.ts';
+
+  const stage = document.querySelector<HTMLElement>('.hero-stage');
   const scene = document.querySelector<HTMLElement>('.hero-scene');
   const reducedMotion = matchMedia('(prefers-reduced-motion: reduce)');
+
+  if (stage) {
+    enableHeroDrift(stage);
+  }
 
   if (scene && !reducedMotion.matches && !scene.contains(document.activeElement)) {
     const finishEntrance = () => scene.classList.remove('is-entering');
@@ -195,6 +202,11 @@
   }
   .hero-scene.is-entering .hero-plane {
     animation: separate-hero 760ms var(--ease-out) 180ms both;
+  }
+  @media (prefers-reduced-motion: no-preference) {
+    .hero-plane {
+      transition: translate 360ms var(--ease-out);
+    }
   }
   @media (max-width: 900px) {
     .hero-grid {
