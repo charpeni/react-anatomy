@@ -202,11 +202,16 @@ try {
         'Application did not become ready',
         60000,
       );
-      // SSR text can be visible before hydration. Wait for a committed client
-      // root independently of Anatomy; never install a DevTools hook in the app.
+      // Check hydration independently of the inspector before requesting a capture.
       await h.until(
-        () =>
-          h.page(`(()=>{
+        () => {
+          // Next's development overlay can commit while the review is still server-rendered.
+          if (item.kind === 'next') {
+            return h.page(
+              `Boolean(document.querySelector('[data-check="counter"][data-hydrated]'))`,
+            );
+          }
+          return h.page(`(()=>{
         for(const el of document.querySelectorAll('*'))for(const key of Object.keys(el)){
           if(!key.startsWith('__reactFiber$')&&!key.startsWith('__reactContainer$'))continue;
           let fiber=Object.getOwnPropertyDescriptor(el,key)?.value,steps=0;
@@ -215,7 +220,8 @@ try {
           if(root?.child&&!root.memoizedState?.isDehydrated)return true;
         }
         return false;
-      })()`),
+      })()`);
+        },
         'React did not finish mounting/hydrating',
         60000,
       );
