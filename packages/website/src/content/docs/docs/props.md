@@ -19,6 +19,34 @@ Props are read as you expand their branches. They are not a historical snapshot 
 
 Use **Refresh props** to reread values without capturing the whole page. A new capture refreshes the selection’s props and keeps expanded paths. If the props object changes or the component unmounts, the inspector asks you to refresh or recapture.
 
+## Copy component context
+
+When several components share a name, **Copy component context** helps you point to the one you mean. The preview includes the selected instance’s name, React key when available, path through the tree, and immediate children. Long paths are shortened and incomplete child lists are marked.
+
+1. On your React page, open **Anatomy** in DevTools. Select a component in the tree, or choose **Pick on page** and click the part of your app you want to inspect.
+2. In the component details, open **Copy component context**. To include a live value, enter its dot-separated path in **Optional prop path** and choose **Include prop**. Use **Remove prop** to leave it out.
+3. Review **Text to copy**, choose **Copy text**, and paste it into an issue or an agent prompt. If your browser asks you to copy manually, the preview is already selected.
+
+### Example from Orbit
+
+Orbit renders three `ProjectCard` instances. Selecting the Design system card and including `project.progress` produces this text.
+
+```text
+Component: ProjectCard [key="design-system"]
+Path: WorkspaceApp → MainContent → ProjectList → ProjectCard [key="design-system"]
+Rendered children: ProgressBar, StatusBadge, AvatarStack
+Prop project.progress (number): 72
+```
+
+The prop line shows the value at the time you choose **Include prop**. Objects and collections get a short preview. When you capture the page again, manually or with **Follow changes**, the preview drops that line and keeps the path you entered. Choose **Include prop** again to read the new value.
+
+<video controls playsinline preload="metadata" width="1280" height="720" aria-label="Copy component context from an Orbit project card" poster="/media/docs/copy-component-context-poster.jpg" src="/media/docs/copy-component-context.mp4">
+  <track kind="captions" srclang="en" label="English" src="/media/docs/copy-component-context.en.vtt" />
+  <a href="/media/docs/copy-component-context.mp4">Watch the 28-second narrated demo.</a>
+</video>
+
+To try the same card in the [interactive example](/#demo), choose **Inspect props**.
+
 ## Props in exported images
 
 Choose **Include in image** in the **Props** section to show a component’s props in [exported images](/docs/explain-a-change/). The image lists its top-level props and the branches you expanded, as the inspector last showed them; it does not read the page again when you export. Hover a value and use its eye button, **Hide in props card**, to hide it; its name stays. Page text on the layers is not affected.

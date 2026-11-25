@@ -403,6 +403,15 @@ export function pageAgent(request: PageRequest = { action: 'capture' }): PageRes
     return descriptor && 'value' in descriptor ? descriptor.value : undefined;
   }
 
+  const reactElementProps = ['type', 'key', 'props'];
+
+  function isReactElement(value: unknown) {
+    const marker = ownValue(value, '$$typeof');
+    return (
+      marker === Symbol.for('react.element') || marker === Symbol.for('react.transitional.element')
+    );
+  }
+
   // A WeakMap lookup performs no reflection, so it cannot run an app's proxy
   // traps. Identities let the panel notice that a hidden value has moved.
   function identityOf(value: object) {
@@ -426,7 +435,7 @@ export function pageAgent(request: PageRequest = { action: 'capture' }): PageRes
       .join('|');
   }
 
-  function propDescriptor(value: unknown, session: PropSession): PropValue {
+  function propDescriptor(value: unknown, session?: PropSession): PropValue {
     try {
       const type = value === null ? 'null' : typeof value;
 
@@ -485,11 +494,7 @@ export function pageAgent(request: PageRequest = { action: 'capture' }): PageRes
       } else if (value instanceof Set) {
         kind = 'set';
         preview = `Set(${Object.getOwnPropertyDescriptor(Set.prototype, 'size')!.get!.call(value)})`;
-      } else if (
-        [Symbol.for('react.element'), Symbol.for('react.transitional.element')].includes(
-          ownValue(value, '$$typeof') as symbol,
-        )
-      ) {
+      } else if (isReactElement(value)) {
         kind = 'react-element';
 
         const elementType = ownValue(value, 'type');
@@ -503,6 +508,10 @@ export function pageAgent(request: PageRequest = { action: 'capture' }): PageRes
         preview = `<${typeof name === 'string' && name ? name.slice(0, 200) : 'Anonymous'} />`;
       } else {
         preview = 'Object';
+      }
+
+      if (!session) {
+        return { type: kind, preview };
       }
 
       let handle = typeof value === 'object' ? session.seen.get(value) : null;
@@ -605,7 +614,7 @@ export function pageAgent(request: PageRequest = { action: 'capture' }): PageRes
         // Do not follow React's private owner/Fiber graph through children props.
         keys =
           kind === 'react-element'
-            ? ['type', 'key', 'props']
+            ? reactElementProps
             : Reflect.ownKeys(value as object).filter(
                 (key) => Object.getOwnPropertyDescriptor(value, key)?.enumerable,
               );
@@ -645,6 +654,45 @@ export function pageAgent(request: PageRequest = { action: 'capture' }): PageRes
       };
     } catch {
       return { ok: false, message: 'This value cannot be inspected.' };
+    }
+  }
+
+  // Read only the requested own properties. Never expand siblings or evaluate an accessor.
+  if (request.action === 'prop-preview') {
+    if (request.document !== undefined && request.document !== state.document) {
+      return { ok: false, message: 'Document changed. Find the component again.' };
+    }
+    const fiber = currentFiber(request.id);
+    if (!fiber) {
+      return { ok: false, message: 'Component unavailable. Find the mounted component again.' };
+    }
+    if (!request.path.length || request.path.length > 12) {
+      return { ok: false, message: 'Supply a path of 1 to 12 prop names.' };
+    }
+    let value = fiber.memoizedProps;
+    try {
+      for (const [index, key] of request.path.entries()) {
+        if (value === null || typeof value !== 'object') {
+          return { ok: false, message: 'Prop path has no inspectable child.' };
+        }
+        if (isReactElement(value) && !reactElementProps.includes(key)) {
+          return { ok: false, message: 'Inspect type, key or props on a React element.' };
+        }
+        const descriptor = Object.getOwnPropertyDescriptor(value, key);
+        if (!descriptor?.enumerable) {
+          return { ok: false, message: 'Prop path was not found.' };
+        }
+        if (!('value' in descriptor)) {
+          if (index !== request.path.length - 1) {
+            return { ok: false, message: 'An accessor blocks this path.' };
+          }
+          return { ok: true, type: 'accessor', preview: '[Accessor — not evaluated]' };
+        }
+        value = descriptor.value;
+      }
+      return { ok: true, ...propDescriptor(value) };
+    } catch {
+      return { ok: false, message: 'This prop cannot be inspected.' };
     }
   }
 
@@ -856,7 +904,7 @@ export function pageAgent(request: PageRequest = { action: 'capture' }): PageRes
         'This component is no longer mounted. Return to Whole page and capture again.',
       );
     }
-    const scopePath: { id: string; name: string }[] = [];
+    const scopePath: SearchMatch[] = [];
     if (scoped) {
       for (
         let fiber: Fiber | null = scoped, steps = 0;
@@ -865,7 +913,11 @@ export function pageAgent(request: PageRequest = { action: 'capture' }): PageRes
       ) {
         const name = componentName(fiber);
         if (name) {
-          scopePath.unshift({ id: fiberId(fiber), name });
+          scopePath.unshift({
+            id: fiberId(fiber),
+            name: String(name).slice(0, 150),
+            key: fiber.key == null ? null : String(fiber.key).slice(0, 100),
+          });
         }
       }
     }

@@ -36,6 +36,8 @@ Captures and inspected props are held in memory during inspection. The extension
 
 Close DevTools or the Anatomy window to stop inspection, then reload the inspected page to clear any remaining inspection state. Uninstalling the extension removes its ability to inspect pages. Images you export, and any screenshots or recordings you make, remain under your control. An exported image is created locally and leaves your browser only when you paste or attach it somewhere. Check its contents before sharing it.
 
+**Copy component context** puts the previewed component names, keys, and any prop value you explicitly include on your clipboard when you choose **Copy text**. You decide where to paste it. Review the preview for private data before sharing it.
+
 ## Requests for page assets
 
 Recreating a page can reload its images, backgrounds, and fonts from their original URLs. Exporting an image can request them again, to include them in the image. Those requests go directly to the sites or asset providers, without passing through a React Anatomy server. They can expose the requested URL, your IP address, and normal browser request headers to those providers. Browser caching and cookie rules apply, and providers may keep their own request logs.

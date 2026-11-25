@@ -23,6 +23,9 @@ const types: Record<string, string> = {
   '.wasm': 'application/wasm',
   '.svg': 'image/svg+xml',
   '.png': 'image/png',
+  '.jpg': 'image/jpeg',
+  '.mp4': 'video/mp4',
+  '.vtt': 'text/vtt',
 };
 const server = createServer(async (request, response) => {
   const path = new URL(request.url ?? '/', 'http://localhost').pathname;
@@ -141,6 +144,41 @@ try {
   assert.equal(await page.locator('.demo-start-hint').isVisible(), false);
   assert.match(await panel.locator('[data-prop-path="props.project.progress"]').innerText(), /80/);
   assert.equal(await panel.locator('.tree-select').count(), 24);
+
+  await page.context().grantPermissions(['clipboard-read', 'clipboard-write'], { origin: base });
+  const copyContext = panel.getByRole('button', { name: 'Copy component context' });
+  await copyContext.click();
+  await panel.getByLabel('Optional prop path').fill('project.progress');
+  await panel.getByRole('button', { name: 'Include prop' }).click();
+  await panel.getByRole('button', { name: 'Remove prop' }).waitFor();
+  await panel.getByRole('button', { name: 'Copy text' }).click();
+  await panel.getByText('Copied component context.', { exact: true }).waitFor();
+  const copied = await page.evaluate(() => navigator.clipboard.readText());
+  assert.equal(copied, await panel.getByLabel('Text to copy').inputValue());
+  assert.match(copied, /Component: ProjectCard \[key="design-system"\]/);
+  assert.match(copied, /Prop project.progress \(number\): 80/);
+  const follow = panel.getByRole('checkbox', { name: 'Follow changes' });
+  await follow.check();
+  await source
+    .getByRole('button', { name: 'Complete task', exact: true })
+    .first()
+    .evaluate((button: HTMLButtonElement) => button.click());
+  await panel.getByText('Page recaptured. Choose Include prop to refresh its value.').waitFor();
+  assert.equal(await panel.getByLabel('Optional prop path').inputValue(), 'project.progress');
+  const structure = copied.split('\n').slice(0, -1).join('\n');
+  assert.equal(await panel.getByLabel('Text to copy').inputValue(), structure);
+  await panel.getByRole('button', { name: 'Copy text' }).click();
+  await panel.getByText('Copied component context.', { exact: true }).waitFor();
+  assert.equal(await page.evaluate(() => navigator.clipboard.readText()), structure);
+  await panel.getByRole('button', { name: 'Include prop' }).click();
+  await panel.getByRole('button', { name: 'Remove prop' }).waitFor();
+  assert.equal(
+    await panel.getByLabel('Text to copy').inputValue(),
+    structure + '\nProp project.progress (number): 88',
+  );
+  await follow.uncheck();
+  await copyContext.click();
+
   await panel.locator('[data-prop-path="props.project.settings"] > summary').click();
   await panel.locator('[data-prop-path="props.project.settings.release"] > summary').click();
   await panel.locator('[data-prop-path="props.project.settings.release.version"]').waitFor();
@@ -181,7 +219,7 @@ try {
     document
       .querySelector<HTMLIFrameElement>('#anatomy-panel')!
       .contentDocument!.querySelector('[data-prop-path="props.project.progress"]')
-      ?.textContent.includes('88'),
+      ?.textContent.includes('96'),
   );
   await page.locator('[data-step="explode"]').click();
   await panel.getByRole('button', { name: 'Pick on page', exact: true }).click();
@@ -550,6 +588,20 @@ try {
   }
 
   await page.goto(base + '/docs/props/');
+  const walkthrough = page.locator('video');
+  await walkthrough.evaluate(async (video: HTMLVideoElement) => {
+    if (!video.controls || !video.playsInline || !video.paused || video.autoplay) {
+      throw new Error('The documentation video needs user-controlled inline playback.');
+    }
+    video.querySelector('track')!.track.mode = 'showing';
+    await video.play();
+  });
+  await page.waitForFunction(() => {
+    const video = document.querySelector('video')!;
+    const captions = video.querySelector('track')!.track;
+    return video.currentTime > 0.3 && !!captions.activeCues?.length;
+  });
+  await walkthrough.evaluate((video: HTMLVideoElement) => video.pause());
   await page.getByRole('button', { name: /Search/ }).click();
   await page.getByPlaceholder('Search', { exact: true }).fill('props');
   await page.locator('.pagefind-ui__result').first().waitFor();

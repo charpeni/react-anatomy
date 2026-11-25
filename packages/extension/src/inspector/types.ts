@@ -55,7 +55,7 @@ export interface Snapshot {
   limits?: CaptureLimits;
   captureMs?: number;
   elementCount?: number;
-  scope?: { id: string; path: { id: string; name: string }[] };
+  scope?: { id: string; path: SearchMatch[] };
   visualLimited?: boolean;
 }
 
@@ -172,6 +172,7 @@ export interface PageRequests {
   search: { scopeId?: string; query: string; cursor?: string };
   status: object;
   props: { id: string };
+  'prop-preview': { id: string; document?: string; path: string[] };
   'props-read': { token: string; handle: string; offset: number; filter?: string };
   'props-release': { token: string };
   highlight: { id: string };
@@ -199,6 +200,7 @@ export interface PageResponses {
     document?: string;
   };
   props: Result<PropInspection>;
+  'prop-preview': Result<Pick<PropValue, 'type' | 'preview'>>;
   'props-read': Result<PropPage>;
   'props-release': Result;
   highlight: Result;

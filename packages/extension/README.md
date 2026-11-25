@@ -62,6 +62,8 @@ Inspection is read-only. It does not invoke property getters, callbacks, or `toJ
 
 Values are read as branches expand; this is a live inspector, not a historical props snapshot. If the committed props object changes or the component unmounts, expansion asks you to refresh or recapture. Each request returns at most 50 entries or 10,000 string characters. Inspection caps collections at 10,000 entries, strings at 1,000,000 characters, and retained value handles at 5,000 per session; limits are displayed. App-defined proxies may still run their own JavaScript traps during reflection. Props are kept in the page until requested and are never uploaded.
 
+Use **Copy component context** in component details to copy the selected instance’s name, key, ancestor path, and immediate children. To include a live value such as `project.progress`, enter its path and choose **Include prop**. Review the text before pasting it into an issue or an agent prompt. [Example and demo video](../website/src/content/docs/docs/props.md#copy-component-context).
+
 ## Run and verify locally
 
 ```sh

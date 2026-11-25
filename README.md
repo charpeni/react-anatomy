@@ -9,6 +9,8 @@ See how a React page is composed, in 3D, inside DevTools.
 
 Explore the rendered component tree, pull the layout apart into layers, focus a subtree, inspect live props, and export a labeled image for a pull request. React Anatomy works with an already running React page, without code changes or a reload.
 
+To point a coding agent at a particular instance, select it and choose **Copy component context**. Paste its React key, component path, children, and an optional prop alongside your question. [See example output](packages/website/src/content/docs/docs/props.md#copy-component-context).
+
 ![The React layers separate. The camera orbits to a top view, eases back toward the starting angle, then zooms to 130% and shows ProjectCard’s props.](packages/extension/assets/extension.gif)
 
 ## Install
