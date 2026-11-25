@@ -157,6 +157,26 @@ try {
   assert.equal(copied, await panel.getByLabel('Text to copy').inputValue());
   assert.match(copied, /Component: ProjectCard \[key="design-system"\]/);
   assert.match(copied, /Prop project.progress \(number\): 80/);
+  const follow = panel.getByRole('checkbox', { name: 'Follow changes' });
+  await follow.check();
+  await source
+    .getByRole('button', { name: 'Complete task', exact: true })
+    .first()
+    .evaluate((button: HTMLButtonElement) => button.click());
+  await panel.getByText('Page recaptured. Choose Include prop to refresh its value.').waitFor();
+  assert.equal(await panel.getByLabel('Optional prop path').inputValue(), 'project.progress');
+  const structure = copied.split('\n').slice(0, -1).join('\n');
+  assert.equal(await panel.getByLabel('Text to copy').inputValue(), structure);
+  await panel.getByRole('button', { name: 'Copy text' }).click();
+  await panel.getByText('Copied component context.', { exact: true }).waitFor();
+  assert.equal(await page.evaluate(() => navigator.clipboard.readText()), structure);
+  await panel.getByRole('button', { name: 'Include prop' }).click();
+  await panel.getByRole('button', { name: 'Remove prop' }).waitFor();
+  assert.equal(
+    await panel.getByLabel('Text to copy').inputValue(),
+    structure + '\nProp project.progress (number): 88',
+  );
+  await follow.uncheck();
   await copyContext.click();
 
   await panel.locator('[data-prop-path="props.project.settings"] > summary').click();
@@ -199,7 +219,7 @@ try {
     document
       .querySelector<HTMLIFrameElement>('#anatomy-panel')!
       .contentDocument!.querySelector('[data-prop-path="props.project.progress"]')
-      ?.textContent.includes('88'),
+      ?.textContent.includes('96'),
   );
   await page.locator('[data-step="explode"]').click();
   await panel.getByRole('button', { name: 'Pick on page', exact: true }).click();

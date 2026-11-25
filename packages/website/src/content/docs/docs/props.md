@@ -38,7 +38,7 @@ Rendered children: ProgressBar, StatusBadge, AvatarStack
 Prop project.progress (number): 72
 ```
 
-The prop line shows the value at the time you choose **Include prop**. Objects and collections get a short preview.
+The prop line shows the value at the time you choose **Include prop**. Objects and collections get a short preview. When you capture the page again, manually or with **Follow changes**, the preview drops that line and keeps the path you entered. Choose **Include prop** again to read the new value.
 
 <video controls playsinline preload="metadata" width="1280" height="720" aria-label="Copy component context from an Orbit project card" poster="/media/docs/copy-component-context-poster.jpg" src="/media/docs/copy-component-context.mp4">
   <track kind="captions" srclang="en" label="English" src="/media/docs/copy-component-context.en.vtt" />

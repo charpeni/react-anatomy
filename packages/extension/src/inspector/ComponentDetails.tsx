@@ -88,6 +88,7 @@ export function ComponentDetails({
           key={(documentId ?? capturedAt) + ':' + node.id}
           id={node.id}
           documentId={documentId}
+          capturedAt={capturedAt}
           path={[...(contextPrefix ?? []), ...path]}
           childrenNames={childNames}
           partial={!!node.hasMore}

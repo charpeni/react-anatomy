@@ -85,6 +85,43 @@ try {
   assert(!structure.includes('Prop '));
   await include('version');
   assert.equal(await preview(), structure + '\nProp version (number): 1');
+  // Hold the next prop read across a manual capture, then deliver the obsolete response.
+  await run(`(() => {
+    const original = chrome.devtools.inspectedWindow.eval;
+    chrome.devtools.inspectedWindow.eval = (expression, callback) => {
+      if (expression.includes('"action":"prop-preview"')) {
+        chrome.devtools.inspectedWindow.eval = original;
+        return original(expression, (...args) => {
+          globalThis.finishPropPreview = () => callback(...args);
+        });
+      }
+      return original(expression, callback);
+    };
+  })()`);
+  await contextButton('Include prop');
+  await h.until(
+    () => run("typeof globalThis.finishPropPreview === 'function'"),
+    'Prop read did not start',
+  );
+  await click('Capture');
+  await h.until(
+    () =>
+      run(
+        "document.querySelector('.component-context [role=status]').textContent.includes('Page recaptured')",
+      ),
+    'Manual capture did not invalidate the pending prop',
+  );
+  await run('globalThis.finishPropPreview(); delete globalThis.finishPropPreview');
+  await run(
+    'new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(() => resolve(true))))',
+  );
+  assert.equal(await preview(), structure, 'A late read added an old prop to the new capture');
+  assert.equal(await run("document.querySelector('.component-context input').value"), 'version');
+  await contextButton('Include prop');
+  await h.until(
+    async () => (await preview()).endsWith('Prop version (number): 1'),
+    'Could not include prop again',
+  );
   await contextButton('Remove prop');
   assert.equal(await preview(), structure);
   await include('guarded.secret');
