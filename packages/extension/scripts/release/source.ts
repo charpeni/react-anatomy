@@ -26,6 +26,7 @@ export async function sourceFiles(version: string) {
     'packages/extension/src',
     'packages/extension/licenses',
     'packages/extension/scripts/fixtures',
+    'packages/extension/scripts/source-trace',
   ]) {
     Object.assign(source, await collect(join(repository, path), path));
   }

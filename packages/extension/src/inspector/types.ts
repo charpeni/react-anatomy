@@ -1,5 +1,6 @@
 import type { ReferenceRequest, ReferenceSearch } from './reference-types.ts';
 import type { ContextRequests, ContextResponses } from './context-types.ts';
+import type { SourceEvidence } from '../source-trace/report.ts';
 
 export interface Frame {
   x: number;
@@ -187,6 +188,7 @@ export interface PageRequests extends ContextRequests {
   'props-read': { token: string; handle: string; offset: number; filter?: string };
   'props-release': { token: string };
   'same-reference': ReferenceRequest;
+  'source-evidence': { id: string };
   highlight: { id: string };
   element: { id: string };
   clear: object;
@@ -216,6 +218,7 @@ export interface PageResponses extends ContextResponses {
   'props-read': Result<PropPage>;
   'props-release': Result;
   'same-reference': Result<ReferenceSearch>;
+  'source-evidence': Result<SourceEvidence>;
   highlight: Result;
   element: Element | null;
   clear: Result;

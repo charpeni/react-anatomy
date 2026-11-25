@@ -4,6 +4,7 @@ import { CopyComponentContext } from './CopyComponentContext.tsx';
 import { PropsInspector } from './PropsInspector.tsx';
 import { SameReference } from './SameReference.tsx';
 import { ContextReaders } from './ContextReaders.tsx';
+import { SourceTraceSection } from '../source-trace/SourceTraceSection.tsx';
 
 // The details pane for the selected component: actions on the page, live
 // props, measured layout, and the chain of components above it.
@@ -131,6 +132,12 @@ export function ComponentDetails({
           isCaptured={isCaptured}
           onSelect={onSelect}
           onReload={onReload}
+        />
+        <SourceTraceSection
+          key={'source-' + node.id}
+          node={node}
+          call={call}
+          capturedAt={capturedAt}
         />
         <details className="inspector-section" open>
           <summary>Layout</summary>

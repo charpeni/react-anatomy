@@ -1,6 +1,11 @@
 import { type BuildOptions, build } from 'esbuild';
 import { copyFile, mkdir, writeFile } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
+import {
+  analyzeUnusedPropsFixture,
+  UNUSED_PROPS_ROOT,
+} from '../../extension/scripts/unused-props/build-fixture.ts';
+import { anatomySourcePlugin } from '../../extension/scripts/source-trace/esbuild-plugin.ts';
 
 const outdir = fileURLToPath(new URL('../public/interactive/', import.meta.url));
 
@@ -33,6 +38,18 @@ await build({
   keepNames: true,
   outfile: outdir + '/context.js',
 });
+const billingRoot = source('../../extension/' + UNUSED_PROPS_ROOT);
+await build({
+  ...options,
+  entryPoints: [billingRoot + '/main.tsx'],
+  keepNames: true,
+  outfile: outdir + '/billing.js',
+  plugins: [anatomySourcePlugin({ root: billingRoot })],
+});
+await writeFile(
+  outdir + '/billing-analysis.json',
+  JSON.stringify(analyzeUnusedPropsFixture(billingRoot)),
+);
 await build({
   ...options,
   entryPoints: [fileURLToPath(import.meta.resolve('@react-anatomy/extension/inspector/panel.tsx'))],
@@ -48,6 +65,7 @@ await build({
     },
   ],
 });
+await copyFile(source('../demo/billing.css'), outdir + '/billing.css');
 await copyFile(source('../demo/context.css'), outdir + '/context.css');
 await copyFile(source('../demo/source.css'), outdir + '/source.css');
 await copyFile(source('../demo/panel.css'), outdir + '/panel.css');
@@ -68,6 +86,7 @@ for (const [name, title, body] of [
     'Context providers',
     '<div id="app"></div><div id="context-portal"></div><div id="context-other-root"></div>',
   ],
+  ['billing', 'Billing plans', '<div id="app"></div>'],
   ['panel', 'Anatomy — example inspector', '<div id="root"></div>'],
 ]) {
   await writeFile(

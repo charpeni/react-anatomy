@@ -1,0 +1,43 @@
+WEBVTT
+
+00:00:00.950 --> 00:00:04.870
+The Team plan card still receives a prop
+called legacyTheme.
+
+00:00:05.110 --> 00:00:09.510
+Does the card use it anywhere, or is the
+billing page just passing it along?
+
+00:00:09.750 --> 00:00:12.950
+Unused props checks the source for this
+particular card.
+
+00:00:13.030 --> 00:00:17.910
+It shows where a prop was passed and whether
+the component reads it or forwards it.
+
+00:00:17.990 --> 00:00:21.990
+With a matching source analysis loaded, open
+Unused props.
+
+00:00:22.150 --> 00:00:25.670
+Under No reader found, expand legacyTheme.
+
+00:00:25.710 --> 00:00:30.870
+The billing page passes it here. The card
+neither reads it nor passes it to a child.
+
+00:00:30.950 --> 00:00:35.070
+Now expand trackingId under Used, but easy to
+miss.
+
+00:00:35.270 --> 00:00:38.310
+Its click handler reads the ID when you pick
+a plan.
+
+00:00:38.390 --> 00:00:41.910
+That makes legacyTheme a cleanup candidate at
+this call site.
+
+00:00:41.990 --> 00:00:44.070
+Check other callers before removing it.

@@ -193,7 +193,37 @@ async function checkContext(browser: Browser, base: string, shots: string) {
     await page.close();
   }
 }
+async function checkUnusedProps(browser: Browser, base: string, shots: string) {
+  const page = await browser.newPage({ viewport: { width: 390, height: 844 } });
+  try {
+    const panel = await openGuide(page, base, 'unused-props');
+    await step(page, 'Inspect the Team plan');
+    assert.equal(await panel.locator('.tree-row.selected .tree-key').textContent(), 'key="team"');
+    assert.match(
+      await panel.locator('.unused-props').innerText(),
+      /Analysis: billing-analysis.json/,
+    );
+    await page.getByRole('button', { name: 'Next step' }).click();
+    await step(page, 'Investigate legacyTheme');
+    const candidate = panel.locator('.unused-row[data-prop="legacyTheme"][data-tier="candidate"]');
+    assert.match(await candidate.innerText(), /BillingApp.tsx/);
+    assert.match(await candidate.innerText(), /PlanCard.tsx/);
+    await page.getByRole('button', { name: 'Next step' }).click();
+    await step(page, 'Compare trackingId');
+    const handler = panel.locator('.unused-row[data-prop="trackingId"][data-tier="indirect"]');
+    assert.equal(await handler.locator('button').first().getAttribute('aria-expanded'), 'true');
+    assert.match(await handler.locator('.unused-evidence-list').innerText(), /trackingId/);
+    await page.locator('.guide-player').screenshot({ path: shots + 'guide-unused-props.png' });
+    await page.getByRole('button', { name: 'Back', exact: true }).click();
+    await step(page, 'Investigate legacyTheme');
+    assert.equal(await candidate.locator('[data-guide-target]').count(), 1);
+  } finally {
+    await page.close();
+  }
+}
+
 export async function checkGuideWalkthroughs(browser: Browser, base: string, shots: string) {
   await checkReference(browser, base, shots);
   await checkContext(browser, base, shots);
+  await checkUnusedProps(browser, base, shots);
 }

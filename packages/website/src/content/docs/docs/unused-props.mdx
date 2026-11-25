@@ -1,0 +1,85 @@
+---
+title: Investigate unused props
+description: Check whether a component or its children read a prop passed at one JSX call site.
+---
+
+import GuideBrowser from '../../../components/GuideBrowser.astro';
+
+<video
+  controls
+  playsinline
+  preload="none"
+  width="1600"
+  height="900"
+  poster="/media/docs/investigate-unused-props.jpg"
+  aria-label="Check whether a plan card reads a prop"
+>
+  <source src="/media/docs/investigate-unused-props.webm" type="video/webm" />
+  <source src="/media/docs/investigate-unused-props.mp4" type="video/mp4" />
+  <track
+    kind="captions"
+    srclang="en"
+    label="English"
+    src="/media/docs/investigate-unused-props.vtt"
+  />
+  <a href="/media/docs/investigate-unused-props.mp4">Watch the video</a>
+</video>
+
+<details>
+  <summary>Video transcript</summary>
+
+The Team plan card still receives a prop called `legacyTheme`. Does the card use it anywhere, or is the billing page just passing it along?
+
+Unused props checks the source for this particular card. It shows where a prop was passed and whether the component reads it or forwards it.
+
+With a matching source analysis loaded, open Unused props. Under No reader found, expand `legacyTheme`.
+
+The billing page passes it here. The card neither reads it nor passes it to a child.
+
+Now expand `trackingId` under Used, but easy to miss. Its click handler reads the ID when you pick a plan.
+
+That makes `legacyTheme` a cleanup candidate at this call site. Check other callers before removing it.
+
+</details>
+
+Select a component instance, open **Unused props**, and choose **Load source analysis…**. Expand a prop to see the JSX that passed it and where the receiving component uses it.
+
+<GuideBrowser />
+
+In the billing example, `legacyTheme` appears under **No reader found**. The plan card receives it, and none of the analyzed code reads or forwards it. The card reads `trackingId` when someone picks a plan, so it appears under **Used, but easy to miss**.
+
+**Not proven** covers cases such as an uninspected memo comparator or a spread whose keys depend on the render. A partial list can omit props supplied by spreads. Before removing a candidate, check other call sites, tests, and any side effects in the expression that supplies its value.
+
+## Create a source analysis
+
+From a [React Anatomy checkout](https://github.com/charpeni/react-anatomy), run the analyzer on your app’s TypeScript or JavaScript source. It uses the TypeScript compiler and writes a JSON report.
+
+```sh
+git clone https://github.com/charpeni/react-anatomy
+cd react-anatomy
+pnpm install --frozen-lockfile
+pnpm trace:source --root /path/to/app/src --out /path/to/app/anatomy-trace.json /path/to/app/src
+```
+
+The analyzer resolves TypeScript path aliases using the nearest `tsconfig.json` at or above `--root`, including inherited mappings. Pass `--tsconfig /path/to/tsconfig.app.json` to select another configuration. Your app’s `target` and `lib` settings can use values newer than the analyzer’s bundled TypeScript version. Include the aliased source files in the analysis. Aliases defined only in your bundler need an equivalent TypeScript mapping.
+
+Pass files or directories to analyze. The report uses paths relative to `--root`. The analyzer skips tests, stories, `node_modules`, and `dist`, and prints the counts of resolved and unresolved components and elements.
+
+Treat the report like source code. It includes relative file paths, source positions, and snippets from your app.
+
+## Connect the analysis to your development build
+
+Add the esbuild plugin to the app you inspect. It records the JSX element that created each instance so the panel can show the right caller when several elements render the same component.
+
+```ts
+import { anatomySourcePlugin } from './react-anatomy/packages/extension/scripts/source-trace/esbuild-plugin.ts';
+
+await build({
+  // …your options
+  plugins: [anatomySourcePlugin({ root: 'src' })],
+});
+```
+
+Use the same `root` for the plugin and the analyzer. For each JSX element that renders a component, the plugin records the file, source position, and file hash in a weak map keyed by the props object. Your component receives its original props, source line numbers stay the same, and JavaScript can collect the record along with the props.
+
+Rebuild the app, open it in DevTools, and load the JSON report under **Unused props**. The panel keeps the report in memory and flags missing call sites or source files that have changed.

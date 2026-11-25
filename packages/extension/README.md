@@ -64,6 +64,10 @@ Values are read as branches expand; this is a live inspector, not a historical p
 
 Use **Copy component context** in component details to copy the selected instance’s name, key, ancestor path, and immediate children. To include a live value such as `project.progress`, enter its path and choose **Include prop**. Review the text before pasting it into an issue or an agent prompt. [Example and demo video](../website/src/content/docs/docs/props.md#copy-component-context).
 
+## Investigate unused props
+
+Select a component and open **Unused props** to load a local source analysis. Expand a candidate to see the JSX that passes the prop and the source lines the analyzer checked in the receiving component. The [setup guide](../website/src/content/docs/docs/unused-props.mdx) covers the analyzer and the esbuild plugin that identifies the selected call site.
+
 ## Run and verify locally
 
 ```sh

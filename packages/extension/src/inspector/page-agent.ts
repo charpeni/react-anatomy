@@ -1852,6 +1852,114 @@ export function pageAgent(request: PageRequest = { action: 'capture' }): PageRes
     return { ok: true, ...result };
   }
 
+  // Source evidence for "Trace in source". An opt-in build records, for each
+  // component element, the file, text hash, and offset it was written at, in a
+  // WeakMap keyed by the element's props object. This reads those records for
+  // the selected component and the components around it. It returns positions,
+  // hashes, and prop names; prop values never leave the page. All walks are
+  // bounded, and nothing is retained between requests.
+  if (request.action === 'source-evidence') {
+    const fiber = currentFiber(request.id);
+
+    if (!fiber) {
+      return { ok: false, message: 'This component is no longer mounted. Capture the page again.' };
+    }
+
+    let sites: unknown;
+    let builtFiles: unknown;
+
+    try {
+      const registry = ownValue(window, '__REACT_ANATOMY_SOURCE_V1__');
+
+      if (registry !== null && typeof registry === 'object') {
+        sites = ownValue(registry, 'sites');
+        builtFiles = ownValue(registry, 'files');
+      }
+    } catch {
+      sites = undefined;
+    }
+
+    const metadata = sites instanceof WeakMap;
+    const text = (value: unknown, limit: number) =>
+      typeof value === 'string' && value.length <= limit ? value : null;
+    const stampOf = (target: Fiber) => {
+      const props = target.memoizedProps;
+
+      if (!metadata || props === null || typeof props !== 'object') {
+        return null;
+      }
+
+      // A component that hands its own props object to another one shares the
+      // record of the element it was created from. Only React's memo wrapper
+      // legitimately shares it with the component it wraps.
+      for (let parent = target.return, steps = 0; parent && steps < 200; parent = parent.return) {
+        steps++;
+
+        if (componentName(parent) !== null) {
+          if (parent.memoizedProps === props && !(parent.tag === 14 && target.return === parent)) {
+            return null;
+          }
+
+          break;
+        }
+      }
+
+      try {
+        // The page owns this map; call the built-in so a replaced method cannot run.
+        const stamp: unknown = WeakMap.prototype.get.call(sites, props);
+
+        if (stamp === null || typeof stamp !== 'object') {
+          return null;
+        }
+
+        const file = text(ownValue(stamp, 'file'), 400);
+        const hash = text(ownValue(stamp, 'hash'), 80);
+        const at = ownValue(stamp, 'at');
+
+        return file !== null && hash !== null && typeof at === 'number' && Number.isSafeInteger(at)
+          ? { file, hash, at }
+          : null;
+      } catch {
+        return null;
+      }
+    };
+    const files: Record<string, string> = {};
+    const propNames: string[] = [];
+    let propNamesLimited = false;
+
+    try {
+      if (builtFiles !== null && typeof builtFiles === 'object') {
+        const paths = Object.keys(builtFiles);
+
+        for (const path of paths.slice(0, 5000)) {
+          const hash = text(ownValue(builtFiles, path), 80);
+
+          if (path.length <= 400 && hash !== null) {
+            files[path] = hash;
+          }
+        }
+      }
+
+      if (fiber.memoizedProps !== null && typeof fiber.memoizedProps === 'object') {
+        const names = Object.keys(fiber.memoizedProps);
+
+        propNames.push(...names.slice(0, 200).filter((name) => name.length <= 200));
+        propNamesLimited = propNames.length < names.length;
+      }
+    } catch {
+      propNamesLimited = true;
+    }
+
+    return {
+      ok: true,
+      metadata,
+      self: stampOf(fiber),
+      propNames,
+      propNamesLimited,
+      files,
+    };
+  }
+
   if (request.action === 'search') {
     const query = request.query.trim().toLowerCase().slice(0, 150);
     if (!request.cursor) {
