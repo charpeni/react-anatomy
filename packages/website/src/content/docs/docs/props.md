@@ -38,7 +38,7 @@ Prop project.progress (number): 72
 
 The prop line appears only when you add it. **Include prop** reads the current value at that path. Objects and collections get a short preview. **Remove prop** returns to the component structure alone.
 
-[Watch the 28-second demo](/media/docs/copy-component-context.mp4).
+[Watch the narrated demo (28 seconds)](/media/docs/copy-component-context.mp4).
 
 ## Props in exported images
 
