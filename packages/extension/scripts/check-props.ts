@@ -60,6 +60,46 @@ try {
   await select('PropsFixture');
   await h.until(async () => (await text()).includes('9007199254740993n'), 'Props did not load');
 
+  const contextButton = (label: string) =>
+    run(
+      `[...document.querySelectorAll('.component-context button')].find(b => b.textContent.trim() === ${JSON.stringify(label)}).click()`,
+    );
+  const preview = () => run<string>("document.querySelector('.component-context textarea').value");
+  const include = async (path: string) => {
+    await run(`(() => {
+      const input = document.querySelector('.component-context input');
+      Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value').set.call(input, ${JSON.stringify(path)});
+      input.dispatchEvent(new Event('input', { bubbles: true }));
+    })()`);
+    await contextButton('Include prop');
+    await h.until(
+      () => run("!document.querySelector('.component-context-actions button').disabled"),
+      'Prop preview did not settle',
+    );
+  };
+
+  await contextButton('Copy component context');
+  const structure = await preview();
+  assert.match(structure, /Component: PropsFixture/);
+  assert.match(structure, /Path: TestApp → PropsExamples → PropsFixture/);
+  assert(!structure.includes('Prop '));
+  await include('version');
+  assert.equal(await preview(), structure + '\nProp version (number): 1');
+  await contextButton('Remove prop');
+  assert.equal(await preview(), structure);
+  await include('guarded.secret');
+  assert((await preview()).includes('[Accessor — not evaluated]'));
+  assert.equal(await page.evaluate(() => window.propGetterCalls || 0), 0);
+  await include('missing');
+  assert((await preview()).includes('Prop missing (undefined): undefined'));
+  await include('doesNotExist');
+  assert.equal(await preview(), structure);
+  assert.match(
+    await run<string>("document.querySelector('.component-context [role=status]').textContent"),
+    /not found/,
+  );
+  await contextButton('Copy component context');
+
   const root = await text();
 
   for (const value of [

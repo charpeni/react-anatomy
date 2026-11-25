@@ -1,5 +1,6 @@
 import type { ComponentNode, ImageProps, PageCall } from './types.ts';
 import { Glyph } from './Glyph.tsx';
+import { CopyComponentContext } from './CopyComponentContext.tsx';
 import { PropsInspector } from './PropsInspector.tsx';
 
 // The details pane for the selected component: actions on the page, live
@@ -7,6 +8,9 @@ import { PropsInspector } from './PropsInspector.tsx';
 export function ComponentDetails({
   node,
   path,
+  contextPrefix,
+  childNames,
+  documentId,
   capturedAt,
   warnings,
   call,
@@ -20,6 +24,9 @@ export function ComponentDetails({
 }: {
   node: ComponentNode;
   path: ComponentNode[];
+  contextPrefix?: Pick<ComponentNode, 'name' | 'key'>[];
+  childNames: string[];
+  documentId?: string;
   capturedAt: number;
   warnings: string[];
   call: PageCall;
@@ -77,6 +84,15 @@ export function ComponentDetails({
         )}
       </div>
       <div className="inspector-scroll">
+        <CopyComponentContext
+          key={(documentId ?? capturedAt) + ':' + node.id}
+          id={node.id}
+          documentId={documentId}
+          path={[...(contextPrefix ?? []), ...path]}
+          childrenNames={childNames}
+          partial={!!node.hasMore}
+          call={call}
+        />
         <PropsInspector
           key={node.id}
           componentId={node.id}

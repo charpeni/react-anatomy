@@ -141,6 +141,21 @@ try {
   assert.equal(await page.locator('.demo-start-hint').isVisible(), false);
   assert.match(await panel.locator('[data-prop-path="props.project.progress"]').innerText(), /80/);
   assert.equal(await panel.locator('.tree-select').count(), 24);
+
+  await page.context().grantPermissions(['clipboard-read', 'clipboard-write'], { origin: base });
+  const copyContext = panel.getByRole('button', { name: 'Copy component context' });
+  await copyContext.click();
+  await panel.getByLabel('Optional prop path').fill('project.progress');
+  await panel.getByRole('button', { name: 'Include prop' }).click();
+  await panel.getByRole('button', { name: 'Remove prop' }).waitFor();
+  await panel.getByRole('button', { name: 'Copy text' }).click();
+  await panel.getByText('Copied component context.', { exact: true }).waitFor();
+  const copied = await page.evaluate(() => navigator.clipboard.readText());
+  assert.equal(copied, await panel.getByLabel('Text to copy').inputValue());
+  assert.match(copied, /Component: ProjectCard \[key="design-system"\]/);
+  assert.match(copied, /Prop project.progress \(number\): 80/);
+  await copyContext.click();
+
   await panel.locator('[data-prop-path="props.project.settings"] > summary').click();
   await panel.locator('[data-prop-path="props.project.settings.release"] > summary').click();
   await panel.locator('[data-prop-path="props.project.settings.release.version"]').waitFor();

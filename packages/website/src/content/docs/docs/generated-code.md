@@ -23,6 +23,10 @@ Run the page and open **Anatomy**. Then work through a few questions:
 
 When something stands out, search your editor for the component’s name to find its source. **Reveal in Elements** shows the DOM it produced.
 
+## Give an agent a specific instance
+
+“Change the progress bar” can point to several cards on the same page. Pick the card you mean, open **Copy component context**, and paste the preview alongside your request. For example, the React key `design-system` identifies the card, and the optional prop `project.progress` gives the agent its current value. [See the steps and example output](/docs/props/#copy-component-context).
+
 ## Cover more than one state
 
 Anatomy shows the current state only. A component that renders only when a list is empty, a request fails, or a flag is on won’t appear until the page is in that state. Exercise the states that matter and capture each one.

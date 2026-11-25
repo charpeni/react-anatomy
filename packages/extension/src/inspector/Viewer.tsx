@@ -476,6 +476,9 @@ export function Viewer({
       <ComponentDetails
         node={selectedNode}
         path={paths[selectedNode.id]}
+        documentId={snapshot.document}
+        contextPrefix={snapshot.scope?.path.slice(0, -1)}
+        childNames={selectedNode.children.map((id) => byId[id].name)}
         capturedAt={snapshot.capturedAt}
         warnings={snapshot.warnings ?? []}
         call={call}

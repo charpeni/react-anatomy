@@ -1340,3 +1340,46 @@ kbd {
   margin-left: auto;
   white-space: nowrap;
 }
+
+.component-context {
+  padding: 7px;
+  border-bottom: 1px solid var(--border);
+}
+.component-context-form,
+.component-context-form form,
+.component-context-form label {
+  display: grid;
+  gap: 5px;
+  min-width: 0;
+}
+.component-context-form {
+  margin-top: 9px;
+  gap: 9px;
+}
+.component-context-form form {
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: end;
+}
+.component-context-form input,
+.component-context-form textarea {
+  width: 100%;
+  color: var(--text);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 2px;
+  padding: 4px;
+  font: 11px/1.45 var(--mono);
+}
+.component-context-form textarea {
+  resize: vertical;
+}
+.component-context-actions {
+  display: flex;
+  gap: 4px;
+}
+.component-context-form [role='status'] {
+  color: var(--muted);
+}
+.component-context-form [role='status']:empty {
+  display: none;
+}

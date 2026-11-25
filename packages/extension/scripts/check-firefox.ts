@@ -79,6 +79,25 @@ try {
   await click('Explode view');
 
   const card = await select('ProjectCard');
+  await click('Copy component context');
+  const context = () => run<string>("document.querySelector('.component-context textarea').value");
+  assert.match(await context(), /Component: ProjectCard \[key="Orbit design system"\]/);
+  await run(`(() => {
+    const input = document.querySelector('.component-context input');
+    Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value').set.call(input, 'project.progress');
+    input.dispatchEvent(new Event('input', { bubbles: true }));
+  })()`);
+  await click('Include prop');
+  await h.until(
+    async () => (await context()).includes('Prop project.progress (number): 72'),
+    'Missing prop in component context',
+  );
+  await click('Copy text');
+  await h.until(
+    () => run("!!document.querySelector('.component-context [role=status]').textContent"),
+    'Missing copy feedback',
+  );
+  await click('Copy component context');
 
   await click('Focus subtree');
   await h.until(

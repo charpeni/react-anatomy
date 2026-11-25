@@ -19,6 +19,27 @@ Props are read as you expand their branches. They are not a historical snapshot 
 
 Use **Refresh props** to reread values without capturing the whole page. A new capture refreshes the selection’s props and keeps expanded paths. If the props object changes or the component unmounts, the inspector asks you to refresh or recapture.
 
+## Copy component context
+
+Use **Copy component context** in the selected component’s details when you want to point someone to a specific instance. The preview includes its name, React key when available, path through the tree, and immediate rendered children. It shortens long paths and marks incomplete child lists.
+
+1. In the [interactive example](/#demo), choose **Inspect props** to select the Design system card.
+2. Open **Copy component context**. To include its progress, enter `project.progress` in **Optional prop path** and choose **Include prop**.
+3. Review **Text to copy**, then choose **Copy text**. Paste it into an issue or an agent prompt alongside your question. If the browser asks you to copy manually, the preview is already selected.
+
+With the sample card at its starting value, you’ll see this text.
+
+```text
+Component: ProjectCard [key="design-system"]
+Path: WorkspaceApp → MainContent → ProjectList → ProjectCard [key="design-system"]
+Rendered children: ProgressBar, StatusBadge, AvatarStack
+Prop project.progress (number): 72
+```
+
+The prop line appears only when you add it. **Include prop** reads the current value at that path. Objects and collections get a short preview. **Remove prop** returns to the component structure alone.
+
+[Watch the 28-second demo](/media/docs/copy-component-context.mp4).
+
 ## Props in exported images
 
 Choose **Include in image** in the **Props** section to show a component’s props in [exported images](/docs/explain-a-change/). The image lists its top-level props and the branches you expanded, as the inspector last showed them; it does not read the page again when you export. Hover a value and use its eye button, **Hide in props card**, to hide it; its name stays. Page text on the layers is not affected.
