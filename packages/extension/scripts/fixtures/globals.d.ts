@@ -7,5 +7,6 @@ declare global {
     updateInspectedProps?: () => void;
     unmountInspectedProps?: () => void;
     prependInspectedItem?: () => void;
+    contextFixtureRenders?: Record<string, number>;
   }
 }

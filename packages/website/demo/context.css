@@ -1,0 +1,16 @@
+html body {
+  padding: 16px;
+}
+html .theme-boundary,
+html .edge-cases,
+html .detached {
+  box-sizing: border-box;
+  width: min(100%, 640px);
+}
+html .toast {
+  top: auto;
+  bottom: 8px;
+  right: 8px;
+  left: auto;
+  padding: 6px 12px;
+}

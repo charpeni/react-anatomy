@@ -1,4 +1,5 @@
 import type { PropValue, Snapshot } from './types.ts';
+import type { ContextAgentState, ContextDependency } from './context-types.ts';
 
 export interface FiberTypeInfo {
   displayName?: string;
@@ -24,6 +25,9 @@ export interface Fiber {
   sibling: Fiber | null;
   return: Fiber | null;
   alternate: Fiber | null;
+  dependencies?: { firstContext: ContextDependency | null } | null;
+  flags?: number;
+  effectTag?: number;
 }
 
 export interface FiberRoot {
@@ -37,7 +41,7 @@ export interface PropSession {
   seen: WeakMap<object, string>;
 }
 
-export interface AgentState {
+export interface AgentState extends ContextAgentState {
   version: number;
   /** Identifies this document. A reload starts a new agent, and component IDs restart. */
   document?: string;
@@ -93,6 +97,7 @@ declare global {
     __REACT_DEVTOOLS_GLOBAL_HOOK__?: {
       renderers: Map<number, unknown>;
       getFiberRoots: (rendererId: number) => Set<FiberRoot>;
+      onCommitFiberRoot?: (this: unknown, ...args: unknown[]) => unknown;
     };
   }
 }

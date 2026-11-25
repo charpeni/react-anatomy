@@ -138,3 +138,18 @@ await writeFile(
   'dist/reference-app.html',
   `<!doctype html><html><head><meta charset="utf-8"><title>Shared references</title></head><body><div id="app"></div><div id="portal"></div><div id="other-root"></div><script>${referenceFixture.outputFiles[0].text.replace(/<\/script/gi, '<\\/script')}</script></body></html>`,
 );
+
+const contextFixture = await build({
+  entryPoints: ['scripts/fixtures/context-app.tsx'],
+  bundle: true,
+  write: false,
+  format: 'iife',
+  minify: true,
+  keepNames: true,
+  define: { 'process.env.NODE_ENV': '"development"' },
+});
+
+await writeFile(
+  'dist/context-app.html',
+  `<!doctype html><html lang="en"><head><meta charset="utf-8"><title>Context readers</title></head><body><div id="app"></div><div id="context-portal"></div><div id="context-other-root"></div><script>${contextFixture.outputFiles[0].text.replace(/<\/script/gi, '<\\/script')}</script></body></html>`,
+);

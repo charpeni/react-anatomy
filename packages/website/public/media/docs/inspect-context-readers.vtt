@@ -1,0 +1,40 @@
+WEBVTT
+
+00:00:00.950 --> 00:00:04.710
+Switch the theme on this page and even the
+caption changes color.
+
+00:00:04.950 --> 00:00:09.110
+Which components actually read the theme, and
+which render when it changes?
+
+00:00:09.350 --> 00:00:12.870
+Context readers shows who reads the value
+from one provider.
+
+00:00:13.190 --> 00:00:15.510
+A render recording answers the second
+question.
+
+00:00:15.830 --> 00:00:18.550
+With the heading selected, open Context
+readers.
+
+00:00:18.950 --> 00:00:23.150
+Three components read this provider,
+including the toast rendered in a portal.
+
+00:00:23.350 --> 00:00:26.750
+With render measurement enabled, choose
+Record renders.
+
+00:00:26.950 --> 00:00:29.470
+Switch the theme once, then stop recording.
+
+00:00:29.670 --> 00:00:32.790
+The heading, badge, and toast each rendered
+once.
+
+00:00:33.110 --> 00:00:38.550
+Under Not readers, the caption recorded zero
+renders. Its color came from CSS.

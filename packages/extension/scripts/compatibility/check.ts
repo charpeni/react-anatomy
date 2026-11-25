@@ -10,6 +10,7 @@ import { readFile, mkdir, writeFile } from 'node:fs/promises';
 import { createHash } from 'node:crypto';
 import { launchBrowser } from './browser.ts';
 import { startApps, startNext } from './servers.ts';
+import { checkContextReaders } from './context.ts';
 
 let browser = 'chrome';
 let live = false;
@@ -279,6 +280,35 @@ try {
 
       if (['router', 'next'].includes(item.kind)) {
         await pick('[data-check="issue"] > h2');
+
+        const contextChecks = await checkContextReaders(h, item, click, () =>
+          pick('[data-check="issue"] > h2'),
+        );
+
+        if (item.kind === 'router') {
+          // Measuring renders reloaded the app with a commit hook. The remaining
+          // checks run, as before, against a page that has none.
+          const reconnected = await run(`document.querySelector('.footer-count').textContent`);
+
+          await h.navigate(item.url!);
+          await h.until(
+            () => h.page(`Boolean(document.querySelector('[data-check="counter"]'))`),
+            'Application did not reload',
+            60000,
+          );
+          // Let the panel's own reconnecting capture finish: a capture cancels the picker.
+          await h.until(
+            () =>
+              run(
+                `document.querySelector('.footer-count')?.textContent!==${JSON.stringify(reconnected)}`,
+              ),
+            'The panel did not reconnect',
+            30000,
+          );
+          await capture();
+        }
+
+        await pick('[data-check="issue"] > h2');
         await h.until(
           async () => (await props()).includes('issue: Object'),
           'Issue component props not selected',
@@ -367,6 +397,7 @@ try {
           'portal ownership',
           'follow changes',
           'client routing',
+          ...contextChecks,
         ];
       } else {
         const pickSelector = item.kind === 'editor' ? '.excalidraw button' : item.selector;

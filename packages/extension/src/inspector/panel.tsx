@@ -417,6 +417,7 @@ function App() {
             }
             void capture({ limits: scopeId ? { scopeId } : {} });
           }}
+          onReload={transport.reload}
           initialSelection={overviewSelection}
           busy={busy}
           changed={changed}

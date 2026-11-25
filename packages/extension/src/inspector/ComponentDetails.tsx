@@ -3,6 +3,7 @@ import { Glyph } from './Glyph.tsx';
 import { CopyComponentContext } from './CopyComponentContext.tsx';
 import { PropsInspector } from './PropsInspector.tsx';
 import { SameReference } from './SameReference.tsx';
+import { ContextReaders } from './ContextReaders.tsx';
 
 // The details pane for the selected component: actions on the page, live
 // props, measured layout, and the chain of components above it.
@@ -18,9 +19,11 @@ export function ComponentDetails({
   canInspect,
   image,
   onImage,
+  isCaptured,
   onFocus,
   onAction,
   onSelect,
+  onReload,
   onClose,
   scopeId,
   captured,
@@ -37,9 +40,11 @@ export function ComponentDetails({
   canInspect: boolean;
   image?: ImageProps;
   onImage: (image: ImageProps) => void;
+  isCaptured: (id: string) => boolean;
   onFocus: (id: string) => void;
   onAction: (action: 'inspect' | 'highlight', id: string) => void;
   onSelect: (id: string) => void;
+  onReload?: (injectedScript: string) => void;
   onClose: () => void;
   scopeId: string | null;
   captured: Record<string, ComponentNode>;
@@ -118,6 +123,14 @@ export function ComponentDetails({
           onSelect={onSelect}
           onFocus={onFocus}
           onHover={onHover}
+        />
+        <ContextReaders
+          node={node}
+          capturedAt={capturedAt}
+          call={call}
+          isCaptured={isCaptured}
+          onSelect={onSelect}
+          onReload={onReload}
         />
         <details className="inspector-section" open>
           <summary>Layout</summary>

@@ -20,6 +20,12 @@ import type {
   Result,
 } from './types.ts';
 import type { ReferenceCoverage, ReferenceMatch } from './reference-types.ts';
+import type {
+  ContextDependency,
+  ContextReaders,
+  ContextRecorder,
+  ContextRecording,
+} from './context-types.ts';
 
 // This function is the entire inspected-page interface. Keep its dependencies
 // inside the function: Chrome executes it in the page's MAIN world.
@@ -99,6 +105,9 @@ export function pageAgent(request: PageRequest = { action: 'capture' }): PageRes
     state.propSessions.clear();
     state.captureJob = undefined;
     state.searchJob = undefined;
+    state.contextRecorder?.stop();
+    state.contextRecorder = undefined;
+    state.contextValues = undefined;
   }
 
   if (request.action === 'dispose') {
@@ -1114,6 +1123,733 @@ export function pageAgent(request: PageRequest = { action: 'capture' }): PageRes
       matches,
       coverage,
     };
+  }
+
+  // Context readers. A Fiber lists the contexts it read in its latest render,
+  // so readers come from React's own dependency lists. Each is matched to the
+  // nearest provider above it by context object identity, never by name: an
+  // alias is the same context, and two contexts can share a display name.
+  type ProviderScope = {
+    context: object;
+    fiber: Fiber;
+    changed: boolean;
+    parent: ProviderScope | null;
+  };
+
+  function providedContext(fiber: Fiber): object | null {
+    if (fiber.tag !== 10) {
+      return null;
+    }
+
+    // React 19 renders the context object itself. Earlier versions render a
+    // Provider object that points to it.
+    const type = fiber.type as unknown as { _context?: unknown } | null;
+    const context = type && typeof type === 'object' ? (type._context ?? type) : null;
+
+    return context && typeof context === 'object' ? context : null;
+  }
+
+  function providerOf(scope: ProviderScope | null, context: object) {
+    for (let steps = 0; scope && steps++ < 1000; scope = scope.parent) {
+      if (scope.context === context) {
+        return scope;
+      }
+    }
+
+    return null;
+  }
+
+  // React adds an entry for every read, so a component that reads one context
+  // many times has a long list of few contexts. Each context is returned once.
+  // A list too long to finish is marked: what it contains is still evidence of
+  // a read, but it is no evidence that anything else was not read.
+  function dependenciesOf(fiber: Fiber) {
+    const list: ContextDependency[] & { truncated?: boolean } = [];
+    const seen = new Set<object>();
+    let dependency = fiber.dependencies?.firstContext;
+    let steps = 0;
+
+    while (dependency && typeof dependency === 'object') {
+      if (++steps > 5000 || list.length >= 200) {
+        list.truncated = true;
+
+        break;
+      }
+
+      if (
+        dependency.context &&
+        typeof dependency.context === 'object' &&
+        !seen.has(dependency.context)
+      ) {
+        seen.add(dependency.context);
+        list.push(dependency);
+      }
+
+      dependency = dependency.next;
+    }
+
+    return list;
+  }
+
+  function contextId(context: object) {
+    state.contextIds ||= new WeakMap();
+
+    let id = state.contextIds.get(context);
+
+    if (!id) {
+      id = `x${(state.contextSequence = (state.contextSequence || 0) + 1)}`;
+      state.contextIds.set(context, id);
+    }
+
+    return id;
+  }
+
+  function contextName(context: object) {
+    try {
+      const name = ownValue(context, 'displayName');
+
+      return typeof name === 'string' && name ? name.slice(0, 150) : null;
+    } catch {
+      return null;
+    }
+  }
+
+  function providedValue(fiber: Fiber): unknown {
+    try {
+      return ownValue(fiber.memoizedProps, 'value');
+    } catch {
+      return undefined;
+    }
+  }
+
+  // Samples compare identity, as React does, without sending values anywhere
+  // or keeping app objects alive: objects get a weakly held token.
+  function valueToken(value: unknown) {
+    const values = (state.contextValues ||= {
+      epoch: `${Date.now()}-${Math.random()}`,
+      sequence: 0,
+      objects: new WeakMap(),
+      primitives: new Map(),
+    });
+
+    if ((typeof value === 'object' && value !== null) || typeof value === 'function') {
+      let token = values.objects.get(value);
+
+      if (!token) {
+        token = `o${++values.sequence}`;
+        values.objects.set(value, token);
+      }
+
+      return token;
+    }
+
+    // Map keys treat -0 as 0. React's Object.is comparison does not.
+    if (Object.is(value, -0)) {
+      return 'negative-zero';
+    }
+
+    let token = values.primitives.get(value);
+
+    if (!token) {
+      if (values.primitives.size >= 2000) {
+        values.primitives.clear();
+        values.epoch = `${Date.now()}-${Math.random()}`;
+      }
+
+      token = `p${++values.sequence}`;
+      values.primitives.set(value, token);
+    }
+
+    return token;
+  }
+
+  function knownId(fiber: Fiber) {
+    return (
+      state.fiberIds.get(fiber) ||
+      (fiber.alternate ? state.fiberIds.get(fiber.alternate) : undefined)
+    );
+  }
+
+  function ownerOf(fiber: Fiber | null) {
+    const name = fiber ? componentName(fiber) : null;
+
+    return fiber && name ? { id: fiberId(fiber), name: String(name).slice(0, 150) } : null;
+  }
+
+  function isMemo(fiber: Fiber) {
+    return fiber.tag === 15 || fiber.return?.tag === 14;
+  }
+
+  // React reports each commit to a DevTools-style hook when one existed before
+  // React loaded. Count renders from those commit reports.
+  function commitHook() {
+    try {
+      const hook = window.__REACT_DEVTOOLS_GLOBAL_HOOK__;
+
+      return hook &&
+        typeof hook.onCommitFiberRoot === 'function' &&
+        Number(hook.renderers?.size) > 0
+        ? hook
+        : null;
+    } catch {
+      return null;
+    }
+  }
+
+  function recordingStatus(): ContextRecording {
+    const recorder = state.contextRecorder;
+
+    return {
+      capability: commitHook() ? 'ready' : 'unavailable',
+      active: !!recorder?.active,
+      recorded: !!recorder,
+      commits: recorder?.commits ?? 0,
+      startedAt: recorder?.startedAt,
+      stoppedAt: recorder?.stoppedAt,
+      limited: !!recorder?.limited,
+    };
+  }
+
+  if (request.action === 'context-record') {
+    if (request.command !== 'start') {
+      state.contextRecorder?.stop();
+
+      if (request.command === 'clear') {
+        state.contextRecorder = undefined;
+      }
+
+      return { ok: true, recording: recordingStatus() };
+    }
+
+    const hook = commitHook();
+
+    if (!hook) {
+      return {
+        ok: false,
+        message:
+          'React is not reporting commits on this page. Reload the page from this panel to measure renders.',
+      };
+    }
+
+    state.contextRecorder?.stop();
+
+    const original = hook.onCommitFiberRoot!;
+    const recorder: ContextRecorder = {
+      active: true,
+      startedAt: Date.now(),
+      commits: 0,
+      limited: false,
+      renders: new Map(),
+      valueChanges: new Map(),
+      stop() {
+        if (!recorder.active) {
+          return;
+        }
+
+        recorder.active = false;
+        recorder.stoppedAt = Date.now();
+
+        // Another tool may have wrapped the hook since. Then this wrapper
+        // stays in place and only forwards.
+        if (hook.onCommitFiberRoot === reportCommit) {
+          hook.onCommitFiberRoot = original;
+        }
+      },
+    };
+
+    // Mirrors how React DevTools walks a commit: React replaces the child
+    // pointer of every Fiber it worked below, clears the flags of each Fiber
+    // it revisits, and sets PerformedWork (1) on those whose component ran.
+    // The walk therefore costs about as much as the commit itself did.
+    const recordCommit = (root: FiberRoot | null | undefined) => {
+      const current = root?.current;
+
+      if (!current) {
+        return;
+      }
+
+      if (++recorder.commits >= 10000) {
+        recorder.limited = true;
+        recorder.stop();
+      }
+
+      const stack: { fiber: Fiber; scope: ProviderScope | null; mounted: boolean }[] = [
+        { fiber: current, scope: null, mounted: false },
+      ];
+      let visits = 0;
+
+      while (stack.length) {
+        if (++visits > 20000) {
+          recorder.limited = true;
+
+          break;
+        }
+
+        const { fiber, scope: inherited, mounted } = stack.pop()!;
+        const previous = mounted ? null : fiber.alternate;
+        const context = providedContext(fiber);
+        let scope = inherited;
+
+        if (context) {
+          const changed = !!previous && !Object.is(providedValue(previous), providedValue(fiber));
+
+          if (changed) {
+            const id = fiberId(fiber);
+
+            recorder.valueChanges.set(id, (recorder.valueChanges.get(id) || 0) + 1);
+          }
+
+          scope = { context, fiber, changed, parent: inherited };
+        }
+
+        if (
+          [0, 1, 2, 9, 11, 15].includes(fiber.tag) &&
+          (mounted || ((fiber.flags ?? fiber.effectTag ?? 0) & 1) === 1)
+        ) {
+          const id = fiberId(fiber);
+          let record = recorder.renders.get(id);
+
+          if (!record && recorder.renders.size < 20000) {
+            record = { renders: 0, mounted: false, withNewValue: {} };
+            recorder.renders.set(id, record);
+          }
+
+          if (!record) {
+            recorder.limited = true;
+          } else {
+            record.renders++;
+            record.mounted ||= mounted;
+
+            if (!mounted && fiber.dependencies?.firstContext) {
+              const dependencies = dependenciesOf(fiber);
+
+              // An unfinished list may hide a read of a provider that changed.
+              recorder.limited ||= !!dependencies.truncated;
+
+              for (const dependency of dependencies) {
+                if (providerOf(inherited, dependency.context)?.changed) {
+                  const key = contextId(dependency.context);
+
+                  record.withNewValue[key] = (record.withNewValue[key] || 0) + 1;
+                }
+              }
+            }
+          }
+        }
+
+        if (!previous || fiber.child !== previous.child) {
+          for (let child = fiber.child; child; child = child.sibling) {
+            stack.push({ fiber: child, scope, mounted: mounted || !child.alternate });
+          }
+        }
+      }
+    };
+
+    function reportCommit(this: unknown, ...args: unknown[]) {
+      if (recorder.active) {
+        try {
+          recordCommit(args[1] as FiberRoot);
+        } catch {
+          recorder.limited = true;
+        }
+      }
+
+      return original.apply(this, args);
+    }
+
+    hook.onCommitFiberRoot = reportCommit;
+    state.contextRecorder = recorder;
+
+    return { ok: true, recording: recordingStatus() };
+  }
+
+  if (request.action === 'contexts') {
+    type Group = {
+      key: string | null;
+      context: object;
+      fiber: Fiber | null;
+      owner: Fiber | null;
+      shadows: Fiber | null;
+      root: number;
+      readers: Set<Fiber>;
+      atLeast: boolean;
+    };
+
+    const started = performance.now();
+    const groups = new Map<Fiber | string, Group>();
+    const reads = new Set<Group>();
+    const uncertainRoots = new Set<number>();
+    let above: Fiber[] = [];
+    let limited = false;
+    let visits = 0;
+    const stack: {
+      fiber: Fiber;
+      scope: ProviderScope | null;
+      owner: Fiber | null;
+      root: number;
+    }[] = [];
+
+    for (let root = state.rootHandles.length - 1; root >= 0; root--) {
+      const fiber = state.rootHandles[root].current;
+
+      if (fiber) {
+        stack.push({ fiber, scope: null, owner: null, root });
+      }
+    }
+
+    // One bounded, synchronous pass: every provider and reader is read from
+    // the same committed tree.
+    while (stack.length) {
+      if (++visits > 50000 || (visits % 256 === 0 && performance.now() - started > 50)) {
+        limited = true;
+
+        break;
+      }
+
+      const entry = stack.pop()!;
+      const { fiber, root } = entry;
+      const named = !!componentName(fiber);
+      const attributed = named ? fiber : entry.owner;
+      const context = providedContext(fiber);
+      let scope = entry.scope;
+
+      if (request.id && knownId(fiber) === request.id) {
+        for (let outer = entry.scope; outer; outer = outer.parent) {
+          above.push(outer.fiber);
+        }
+      }
+
+      if (context) {
+        if (groups.size < 300) {
+          groups.set(fiber, {
+            key: null,
+            context,
+            fiber,
+            owner: entry.owner,
+            shadows: providerOf(entry.scope, context)?.fiber || null,
+            root,
+            readers: new Set(),
+            atLeast: false,
+          });
+        } else {
+          limited = true;
+        }
+
+        scope = { context, fiber, changed: false, parent: entry.scope };
+      }
+
+      if (fiber.dependencies?.firstContext && attributed) {
+        const dependencies = dependenciesOf(fiber);
+
+        if (dependencies.truncated) {
+          // This component may also read any provider above it, or a default.
+          uncertainRoots.add(root);
+
+          for (let outer = entry.scope; outer; outer = outer.parent) {
+            const group = groups.get(outer.fiber);
+
+            if (group) {
+              group.atLeast = true;
+            }
+          }
+        }
+
+        for (const dependency of dependencies) {
+          const provider = providerOf(entry.scope, dependency.context)?.fiber;
+          // Roots share no providers, so each root has its own default-value readers.
+          const unprovided = `default:${contextId(dependency.context)}@${root}`;
+          let group = groups.get(provider || unprovided);
+
+          if (!group && !provider && groups.size < 300) {
+            group = {
+              key: null,
+              context: dependency.context,
+              fiber: null,
+              owner: null,
+              shadows: null,
+              root,
+              readers: new Set(),
+              atLeast: false,
+            };
+            groups.set(unprovided, group);
+          }
+
+          if (!group) {
+            limited = true;
+
+            continue;
+          }
+
+          group.readers.add(attributed);
+
+          if (request.id && knownId(attributed) === request.id) {
+            reads.add(group);
+          }
+        }
+      }
+
+      if (fiber.sibling) {
+        stack.push({ fiber: fiber.sibling, scope: entry.scope, owner: entry.owner, root });
+      }
+
+      if (fiber.child) {
+        stack.push({ fiber: fiber.child, scope, owner: attributed, root });
+      }
+    }
+
+    const keyOf = (group: Group) =>
+      (group.key ||= group.fiber
+        ? fiberId(group.fiber)
+        : `default:${contextId(group.context)}@${group.root}`);
+
+    above = above.filter((fiber) => groups.has(fiber));
+
+    return {
+      providers: Array.from(groups.values(), (group) => ({
+        key: keyOf(group),
+        kind: group.fiber ? 'provider' : 'default',
+        contextId: contextId(group.context),
+        name: contextName(group.context),
+        owner: ownerOf(group.owner),
+        readers: group.readers.size,
+        atLeast: limited || group.atLeast || (!group.fiber && uncertainRoots.has(group.root)),
+        shadows:
+          group.shadows && groups.has(group.shadows) ? keyOf(groups.get(group.shadows)!) : null,
+        root: group.root,
+      })),
+      reads: Array.from(reads, keyOf),
+      above: above.map((fiber) => keyOf(groups.get(fiber)!)),
+      roots: state.rootHandles.length,
+      session: (state.contextSession ||= `${Date.now()}-${Math.random()}`),
+      limited,
+      recording: recordingStatus(),
+      readAt: Date.now(),
+    };
+  }
+
+  if (request.action === 'context-readers') {
+    const key = String(request.key);
+    const fallback = key.startsWith('default:');
+    const provider = fallback ? null : currentFiber(key);
+    const context = provider ? providedContext(provider) : null;
+
+    if (!fallback && !context) {
+      return {
+        ok: false,
+        message: 'This provider is no longer mounted. Refresh the context list.',
+      };
+    }
+
+    const [, defaultContext = '', defaultRoot = ''] = /^default:([^@]+)@(\d+)$/.exec(key) || [];
+    const unprovidedRoot = fallback ? state.rootHandles[Number(defaultRoot)]?.current : null;
+
+    if (fallback && !unprovidedRoot) {
+      return {
+        ok: false,
+        message: 'This React root is no longer mounted. Refresh the context list.',
+      };
+    }
+
+    const wanted = context ? contextId(context) : defaultContext;
+    let matched: object | null = context;
+    const matches = (candidate: object) =>
+      context ? candidate === context : state.contextIds?.get(candidate) === wanted;
+
+    type Draft = {
+      fiber: Fiber;
+      counted: Fiber;
+      via: 'component' | 'consumer';
+      dependency: ContextDependency;
+      portal: boolean;
+    };
+
+    const started = performance.now();
+    const readers = new Map<Fiber, Draft>();
+    const nested = new Map<Fiber, Set<Fiber>>();
+    const shadowed = new Set<Fiber>();
+    const others = new Set<Fiber>();
+    const unchecked = new Set<Fiber>();
+    let limited = false;
+    let visits = 0;
+    let above: Fiber | null = null;
+    const stack: { fiber: Fiber; shadow: Fiber | null; owner: Fiber | null; portal: boolean }[] =
+      [];
+
+    if (provider) {
+      for (let fiber = provider.return, steps = 0; fiber && steps++ < 1000; fiber = fiber.return) {
+        if (componentName(fiber)) {
+          above = fiber;
+
+          break;
+        }
+      }
+
+      if (provider.child) {
+        stack.push({ fiber: provider.child, shadow: null, owner: above, portal: false });
+      }
+    } else if (unprovidedRoot) {
+      stack.push({ fiber: unprovidedRoot, shadow: null, owner: null, portal: false });
+    }
+
+    while (stack.length) {
+      if (++visits > 50000 || (visits % 256 === 0 && performance.now() - started > 50)) {
+        limited = true;
+
+        break;
+      }
+
+      const entry = stack.pop()!;
+      const { fiber } = entry;
+      const named = !!componentName(fiber);
+      const attributed = named ? fiber : entry.owner;
+      const provided = providedContext(fiber);
+      let shadow = entry.shadow;
+      let descend = true;
+
+      if (provided && matches(provided)) {
+        // Below another provider of this context, readers read that provider.
+        if (provider) {
+          shadow = fiber;
+          nested.set(fiber, new Set());
+        } else {
+          descend = false;
+        }
+      }
+
+      const dependencies = fiber.dependencies?.firstContext ? dependenciesOf(fiber) : undefined;
+      const dependency = dependencies?.find((item) => matches(item.context));
+
+      if (dependency && attributed) {
+        matched ||= dependency.context;
+
+        if (entry.shadow) {
+          nested.get(entry.shadow)!.add(attributed);
+          shadowed.add(attributed);
+        } else if (readers.size >= 1000 && !readers.has(attributed)) {
+          limited = true;
+        } else if (!readers.has(attributed) || named) {
+          readers.set(attributed, {
+            fiber: attributed,
+            counted: fiber,
+            via: named ? 'component' : 'consumer',
+            dependency,
+            portal: entry.portal,
+          });
+        }
+      } else if (dependencies?.truncated) {
+        // Not found in an unfinished list: neither a reader nor known not to be one.
+        unchecked.add(attributed || fiber);
+      } else if (named && fiber.tag !== 14 && provider) {
+        // A memo wrapper with a comparator only forwards to the component below it.
+        if (others.size < 2000) {
+          others.add(fiber);
+        } else {
+          limited = true;
+        }
+      }
+
+      if (fiber.sibling) {
+        stack.push({ ...entry, fiber: fiber.sibling });
+      }
+
+      if (fiber.child && descend) {
+        stack.push({
+          fiber: fiber.child,
+          shadow,
+          owner: attributed,
+          portal: entry.portal || fiber.tag === 4,
+        });
+      }
+    }
+
+    const value = provider ? providedValue(provider) : undefined;
+    const recorder = state.contextRecorder;
+    const measured = (fiber: Fiber) => {
+      if (!recorder) {
+        return {};
+      }
+
+      const record = recorder.renders.get(knownId(fiber) ?? '');
+
+      return {
+        measured: {
+          renders: record?.renders ?? 0,
+          withNewValue: record?.withNewValue[wanted] ?? 0,
+          mounted: !!record?.mounted,
+        },
+      };
+    };
+    const describe = (fiber: Fiber) => ({
+      id: fiberId(fiber),
+      name: String(componentName(fiber)).slice(0, 150),
+      key: fiber.key === null ? null : String(fiber.key).slice(0, 100),
+      memo: isMemo(fiber),
+    });
+    const bystanders = Array.from(others).filter(
+      (fiber) => !readers.has(fiber) && !shadowed.has(fiber) && !unchecked.has(fiber),
+    );
+    const undecided = Array.from(unchecked).filter(
+      (fiber) => !readers.has(fiber) && !shadowed.has(fiber),
+    ).length;
+    const preview = provider
+      ? propDescriptor(value, { id: key, props: null, values: new Map(), seen: new WeakMap() })
+      : null;
+    const epochBefore = state.contextValues?.epoch;
+    const result: ContextReaders = {
+      provider: {
+        key,
+        kind: provider ? 'provider' : 'default',
+        contextId: wanted,
+        name: matched ? contextName(matched) : null,
+        owner: ownerOf(above),
+        value: preview && { type: preview.type, preview: preview.preview },
+        valueToken: provider ? valueToken(value) : null,
+        ...(recorder && provider
+          ? { valueChanges: recorder.valueChanges.get(knownId(provider) ?? '') ?? 0 }
+          : {}),
+      },
+      readers: Array.from(readers.values())
+        .slice(0, 300)
+        .map((draft) => ({
+          ...describe(draft.fiber),
+          via: draft.via,
+          portal: draft.portal,
+          // React 18 and later keep the value each reader last read.
+          ...('memoizedValue' in draft.dependency
+            ? {
+                valueToken: valueToken(draft.dependency.memoizedValue),
+                ...(provider ? { current: Object.is(draft.dependency.memoizedValue, value) } : {}),
+              }
+            : {}),
+          ...measured(draft.counted),
+        })),
+      nested: Array.from(nested, ([fiber, below]) => ({
+        key: fiberId(fiber),
+        owner: ownerOf(
+          (() => {
+            for (let up = fiber.return, steps = 0; up && steps++ < 1000; up = up.return) {
+              if (componentName(up)) {
+                return up;
+              }
+            }
+
+            return null;
+          })(),
+        ),
+        readers: below.size,
+      })).slice(0, 50),
+      bystanders: provider
+        ? bystanders.slice(0, 300).map((fiber) => ({ ...describe(fiber), ...measured(fiber) }))
+        : null,
+      totals: { readers: readers.size, bystanders: bystanders.length, unchecked: undecided },
+      epoch: state.contextValues?.epoch ?? '',
+      // Tokens issued before the primitive table was reset are not comparable.
+      limited: limited || (!!epochBefore && epochBefore !== state.contextValues?.epoch),
+      recording: recordingStatus(),
+      readAt: Date.now(),
+    };
+
+    return { ok: true, ...result };
   }
 
   if (request.action === 'search') {

@@ -18,10 +18,13 @@ When you open Anatomy for a page, it reads the information needed to show that p
 - The page’s URL and title.
 - React component names, relationships, and the props you inspect.
 - Page content and layout, including text, styles, images, canvas output, and form values.
+- The context providers each component reads and, while you record renders, how often React rendered each component.
 
-This information powers the component tree, 3D layers, props inspector, and page selection tools. Inspection can follow changes and navigation while the panel is open. The extension does not scan unrelated tabs or read your browser’s history database.
+This information powers the component tree, 3D layers, props inspector, context readers, and page selection tools. Inspection can follow changes and navigation while the panel is open. The extension does not scan unrelated tabs or read your browser’s history database.
 
 Page content and props can contain personal or confidential information. Password and file inputs are cleared in the reconstructed view, but the same information may still appear in props or elsewhere on the page. Captures are not a reliably redacted version of your app.
+
+Measuring renders is optional. If you choose **Reload page to measure renders**, Anatomy reloads the inspected page and adds a small hook that receives React’s commit reports for that page load. Recording stops when you stop it or close the panel.
 
 ## Permissions
 
