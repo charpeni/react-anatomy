@@ -29,8 +29,9 @@
 .demo-address {
   flex: 1;
 }
-.demo-address > span {
-  color: #8a9099;
+.demo-address a {
+  text-decoration: underline;
+  text-underline-offset: 2px;
 }
 .demo-badge {
   font-size: 10px;

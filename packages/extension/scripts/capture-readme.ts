@@ -2,10 +2,9 @@ import assert from 'node:assert/strict';
 import { mkdir, writeFile } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
 import { launchExtension, openDevtoolsPanel } from './chrome-harness.ts';
-import { startFixtureServer } from './fixture-server.ts';
+import { openOrbitSample } from './demo/page.ts';
 
 const output = fileURLToPath(new URL('../assets/', import.meta.url));
-const fixture = await startFixtureServer();
 const errors: string[] = [];
 let browser: Awaited<ReturnType<typeof launchExtension>> | undefined;
 
@@ -18,7 +17,7 @@ try {
   page.on('pageerror', (error) => errors.push(error.message));
 
   await page.setViewportSize({ width: 1000, height: 640 });
-  await page.goto(fixture.url + '/demo');
+  await openOrbitSample(page);
   await page.getByRole('button', { name: 'New project' }).waitFor();
 
   const { session, panelSession } = await openDevtoolsPanel(browser);
@@ -94,5 +93,4 @@ try {
   console.log(`Captured the real Anatomy DevTools panel: ${output}extension.png`);
 } finally {
   await browser?.close();
-  await fixture.close();
 }

@@ -8,9 +8,8 @@ import type { Narration } from './types.ts';
 import assert from 'node:assert/strict';
 import { mkdir, writeFile, readFile, rm } from 'node:fs/promises';
 import { resolve } from 'node:path';
-import { createServer } from 'node:net';
 import { launchExtension, openDevtoolsPanel } from '../chrome-harness.ts';
-import { startFixtureServer } from '../fixture-server.ts';
+import { openOrbitSample, orbitUrl } from '../demo/page.ts';
 import { DESKTOP, CHROME_HEIGHT, WINDOW, TITLE_HEIGHT, DEVTOOLS, SUBTITLE_BAND } from './layout.ts';
 import type { CDPSession, Page } from 'playwright';
 
@@ -24,14 +23,6 @@ await mkdir(output + '/frames', { recursive: true });
 
 const clip = Object.fromEntries(narration.clips.map((c) => [c.id, c]));
 
-const portFree = (port: number | undefined) =>
-  new Promise((r) => {
-    const s = createServer()
-      .once('error', () => r(false))
-      .listen(port, '127.0.0.1', () => s.close(() => r(true)));
-  });
-
-const fixture = await startFixtureServer((await portFree(4174)) ? 4174 : 0);
 const h = await launchExtension();
 
 const pause = (ms: number | undefined) => new Promise((r) => setTimeout(r, ms));
@@ -65,7 +56,7 @@ const save = () =>
     output + '/timeline.json',
     JSON.stringify(
       {
-        url: fixture.url + '/demo',
+        url: orbitUrl,
         fps: 30,
         duration: time,
         frames,
@@ -385,7 +376,7 @@ try {
 
   source.on('pageerror', (e) => sourceErrors.push(e.message));
   await source.setViewportSize({ width: DESKTOP.w, height: DESKTOP.h - CHROME_HEIGHT });
-  await source.goto(fixture.url + '/demo');
+  await openOrbitSample(source);
   await source.getByRole('button', { name: 'New project' }).waitFor();
   sourceSession = await h.context.newCDPSession(source);
   await sourceSession.send('Emulation.setDeviceMetricsOverride', {
@@ -640,5 +631,4 @@ try {
   console.log(`Captured ${frames.length} frames; ${time.toFixed(2)} seconds.`);
 } finally {
   await h.close();
-  await fixture.close();
 }

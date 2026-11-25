@@ -52,4 +52,4 @@ Props are read-only and current: interact with the page, then choose **Refresh p
 
 ## Try it on the example
 
-The [interactive example](/#demo) runs the real inspector against a small sample app. Open Anatomy, explode the page, pick a project card, and follow its props — no extension needed.
+The [interactive example](/#demo) runs the real inspector against the [Orbit sample app](https://orbit.react-anatomy.com/). Open Anatomy, explode the page, pick a project card, and follow its props — no extension needed.

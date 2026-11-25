@@ -5,7 +5,7 @@ import { tmpdir } from 'node:os';
 import { chromium } from 'playwright';
 import { launchExtension, openDevtoolsPanel } from '../chrome-harness.ts';
 import { browserOptions } from '../browser-options.ts';
-import { startFixtureServer } from '../fixture-server.ts';
+import { openOrbitSample } from '../demo/page.ts';
 import { archive, collect, extract, json, node, releaseAt, repository, sha256 } from './common.ts';
 
 const release = await releaseAt();
@@ -18,7 +18,6 @@ const unpacked = await mkdtemp(join(tmpdir(), 'anatomy-store-capture-'));
 await extract(await readFile(join(release.directory, release.artifacts.chrome.file)), unpacked);
 await node('scripts/demo/build.ts');
 
-const fixture = await startFixtureServer();
 let h!: Awaited<ReturnType<typeof launchExtension>>;
 const images: ({ file: string; description: string; sha256: string } & ReturnType<
   typeof pngInfo
@@ -41,7 +40,7 @@ try {
 
   page.on('pageerror', (error) => errors.push(error.message));
   await page.setViewportSize({ width: 1000, height: 640 });
-  await page.goto(fixture.url + '/demo');
+  await openOrbitSample(page);
   await page.getByRole('button', { name: 'New project' }).waitFor();
 
   const { session, panelSession } = await openDevtoolsPanel(h);
@@ -169,7 +168,6 @@ try {
     await h.close();
   }
 
-  await fixture.close();
   await rm(unpacked, { recursive: true, force: true });
 }
 

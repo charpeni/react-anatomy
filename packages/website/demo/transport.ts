@@ -1,6 +1,5 @@
 import type { Transport } from '@react-anatomy/extension/inspector/types.ts';
-
-const sampleUrl = 'https://orbit.example/projects';
+import { orbitUrl } from '../src/lib/site.ts';
 
 export function createTransport(): Omit<Transport, 'mode'> & { mode: 'demo' } {
   let lastPicked: string | null = null;
@@ -38,9 +37,9 @@ export function createTransport(): Omit<Transport, 'mode'> & { mode: 'demo' } {
 
       // Consistent display URL in capture and status; the source is a bundled fixture.
       if (result && 'snapshot' in result) {
-        return { ...result, snapshot: { ...result.snapshot, url: sampleUrl } };
+        return { ...result, snapshot: { ...result.snapshot, url: orbitUrl } };
       }
-      return result && 'url' in result ? { ...result, url: sampleUrl } : result;
+      return result && 'url' in result ? { ...result, url: orbitUrl } : result;
     },
     onNavigate: () => () => {},
   };

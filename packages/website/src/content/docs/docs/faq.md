@@ -7,7 +7,7 @@ description: How React Anatomy compares with React DevTools, works on production
 
 React Anatomy is an open-source browser extension that adds an **Anatomy** panel to DevTools. It connects the rendered React component tree to the visible page, separates the layout into 3D layers, and lets you inspect a selected component’s live props.
 
-Use it to understand an unfamiliar layout, learn React composition, investigate unexpected output, or explain a change in a pull request. The [interactive example](/#demo) runs on a bundled sample page without installing the extension.
+Use it to understand an unfamiliar layout, learn React composition, investigate unexpected output, or explain a change in a pull request. The [interactive example](/#demo) runs on the bundled [Orbit sample app](https://orbit.react-anatomy.com/) without installing the extension.
 
 ## How is it different from React DevTools?
 

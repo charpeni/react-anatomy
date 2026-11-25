@@ -1,6 +1,6 @@
 import { getCollection } from 'astro:content';
 import { documentPath } from '../lib/documentation.ts';
-import { canonicalUrl, site } from '../lib/site.ts';
+import { canonicalUrl, orbitUrl, site } from '../lib/site.ts';
 
 export async function GET() {
   const entries = (await getCollection('docs')).sort((a, b) => a.id.localeCompare(b.id));
@@ -16,6 +16,7 @@ export async function GET() {
       'The Markdown documents below are generated from the same sources as the website. Each includes the URL of its HTML page for citation.',
       '## Website and source',
       `- [Website and interactive example](${canonicalUrl('/')})`,
+      `- [Standalone Orbit sample app](${orbitUrl})`,
       `- [Source code](${site.repository})`,
       `- [MIT license](${site.repository}/blob/main/LICENSE)`,
       '## Documentation',

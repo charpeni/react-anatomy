@@ -54,6 +54,7 @@ const server = createServer(async (request, response) => {
 await new Promise<void>((done) => server.listen(0, '127.0.0.1', done));
 
 const base = `http://127.0.0.1:${(server.address() as AddressInfo).port}`;
+const orbitUrl = 'https://orbit.react-anatomy.com/';
 const browser = await chromium.launch({ headless: true, ...browserOptions() });
 const errors: string[] = [];
 const failures: string[] = [];
@@ -110,6 +111,12 @@ try {
   await observe(page);
   await page.goto(base);
   await page.locator('#demo').scrollIntoViewIfNeeded();
+  assert.equal(
+    await page
+      .getByRole('link', { name: 'orbit.react-anatomy.com', exact: true })
+      .getAttribute('href'),
+    orbitUrl,
+  );
 
   const source = page.frameLocator('#anatomy-source');
   const panel = page.frameLocator('#anatomy-panel');
@@ -130,6 +137,7 @@ try {
   await source.getByRole('button', { name: 'Complete task', exact: true }).first().click();
   await page.locator('[data-step="props"]').click();
   await panel.locator('[data-prop-path="props.project.progress"]').waitFor();
+  assert.equal(await panel.locator('.session').innerText(), orbitUrl);
   assert.equal(await page.locator('.demo-start-hint').isVisible(), false);
   assert.match(await panel.locator('[data-prop-path="props.project.progress"]').innerText(), /80/);
   assert.equal(await panel.locator('.tree-select').count(), 24);
@@ -379,11 +387,24 @@ try {
   );
 
   await page.goto(base + '/docs/');
-  const [orbit] = await Promise.all([
-    page.waitForEvent('popup'),
-    page.getByRole('link', { name: 'Open the Orbit sample in a new tab' }).click(),
-  ]);
+  const orbitLink = page.getByRole('link', { name: 'Open the Orbit sample in a new tab' });
+  assert.equal(await orbitLink.getAttribute('href'), orbitUrl);
+
+  // Serve the popup from this build using the same paths as the production rewrites.
+  const orbitPaths: Record<string, string> = {
+    '/': '/interactive/source.html',
+    '/source.js': '/interactive/source.js',
+    '/source.css': '/interactive/source.css',
+    '/fonts.css': '/interactive/fonts.css',
+  };
+  await page.context().route(orbitUrl + '**', async (route) => {
+    const { pathname } = new URL(route.request().url());
+    const path = orbitPaths[pathname] ?? pathname;
+    await route.fulfill({ response: await page.request.get(base + path) });
+  });
+  const [orbit] = await Promise.all([page.waitForEvent('popup'), orbitLink.click()]);
   try {
+    assert.equal(orbit.url(), orbitUrl);
     await orbit.setViewportSize({ width: 900, height: 400 });
     await orbit.locator('.project-card').first().waitFor();
     await orbit.mouse.wheel(0, 400);

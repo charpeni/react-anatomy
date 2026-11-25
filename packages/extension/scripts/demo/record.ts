@@ -4,7 +4,7 @@ import assert from 'node:assert/strict';
 import { mkdir, writeFile, readFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
 import { launchExtension, openDevtoolsPanel } from '../chrome-harness.ts';
-import { startFixtureServer } from '../fixture-server.ts';
+import { openOrbitSample, orbitUrl } from './page.ts';
 import type { CDPSession, Page } from 'playwright';
 
 process.env.FONTCONFIG_FILE = resolve('scripts/demo/fonts.conf');
@@ -42,10 +42,6 @@ if (resumeLive && previous) {
   previous.duration = cut;
 }
 
-const port = resume
-  ? Number(process.env.DEMO_PORT || (previous?.url ? new URL(previous.url).port : 0))
-  : 0;
-const fixture = await startFixtureServer(port);
 const h = await launchExtension();
 const frames: DemoTimeline['frames'] = previous?.frames || [];
 const captions: DemoTimeline['captions'] = previous?.captions || [];
@@ -73,7 +69,7 @@ const save = () =>
     output + '/timeline.json',
     JSON.stringify(
       {
-        url: fixture.url + '/demo',
+        url: orbitUrl,
         width: 2560,
         height: 1440,
         contentHeight: 1300,
@@ -350,7 +346,7 @@ try {
 
   source.on('pageerror', (e) => sourceErrors.push(e.message));
   await source.setViewportSize({ width: 1280, height: 650 });
-  await source.goto(fixture.url + '/demo');
+  await openOrbitSample(source);
   await source.getByRole('button', { name: 'New project' }).waitFor();
   sourceSession = await h.context.newCDPSession(source);
   await sourceSession.send('Emulation.setDeviceMetricsOverride', {
@@ -718,5 +714,4 @@ try {
   );
 } finally {
   await h.close();
-  await fixture.close();
 }

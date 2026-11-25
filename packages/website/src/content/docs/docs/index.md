@@ -10,7 +10,7 @@ You can [try the interactive example](/#demo) in your browser or follow the step
 ## Make your first capture
 
 1. Install React Anatomy from the [Chrome Web Store](https://chromewebstore.google.com/detail/react-anatomy/cllgnlljmehhoemdlfngkkpienkglkml) or [Firefox Add-ons](https://addons.mozilla.org/en-US/firefox/addon/react-anatomy/).
-2. <a href="/interactive/source.html" target="_blank" rel="noopener">Open the Orbit sample in a new tab</a>. Open DevTools on that tab and choose **Anatomy**. If DevTools was open during installation, close and reopen it. Look under **»** if the tab is hidden. The first capture runs automatically.
+2. <a href="https://orbit.react-anatomy.com/" target="_blank" rel="noopener">Open the Orbit sample in a new tab</a>. Open DevTools on that tab and choose **Anatomy**. If DevTools was open during installation, close and reopen it. Look under **»** if the tab is hidden. The first capture runs automatically.
 3. Choose **Pick on page** and click just inside the edge of a project card. Look for **ProjectCard** in the component tree, then expand its **project** prop in the inspector.
 
 Prefer a separate inspector window? Click the React Anatomy extension button while viewing Orbit.

@@ -1,3 +1,5 @@
+export { orbitUrl } from '@react-anatomy/extension/demo/page.ts';
+
 export const site = {
   name: 'React Anatomy',
   url: 'https://react-anatomy.com',
