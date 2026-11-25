@@ -137,6 +137,7 @@ try {
   }>(`(async()=>{
     const img=document.querySelector('.export-preview img');
     if(!img)return {card:document.querySelector('.export-preview').textContent};
+    await img.decode();
     const blob=await (await fetch(img.src)).blob();
     const bitmap=await createImageBitmap(blob);
     const canvas=new OffscreenCanvas(bitmap.width,bitmap.height);
@@ -161,6 +162,28 @@ try {
   );
   assert(exported.card.includes('name: "Orbit design system"'), exported.card);
   await writeFile(artifacts + '/export.png', Buffer.from(exported.png.split(',')[1], 'base64'));
+  await click('Show types instead of prop values');
+  await h.until(
+    () =>
+      run(
+        `!!document.querySelector('.export-preview img') && document.querySelector('.export-card').textContent.includes('name: string')`,
+      ),
+    'Expanded prop types did not render',
+  );
+  await run(`(() => {
+    const select = document.querySelector('.export-prop-controls select');
+    select.value = 'collapsed';
+    select.dispatchEvent(new Event('change', { bubbles: true }));
+  })()`);
+  await h.until(
+    () =>
+      run(`(() => {
+      const img = document.querySelector('.export-preview img');
+      return img?.naturalHeight > 0 && img.naturalHeight < ${exported.size[1]} &&
+        document.querySelector('.export-card').textContent.endsWith('project: Object');
+    })()`),
+    'Collapsed props did not produce a shorter PNG',
+  );
   await click('Close export');
   await click('Include in image');
   console.log(`Passed: exported a ${exported.size.join(' × ')} image in Firefox.`);

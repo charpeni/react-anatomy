@@ -240,7 +240,7 @@ export function reviewRows(
       rows.push({
         depth,
         name: '',
-        type: 'string',
+        type: 'string-content',
         preview: JSON.stringify(text) + (page.total > text.length ? '…' : ''),
       });
 
@@ -289,4 +289,55 @@ export function reviewRows(
 /** Whether two reviews would draw the same card. */
 export function sameRows(a: ImageRow[], b: ImageRow[]) {
   return JSON.stringify(a) === JSON.stringify(b);
+}
+
+export interface PropDisplay {
+  collapsed: boolean;
+  typesOnly: boolean;
+}
+
+const MAX_CARD_ROWS = 40;
+const typeLabels = new Map([
+  ['object', 'Object'],
+  ['array', 'Array'],
+  ['map', 'Map'],
+  ['set', 'Set'],
+  ['date', 'Date'],
+  ['dom', 'DOM element'],
+  ['react-element', 'React element'],
+  ['getter', 'Accessor'],
+]);
+
+/** The exact rows drawn in a PNG, also used to compare the card with live props. */
+export function exportRows(reviewed: ImageRow[], { collapsed, typesOnly }: PropDisplay) {
+  const rows: ImageRow[] = [];
+  let overflow = 0;
+  let pagination: ImageRow | undefined;
+
+  for (const row of reviewed) {
+    if ((collapsed && row.depth > 0) || (typesOnly && row.type === 'string-content')) {
+      continue;
+    }
+
+    if (row.type === 'more' && row.depth === 0) {
+      pagination = row;
+    } else if (rows.length === MAX_CARD_ROWS) {
+      overflow++;
+    } else if (row.hidden) {
+      rows.push({ depth: row.depth, name: row.name, type: 'hidden', hidden: true });
+    } else if (typesOnly && !['stale', 'more', 'unavailable'].includes(row.type)) {
+      rows.push({ ...row, type: 'type-label', preview: typeLabels.get(row.type) ?? row.type });
+    } else {
+      rows.push(row);
+    }
+  }
+
+  if (overflow) {
+    rows.push({ depth: 0, name: '', type: 'more', preview: `${overflow} more lines not shown` });
+  }
+  if (pagination) {
+    rows.push(pagination);
+  }
+
+  return rows;
 }

@@ -1,8 +1,9 @@
-import type { HiddenValue, PropEntry, PropValue } from '../src/inspector/types.ts';
+import type { HiddenValue, ImageRow, PropEntry, PropValue } from '../src/inspector/types.ts';
 import assert from 'node:assert/strict';
 import {
   changeHidden,
   confirmHidden,
+  exportRows,
   hiddenText,
   reviewRows,
   staleContainers,
@@ -248,6 +249,54 @@ assert.equal(
   });
 
   assert.deepEqual(review?.rows, [{ depth: 0, name: 'self', type: 'object', preview: 'Object' }]);
+}
+
+// Collapse before applying the line cap, so a large first branch cannot hide later props.
+{
+  const rows: ImageRow[] = [
+    { depth: 0, name: 'items', type: 'array', preview: 'Array(45)' },
+    ...Array.from({ length: 45 }, (_, i) => ({
+      depth: 1,
+      name: String(i),
+      type: 'number',
+      preview: String(i),
+    })),
+    { depth: 0, name: 'token', type: 'string', hidden: true },
+    { depth: 0, name: '', type: 'more', preview: '3 more' },
+  ];
+  const expanded = exportRows(rows, { collapsed: false, typesOnly: false });
+  assert.equal(expanded.length, 42);
+  assert.equal(expanded.at(-2)?.preview, '7 more lines not shown');
+  assert.equal(expanded.at(-1)?.preview, '3 more');
+  const compact = exportRows(rows, { collapsed: true, typesOnly: true });
+  assert.deepEqual(compact, [
+    { depth: 0, name: 'items', type: 'type-label', preview: 'Array' },
+    { depth: 0, name: 'token', type: 'hidden', hidden: true },
+    rows.at(-1),
+  ]);
+}
+
+// Expanded text has a single type label. An empty property name is still a real entry.
+{
+  const rows: ImageRow[] = [
+    { depth: 0, name: 'message', type: 'string', preview: '"Long message…"' },
+    { depth: 1, name: '', type: 'string-content', preview: '"Long message in full"' },
+    { depth: 0, name: '', type: 'string', preview: '"value"' },
+    { depth: 0, name: 'guarded', type: 'getter', preview: '[Getter — not evaluated]' },
+    { depth: 0, name: 'missing', type: 'unavailable', preview: '[Removed]' },
+    { depth: 0, name: 'sealed', type: 'object', preview: 'Object' },
+    { depth: 1, name: '', type: 'stale' },
+  ];
+  const typed = exportRows(rows, { collapsed: false, typesOnly: true });
+  assert.deepEqual(
+    typed.map((row) => row.preview),
+    ['string', 'string', 'Accessor', '[Removed]', 'Object', undefined],
+  );
+  assert.equal(typed.at(-1)?.type, 'stale');
+  assert.deepEqual(
+    exportRows(rows, { collapsed: true, typesOnly: false }),
+    rows.filter((row) => row.depth === 0),
+  );
 }
 
 console.log(

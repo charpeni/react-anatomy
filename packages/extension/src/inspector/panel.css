@@ -796,7 +796,8 @@ kbd {
 .empty-value {
   color: var(--muted);
 }
-.property-value.string {
+.property-value.string,
+.property-value.string-content {
   color: var(--string);
 }
 .property-value.number,
@@ -1143,6 +1144,31 @@ kbd {
 .export-dialog-heading .icon-button {
   margin-left: 6px;
 }
+.export-prop-controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 16px;
+  padding: 6px 12px;
+  border-bottom: 1px solid var(--border);
+}
+.export-prop-controls label {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+.export-prop-controls select {
+  font: inherit;
+  color: var(--text);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 2px 4px;
+}
+.export-prop-controls input {
+  margin: 0;
+  accent-color: var(--accent);
+}
 /* The whole image stays in view, so it can be checked before sharing. */
 .export-preview {
   display: flex;
@@ -1320,6 +1346,7 @@ kbd {
   font-size: 12px;
 }
 .export-hidden,
+.property-value.type-label,
 .property-value.more {
   color: var(--muted);
   font-style: italic;
