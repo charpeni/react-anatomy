@@ -1,0 +1,83 @@
+---
+import ExampleBrowser from './ExampleBrowser.astro';
+import { walkthroughs } from '../scripts/walkthroughs/index.ts';
+import '../styles/guide-browser.css';
+const guide = Astro.locals.starlightRoute.entry.id;
+const { label, address } = walkthroughs[guide];
+---
+
+<section
+  id="interactive-walkthrough"
+  class="guide-example not-content"
+  data-walkthrough={guide}
+  aria-label="Interactive walkthrough"
+  hidden
+>
+  <div class="guide-preview">
+    <div class="guide-placeholder" aria-hidden="true">
+      <div class="demo-chrome">
+        <div class="demo-window-dots">
+          <i></i>
+          <i></i>
+          <i></i>
+        </div>
+        <span>{label}</span>
+      </div>
+      <div class="skeleton-app">
+        <div class="skeleton-nav">
+          <i></i>
+          <i></i>
+          <i></i>
+          <i></i>
+        </div>
+        <div class="skeleton-main">
+          <div class="skeleton-heading"></div>
+          <div class="skeleton-cards">
+            <i></i>
+            <i></i>
+            <i></i>
+          </div>
+          <div class="skeleton-rows">
+            <i></i>
+            <i></i>
+            <i></i>
+          </div>
+        </div>
+      </div>
+    </div>
+    <button class="start-guide" type="button">
+      <svg aria-hidden="true" viewBox="0 0 16 16" width="16" height="16" fill="currentColor">
+        <path d="M4 2.6a.7.7 0 0 1 1.1-.6l8 5.4a.7.7 0 0 1 0 1.2l-8 5.4a.7.7 0 0 1-1.1-.6z" />
+      </svg>
+      Start interactive walkthrough
+    </button>
+  </div>
+  <div class="guide-player" hidden>
+    <div class="guide-controls">
+      <div aria-live="polite" aria-atomic="true">
+        <small class="guide-count"></small>
+        <strong class="guide-title"></strong>
+        <p class="guide-instruction"></p>
+      </div>
+      <div class="guide-navigation">
+        <button type="button" class="guide-back">
+          Back
+        </button>
+        <button type="button" class="guide-next">
+          Next step
+        </button>
+      </div>
+    </div>
+    <div class="guide-browser"></div>
+  </div>
+  <template>
+    <ExampleBrowser label={label} address={address} />
+  </template>
+</section>
+<script>
+  import { mountWalkthrough } from '../scripts/walkthroughs/player.ts';
+  import { walkthroughs } from '../scripts/walkthroughs/index.ts';
+  for (const root of document.querySelectorAll<HTMLElement>('[data-walkthrough]')) {
+    mountWalkthrough(root, walkthroughs[root.dataset.walkthrough!]);
+  }
+</script>

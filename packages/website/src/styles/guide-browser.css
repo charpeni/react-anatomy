@@ -1,0 +1,249 @@
+.guide-example {
+  --ease-out: ease-out;
+  margin: 1.2rem 0;
+  color: #172735;
+  font:
+    15px/1.4 system-ui,
+    sans-serif;
+}
+.guide-example [hidden]:not(.demo-frame) {
+  display: none !important;
+}
+.guide-example button {
+  font-family: inherit;
+  cursor: pointer;
+}
+.start-guide,
+.guide-navigation button {
+  min-height: 38px;
+  padding: 6px 13px;
+  border-radius: 5px;
+  font-size: 14px;
+}
+.start-guide,
+.guide-next {
+  color: #fff;
+  background: #205ba8;
+  border: 1px solid #205ba8;
+}
+.guide-back,
+.guide-next[data-restart] {
+  background: #fff;
+  border: 1px solid #abb6c0;
+  color: #233545;
+}
+.guide-example button:focus-visible {
+  outline: 3px solid #2076c9;
+  outline-offset: 2px;
+}
+.guide-navigation button:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+.guide-player {
+  border: 1px solid #bfc9d2;
+  border-radius: 9px;
+  overflow: hidden;
+  background: #fff;
+}
+.guide-controls {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 15px;
+  border-bottom: 1px solid #cfd3da;
+}
+.guide-controls small,
+.guide-controls strong {
+  display: block;
+}
+.guide-count {
+  color: #536576;
+  font-size: 12px;
+}
+.guide-title {
+  font-size: 17px;
+  margin-top: 2px;
+}
+.guide-instruction {
+  margin: 3px 0 0;
+}
+.guide-controls code {
+  padding: 0.1em 0.3em;
+  border-radius: 3px;
+  background: #edf0f3;
+  font-family: var(--sl-font-mono, var(--sl-font-system-mono));
+  font-size: 0.9em;
+}
+
+.guide-navigation {
+  display: flex;
+  gap: 6px;
+  flex-shrink: 0;
+}
+.guide-example .demo-window {
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+}
+.guide-example .demo-viewport {
+  height: var(--guide-viewport-height);
+}
+.guide-example .demo-badge {
+  color: #536576;
+}
+.guide-example .demo-address a {
+  color: #475869;
+}
+@media (max-width: 650px) {
+  .guide-controls {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 9px;
+  }
+}
+.guide-example[hidden] {
+  display: none;
+}
+.guide-player {
+  color-scheme: light;
+}
+
+/* Keep the text measure while letting the sample use the article panel's gutters. */
+.content-panel:has(.guide-example) {
+  container-type: inline-size;
+}
+.main-pane:has(.guide-example) .sl-container {
+  margin-inline: auto;
+}
+.guide-example {
+  --guide-viewport-height: clamp(320px, 60svh, 550px);
+  --guide-width: min(100cqi, 90rem);
+  inline-size: var(--guide-width);
+  margin-inline: calc((100% - var(--guide-width)) / 2);
+}
+.guide-preview {
+  position: relative;
+  display: grid;
+  place-items: center;
+  isolation: isolate;
+  min-height: calc(var(--guide-viewport-height) + 5rem);
+  overflow: hidden;
+  border: 1px solid var(--sl-color-gray-5);
+  border-radius: 9px;
+  background: var(--sl-color-bg);
+}
+.guide-placeholder {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  display: flex;
+  flex-direction: column;
+  color: var(--sl-color-gray-3);
+  pointer-events: none;
+}
+.guide-placeholder .demo-chrome {
+  flex-shrink: 0;
+  background: var(--sl-color-bg-nav);
+  color: var(--sl-color-gray-2);
+  border-color: var(--sl-color-gray-5);
+}
+.guide-placeholder .demo-window-dots i {
+  border-color: var(--sl-color-gray-4);
+}
+.skeleton-app {
+  flex: 1;
+  display: grid;
+  grid-template-columns: min(22%, 13rem) 1fr;
+  opacity: 0.62;
+}
+.skeleton-nav,
+.skeleton-main {
+  padding: clamp(12px, 3%, 32px);
+}
+.skeleton-nav {
+  background: var(--sl-color-bg-sidebar);
+  border-inline-end: 1px solid var(--sl-color-hairline);
+}
+.skeleton-app i,
+.skeleton-heading {
+  display: block;
+  border-radius: 4px;
+  background: var(--sl-color-gray-6);
+}
+.skeleton-nav i,
+.skeleton-rows i {
+  height: 0.55rem;
+  margin-block: 1.1rem;
+}
+.skeleton-nav i:nth-child(even) {
+  width: 68%;
+}
+.skeleton-heading {
+  width: 42%;
+  height: 1.2rem;
+  margin-block: 0.6rem 1.8rem;
+}
+.skeleton-cards {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 3%;
+}
+.skeleton-cards i {
+  height: clamp(64px, 11svh, 100px);
+  border: 1px solid var(--sl-color-gray-5);
+  background: var(--sl-color-bg-nav);
+}
+.skeleton-cards i::before,
+.skeleton-cards i::after {
+  content: '';
+  display: block;
+  height: 0.4rem;
+  width: 45%;
+  margin: 0.9rem 12% 0.5rem;
+  border-radius: 3px;
+  background: var(--sl-color-gray-6);
+}
+.skeleton-cards i::after {
+  width: 65%;
+  margin-top: 0;
+}
+.skeleton-rows {
+  padding-block-start: 1.4rem;
+  max-width: 84%;
+}
+.skeleton-rows i:nth-child(2) {
+  width: 72%;
+}
+.guide-preview .start-guide {
+  display: inline-flex;
+  gap: 0.6rem;
+  align-items: center;
+  min-height: 46px;
+  padding-inline: 1.2rem;
+  font-weight: 600;
+  box-shadow: 0 3px 12px #14253626;
+}
+.guide-preview .start-guide:hover {
+  background: #184b96;
+}
+
+@media (min-width: 72rem) {
+  /* Starlight normally gives both sidebars extra space on wide screens. */
+  .main-frame:has(.guide-example) {
+    --guide-toc-width: clamp(11rem, 13vw, 14rem);
+  }
+  .main-frame:has(.guide-example) .right-sidebar-container,
+  .main-frame:has(.guide-example) .right-sidebar {
+    width: var(--guide-toc-width);
+  }
+  .main-frame:has(.guide-example) .right-sidebar-panel .sl-container {
+    width: 100%;
+    max-width: none;
+  }
+  .main-frame:has(.guide-example) .main-pane {
+    flex: 1;
+    min-width: 0;
+  }
+}

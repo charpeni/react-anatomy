@@ -89,6 +89,12 @@ export function Glyph({ type = 'layers', size = 18 }: { type?: string; size?: nu
       </>
     ),
     download: <path d="M12 3v12m-5-5 5 5 5-5M4 21h16" />,
+    link: (
+      <>
+        <path d="M10 13a5 5 0 0 0 7.5.5l3-3a5 5 0 0 0-7-7l-1.7 1.7" />
+        <path d="M14 11a5 5 0 0 0-7.5-.5l-3 3a5 5 0 0 0 7 7l1.7-1.7" />
+      </>
+    ),
     arrow: <path d="m9 5 7 7-7 7" />,
     minus: <path d="M5 12h14" />,
     plus: <path d="M5 12h14m-7-7v14" />,

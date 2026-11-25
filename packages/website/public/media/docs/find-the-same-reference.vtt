@@ -1,0 +1,36 @@
+WEBVTT
+
+00:00:00.950 --> 00:00:04.310
+Each project card in Orbit has a Complete
+task button.
+
+00:00:04.710 --> 00:00:07.990
+Do the cards share one callback, or does each
+get its own?
+
+00:00:08.550 --> 00:00:12.550
+Two functions can have identical code and
+still be different objects.
+
+00:00:12.790 --> 00:00:18.470
+Find same reference shows which mounted
+components hold the exact same function in
+their props.
+
+00:00:18.790 --> 00:00:21.230
+Select the Customer portal card in the tree.
+
+00:00:21.430 --> 00:00:25.910
+In Props, choose Find same reference beside
+onCompleteTask.
+
+00:00:26.390 --> 00:00:31.590
+Five instances hold this function: the three
+project cards, the list, and its parent.
+
+00:00:32.070 --> 00:00:33.990
+Select Mobile app in the results.
+
+00:00:34.390 --> 00:00:38.070
+To see which card it represents, choose
+Highlight on page.

@@ -9,6 +9,11 @@ export function documentMarkdown(entry: CollectionEntry<'docs'>) {
   const url = canonicalUrl(`/${documentPath(entry)}/`);
   // Absolute links retain their destinations when a reader copies the text out of the website.
   const body = (entry.body ?? '')
+    .replace(/^import GuideBrowser from '[^']+GuideBrowser\.astro';\n+/m, '')
+    .replace(
+      /^<GuideBrowser \/>$/m,
+      `[Start the interactive walkthrough](${url}#interactive-walkthrough)`,
+    )
     .replace(/\]\((\/[^)]*)\)/g, (_, path: string) => `](${new URL(path, url).href})`)
     .replace(
       /\b(href|src|poster)="(\/[^"]*)"/g,

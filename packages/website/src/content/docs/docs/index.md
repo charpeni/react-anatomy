@@ -10,14 +10,16 @@ You can [try the interactive example](/#demo) in your browser or follow the step
 ## Make your first capture
 
 1. Install React Anatomy from the [Chrome Web Store](https://chromewebstore.google.com/detail/react-anatomy/cllgnlljmehhoemdlfngkkpienkglkml) or [Firefox Add-ons](https://addons.mozilla.org/en-US/firefox/addon/react-anatomy/).
-2. <a href="https://orbit.react-anatomy.com/" target="_blank" rel="noopener">Open the Orbit sample in a new tab</a>. Open DevTools on that tab and choose **Anatomy**. If DevTools was open during installation, close and reopen it. Look under **»** if the tab is hidden. The first capture runs automatically.
-3. Choose **Pick on page** and click just inside the edge of a project card. Look for **ProjectCard** in the component tree, then expand its **project** prop in the inspector.
+2. In the tab running your React app, open DevTools and select **Anatomy**. The first capture runs automatically. If DevTools was open during installation, close and reopen it. Look under **»** if the tab is hidden.
+3. Choose **Pick on page** and click an element in your app. Anatomy selects its component in the tree. Open **Props** to inspect the values it received.
 
-Prefer a separate inspector window? Click the React Anatomy extension button while viewing Orbit.
+If you prefer a separate inspector window, click the React Anatomy extension button in your app’s tab.
+
+For an example, <a href="https://orbit.react-anatomy.com/" target="_blank" rel="noopener">open the Orbit sample in a new tab</a>. Pick a project card, then expand the `project` prop on `ProjectCard`.
 
 ### No React components to inspect
 
-The landing page embeds Orbit in an iframe. The extension captures the top-level page, so use the standalone sample in step 2 to inspect Orbit. If the sample works but your app shows this message, check its [React DOM version](/docs/compatibility/#react). For a server-rendered app, wait for hydration to finish, then choose **Capture page**.
+Anatomy inspects the top-level page. If your app runs in an iframe, open its URL in its own tab. For a server-rendered app, wait for hydration to finish, then choose **Capture page**. You can also check your [React DOM version](/docs/compatibility/#react).
 
 ## The mental model
 
@@ -58,6 +60,7 @@ React Anatomy is an inspector. It helps you read and explain structure. It does 
 - [Understand a page](/docs/understand/): go from something you see to the component behind it, and follow the data.
 - [Explain a change](/docs/explain-a-change/): show the structure of your change in a pull request.
 - [Read generated code](/docs/generated-code/): look at what an AI agent actually rendered before you take ownership of it.
+- [Find the same reference](/docs/find-the-same-reference/) to see which mounted instances received the same callback.
 
 For details on the controls, see [Layers, focus, and controls](/docs/explore/) and [Props inspector](/docs/props/).
 

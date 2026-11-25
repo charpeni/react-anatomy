@@ -213,3 +213,20 @@ export async function openDevtoolsPanel(harness: Awaited<ReturnType<typeof launc
 
   return { session, panelSession };
 }
+
+/** Direct keyboard focus to the extension iframe in a headless DevTools window. */
+export async function focusDevtoolsPanel(
+  h: Awaited<ReturnType<typeof launchExtension>>,
+  session: string,
+  panelSession: string,
+) {
+  await h.send('Emulation.setFocusEmulationEnabled', { enabled: true }, session);
+  await h.send('Emulation.setFocusEmulationEnabled', { enabled: true }, panelSession);
+  await h.evaluate(
+    `(()=>{
+      const find=(root)=>{for(const el of root.querySelectorAll('*')){if(el.tagName==='IFRAME'&&/panel\\.html/.test(el.src))return el;if(el.shadowRoot){const found=find(el.shadowRoot);if(found)return found;}}return null;};
+      find(document)?.focus();
+    })()`,
+    session,
+  );
+}

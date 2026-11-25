@@ -2,7 +2,10 @@
   "$schema": "./node_modules/wrangler/config-schema.json",
   "name": "react-anatomy",
   "compatibility_date": "2026-11-02",
+  "main": "packages/website/worker.ts",
   "assets": {
+    "binding": "ASSETS",
+    "run_worker_first": ["/media/docs/*.mp4", "/media/docs/*.webm"],
     "directory": "./packages/website/dist",
     "html_handling": "auto-trailing-slash",
     "not_found_handling": "404-page",

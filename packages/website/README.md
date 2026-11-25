@@ -108,7 +108,7 @@ The extension and website privacy policy is at `/privacy/`, authored in `src/con
 
 ## Deployment
 
-Cloudflare Workers serves the static website and public docs. The root `wrangler.jsonc` points to the built files; no server or Astro adapter is needed.
+Cloudflare Workers serves the Astro build as static files. For MP4 and WebM files under `/media/docs/`, `worker.ts` handles byte-range requests so viewers can seek.
 
 Connect `charpeni/react-anatomy` through the Worker's GitHub integration, then use these build settings:
 

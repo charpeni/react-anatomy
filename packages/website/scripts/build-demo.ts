@@ -39,6 +39,11 @@ await build({
 });
 await copyFile(source('../demo/source.css'), outdir + '/source.css');
 await copyFile(source('../demo/panel.css'), outdir + '/panel.css');
+await build({
+  bundle: true,
+  entryPoints: [source('../demo/guide-target.css')],
+  outfile: outdir + '/guide-target.css',
+});
 await copyFile(
   fileURLToPath(import.meta.resolve('@react-anatomy/extension/fonts.css')),
   outdir + '/fonts.css',
@@ -50,7 +55,7 @@ for (const [name, title, body] of [
 ]) {
   await writeFile(
     `${outdir}/${name}.html`,
-    `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex"><title>${title}</title><link rel="icon" href="/favicon.svg"><link rel="stylesheet" href="./fonts.css"><link rel="stylesheet" href="./${name}.css"></head><body>${body}<script src="./${name}.js"></script></body></html>`,
+    `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex"><title>${title}</title><link rel="icon" href="/favicon.svg"><link rel="stylesheet" href="./fonts.css"><link rel="stylesheet" href="./${name}.css"><link rel="stylesheet" href="./guide-target.css"></head><body>${body}<script src="./${name}.js"></script></body></html>`,
   );
 }
 

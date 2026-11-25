@@ -61,6 +61,10 @@ The inspector does not call getters, callbacks, or `toJSON`. Accessors are shown
 
 React children show their type, key, and props without traversing React’s private owner graph. App-defined proxies can still execute their own traps during JavaScript reflection.
 
+## Find the same reference
+
+Choose **Find same reference** beside a top-level object, array, or function prop to see which mounted instances hold the same value, even under a different prop name. [Follow a shared callback in Orbit](/docs/find-the-same-reference/).
+
 ## Bounded requests
 
 Each request returns at most 50 entries or 10,000 string characters. The inspector caps collections at 10,000 entries, strings at 1,000,000 characters, and retained value handles at 5,000 per session. It shows when these limits are reached.

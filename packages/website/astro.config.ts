@@ -42,6 +42,7 @@ export default defineConfig({
             { label: 'Understand a page', slug: 'docs/understand' },
             { label: 'Explain a change', slug: 'docs/explain-a-change' },
             { label: 'Read generated code', slug: 'docs/generated-code' },
+            { label: 'Find the same reference', slug: 'docs/find-the-same-reference' },
           ],
         },
         {
