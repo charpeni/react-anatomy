@@ -240,6 +240,9 @@ h1 span {
   color: var(--muted);
 }
 .route-also {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  column-gap: 8px;
   font-size: 12px;
   line-height: 1.6;
   color: var(--muted);
@@ -284,10 +287,10 @@ h1 span {
   margin-left: 2px;
 }
 .install-logos {
-  display: inline-flex;
+  display: flex;
+  align-items: center;
+  height: 1lh;
   gap: 4px;
-  vertical-align: -3px;
-  margin-right: 6px;
 }
 .install-logos img {
   width: 16px;
