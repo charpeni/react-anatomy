@@ -15,3 +15,8 @@
   width: 2rem;
   height: 2rem;
 }
+.sl-markdown-content video {
+  display: block;
+  width: 100%;
+  height: auto;
+}

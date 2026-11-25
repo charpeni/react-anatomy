@@ -21,13 +21,15 @@ Use **Refresh props** to reread values without capturing the whole page. A new c
 
 ## Copy component context
 
-Use **Copy component context** in the selected component’s details when you want to point someone to a specific instance. The preview includes its name, React key when available, path through the tree, and immediate rendered children. It shortens long paths and marks incomplete child lists.
+When several components share a name, **Copy component context** helps you point to the one you mean. The preview includes the selected instance’s name, React key when available, path through the tree, and immediate children. Long paths are shortened and incomplete child lists are marked.
 
-1. In the [interactive example](/#demo), choose **Inspect props** to select the Design system card.
-2. Open **Copy component context**. To include its progress, enter `project.progress` in **Optional prop path** and choose **Include prop**.
-3. Review **Text to copy**, then choose **Copy text**. Paste it into an issue or an agent prompt alongside your question. If the browser asks you to copy manually, the preview is already selected.
+1. On your React page, open **Anatomy** in DevTools. Select a component in the tree, or choose **Pick on page** and click the part of your app you want to inspect.
+2. In the component details, open **Copy component context**. To include a live value, enter its dot-separated path in **Optional prop path** and choose **Include prop**. Use **Remove prop** to leave it out.
+3. Review **Text to copy**, choose **Copy text**, and paste it into an issue or an agent prompt. If your browser asks you to copy manually, the preview is already selected.
 
-With the sample card at its starting value, you’ll see this text.
+### Example from Orbit
+
+Orbit renders three `ProjectCard` instances. Selecting the Design system card and including `project.progress` produces this text.
 
 ```text
 Component: ProjectCard [key="design-system"]
@@ -36,9 +38,14 @@ Rendered children: ProgressBar, StatusBadge, AvatarStack
 Prop project.progress (number): 72
 ```
 
-The prop line appears only when you add it. **Include prop** reads the current value at that path. Objects and collections get a short preview. **Remove prop** returns to the component structure alone.
+The prop line shows the value at the time you choose **Include prop**. Objects and collections get a short preview.
 
-[Watch the narrated demo (28 seconds)](/media/docs/copy-component-context.mp4).
+<video controls playsinline preload="metadata" width="1280" height="720" aria-label="Copy component context from an Orbit project card" poster="/media/docs/copy-component-context-poster.jpg" src="/media/docs/copy-component-context.mp4">
+  <track kind="captions" srclang="en" label="English" src="/media/docs/copy-component-context.en.vtt" />
+  <a href="/media/docs/copy-component-context.mp4">Watch the 28-second narrated demo.</a>
+</video>
+
+To try the same card in the [interactive example](/#demo), choose **Inspect props**.
 
 ## Props in exported images
 

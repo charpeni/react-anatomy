@@ -23,6 +23,9 @@ const types: Record<string, string> = {
   '.wasm': 'application/wasm',
   '.svg': 'image/svg+xml',
   '.png': 'image/png',
+  '.jpg': 'image/jpeg',
+  '.mp4': 'video/mp4',
+  '.vtt': 'text/vtt',
 };
 const server = createServer(async (request, response) => {
   const path = new URL(request.url ?? '/', 'http://localhost').pathname;
@@ -565,6 +568,20 @@ try {
   }
 
   await page.goto(base + '/docs/props/');
+  const walkthrough = page.locator('video');
+  await walkthrough.evaluate(async (video: HTMLVideoElement) => {
+    if (!video.controls || !video.playsInline || !video.paused || video.autoplay) {
+      throw new Error('The documentation video needs user-controlled inline playback.');
+    }
+    video.querySelector('track')!.track.mode = 'showing';
+    await video.play();
+  });
+  await page.waitForFunction(() => {
+    const video = document.querySelector('video')!;
+    const captions = video.querySelector('track')!.track;
+    return video.currentTime > 0.3 && !!captions.activeCues?.length;
+  });
+  await walkthrough.evaluate((video: HTMLVideoElement) => video.pause());
   await page.getByRole('button', { name: /Search/ }).click();
   await page.getByPlaceholder('Search', { exact: true }).fill('props');
   await page.locator('.pagefind-ui__result').first().waitFor();

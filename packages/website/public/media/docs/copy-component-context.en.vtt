@@ -1,0 +1,28 @@
+WEBVTT
+
+00:00.220 --> 00:02.540
+When several cards share a component,
+
+00:02.620 --> 00:05.020
+use the page picker to select the one you mean.
+
+00:07.120 --> 00:09.360
+Open Copy component context.
+
+00:09.600 --> 00:12.800
+The React key identifies the Design system card.
+
+00:13.100 --> 00:14.780
+To include a live value,
+
+00:14.980 --> 00:18.300
+enter project.progress and choose Include prop.
+
+00:18.920 --> 00:20.840
+The preview now shows 72.
+
+00:21.320 --> 00:23.880
+Copy the text and paste it beside your request
+
+00:23.960 --> 00:26.520
+so the agent knows which label to change.
