@@ -47,7 +47,7 @@ Before posting, look at what the image contains. Page text and props can include
 
 ## 5. Write the explanation
 
-Describe the structure in a few sentences, in terms the reviewer can check against the image and the diff. The numbers in the image make it easy to point at components. For example, for a change to the sample app’s project cards:
+Describe the structure in a few sentences, in terms the reviewer can check against the image and the diff. The numbers in the image make it easy to point at components. For example, for a change to the project cards in the [Orbit sample app](https://orbit.react-anatomy.com/):
 
 ```md
 ### Structure

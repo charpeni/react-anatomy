@@ -16,7 +16,7 @@ Explore the rendered component tree, pull the layout apart into layers, focus a 
 - [Chrome Web Store](https://chromewebstore.google.com/detail/react-anatomy/cllgnlljmehhoemdlfngkkpienkglkml) — also installs in Brave and Edge
 - [Firefox Add-ons](https://addons.mozilla.org/en-US/firefox/addon/react-anatomy/)
 
-Then open DevTools on a React page and choose **Anatomy**. Requires desktop Chrome or Firefox 140+ and React DOM 18.2, 18.3, or 19.0–19.3. You can also try the [interactive example](https://react-anatomy.com/#demo) on [react-anatomy.com](https://react-anatomy.com) without installing anything. [Documentation](https://react-anatomy.com/docs/).
+Then open the [Orbit sample app](https://orbit.react-anatomy.com/) or your own React page, open DevTools, and choose **Anatomy**. Requires desktop Chrome or Firefox 140+ and React DOM 18.2, 18.3, or 19.0–19.3. You can also try the [interactive example](https://react-anatomy.com/#demo) on [react-anatomy.com](https://react-anatomy.com) without installing anything. [Documentation](https://react-anatomy.com/docs/).
 
 ## Run locally
 

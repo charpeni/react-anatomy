@@ -10,7 +10,7 @@ The extension attaches to an already running React app. No npm package, source c
 
 ## Install
 
-Install the published extension from the [Chrome Web Store](https://chromewebstore.google.com/detail/react-anatomy/cllgnlljmehhoemdlfngkkpienkglkml) or [Firefox Add-ons](https://addons.mozilla.org/en-US/firefox/addon/react-anatomy/). Then open DevTools on a React page and choose **Anatomy**; it may be under the `»` menu.
+Install the published extension from the [Chrome Web Store](https://chromewebstore.google.com/detail/react-anatomy/cllgnlljmehhoemdlfngkkpienkglkml) or [Firefox Add-ons](https://addons.mozilla.org/en-US/firefox/addon/react-anatomy/). Then open DevTools on the [Orbit sample app](https://orbit.react-anatomy.com/) or your own React page and choose **Anatomy**; it may be under the `»` menu.
 
 ### Load a development build in Chrome
 

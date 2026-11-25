@@ -1,5 +1,6 @@
 ---
 import mark from '@react-anatomy/brand/svg/icon-24.svg?url';
+import { orbitUrl } from '../lib/site.ts';
 import '../styles/demo.css';
 ---
 
@@ -17,7 +18,9 @@ import '../styles/demo.css';
         <i></i>
       </div>
       <span class="demo-address">
-        orbit.example <span>/ projects</span>
+        <a href={orbitUrl} target="_blank" rel="noopener">
+          {new URL(orbitUrl).hostname}
+        </a>
       </span>
       <span class="demo-badge">Example app</span>
       <button type="button" class="demo-intro-skip" hidden>

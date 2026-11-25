@@ -80,7 +80,7 @@ These commands write separate versioned ZIPs under `packages/extension/artifacts
 
 ## Landing-page example
 
-The website bundles the Orbit sample app and the real Anatomy inspector into two isolated frames. The sample is interactive; the inspector reads its actual React tree and props. Its transport is restricted to that sample, so it does not inspect other pages or require extension permissions.
+The website bundles the [Orbit sample app](https://orbit.react-anatomy.com/) and the real Anatomy inspector into two isolated frames. The sample is interactive; the inspector reads its actual React tree and props. Its transport is restricted to that sample, so it does not inspect other pages or require extension permissions.
 
 The example bundles are generated before `dev` and `build`. If you change the demo or extension source while Astro is already running, rebuild them and reload:
 
