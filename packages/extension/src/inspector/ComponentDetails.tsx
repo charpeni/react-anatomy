@@ -5,6 +5,7 @@ import { PropsInspector } from './PropsInspector.tsx';
 import { SameReference } from './SameReference.tsx';
 import { ContextReaders } from './ContextReaders.tsx';
 import { SourceTraceSection } from '../source-trace/SourceTraceSection.tsx';
+import { selectTracedProp, topLevelProp } from '../source-trace/store.ts';
 
 // The details pane for the selected component: actions on the page, live
 // props, measured layout, and the chain of components above it.
@@ -112,6 +113,7 @@ export function ComponentDetails({
           componentId={node.id}
           capturedAt={capturedAt}
           call={call}
+          onSelectPath={(path) => selectTracedProp(topLevelProp(path), false)}
           image={image}
           onImage={onImage}
         />
@@ -138,6 +140,8 @@ export function ComponentDetails({
           node={node}
           call={call}
           capturedAt={capturedAt}
+          isCaptured={isCaptured}
+          onSelect={onSelect}
         />
         <details className="inspector-section" open>
           <summary>Layout</summary>

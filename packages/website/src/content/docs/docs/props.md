@@ -74,3 +74,7 @@ Props stay in the inspected page until requested and are not uploaded to a servi
 ## Investigate unused props
 
 Open [Unused props](/docs/unused-props/) to check whether the code reads or forwards a prop passed to the selected instance.
+
+## Where a prop comes from
+
+Props show the value a component received. To see which component created it and where your code uses it, load a source analysis and use [Trace in source](/docs/trace-a-prop/).

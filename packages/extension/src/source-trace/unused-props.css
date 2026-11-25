@@ -137,6 +137,17 @@
   color: inherit;
   border-radius: 2px;
 }
+.unused-trace {
+  padding: 2px 7px;
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  background: var(--surface);
+  color: var(--accent);
+  font: inherit;
+}
+.unused-trace:hover {
+  background: var(--hover);
+}
 .unused-unavailable strong {
   display: block;
   margin: 3px 0;

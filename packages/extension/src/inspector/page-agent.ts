@@ -1923,13 +1923,115 @@ export function pageAgent(request: PageRequest = { action: 'capture' }): PageRes
         return null;
       }
     };
+    const idOf = (target: Fiber) =>
+      state.fiberIds.get(target) ||
+      (target.alternate ? state.fiberIds.get(target.alternate) : undefined) ||
+      null;
+    const nameOf = (target: Fiber) => componentName(target) ?? 'Anonymous';
+    // Function, class, forwardRef, and memo components.
+    const composite = (target: Fiber) => componentName(target) !== null;
+    const ancestors: { id: string | null; name: string; stamp: ReturnType<typeof stampOf> }[] = [];
+    const ancestorFibers: Fiber[] = [];
+    const descendants: {
+      id: string | null;
+      name: string;
+      stamp: NonNullable<ReturnType<typeof stampOf>>;
+    }[] = [];
     const files: Record<string, string> = {};
     const propNames: string[] = [];
+    let limited = false;
+    let ancestorsLimited = false;
     let propNamesLimited = false;
+    let steps = 0;
+    let previous = fiber.memoizedProps;
+
+    for (let parent = fiber.return; parent; parent = parent.return) {
+      if (++steps > 2000 || ancestors.length >= 100) {
+        limited = true;
+        ancestorsLimited = true;
+        break;
+      }
+
+      // A memo wrapper and its inner component share one props object.
+      if (composite(parent) && parent.memoizedProps !== previous) {
+        ancestors.push({ id: idOf(parent), name: nameOf(parent), stamp: stampOf(parent) });
+        ancestorFibers.push(parent);
+        previous = parent.memoizedProps;
+      }
+    }
+
+    // Development builds of React record which component instance created
+    // each element. Position alone cannot tell two nested instances of one
+    // component apart, so this record decides the supplying instance.
+    const ownerOf = (target: Fiber) => {
+      const owner = (target as { _debugOwner?: Partial<Fiber> | null })._debugOwner;
+
+      return owner && typeof owner.tag === 'number' ? (owner as Fiber) : null;
+    };
+    let creators: number[] | null = null;
+
+    if ('_debugOwner' in (fiber as object)) {
+      creators = [];
+
+      for (let current = fiber; creators.length < 100;) {
+        let owner = ownerOf(current);
+
+        // A memo wrapper "creates" the component it wraps; they are one instance.
+        while (owner && owner.memoizedProps === current.memoizedProps) {
+          current = owner;
+          owner = ownerOf(current);
+        }
+
+        if (!owner) {
+          break;
+        }
+
+        const creator = owner;
+        const position = ancestorFibers.findIndex(
+          (ancestor) => ancestor === creator || ancestor.alternate === creator,
+        );
+
+        creators.push(position);
+
+        if (position < 0) {
+          break;
+        }
+
+        current = owner;
+      }
+    }
+
+    const stack: Fiber[] = [];
+
+    for (let child = fiber.child; child; child = child.sibling) {
+      stack.push(child);
+    }
+
+    steps = 0;
+
+    while (stack.length) {
+      if (++steps > 5000 || descendants.length >= 400) {
+        limited = true;
+        break;
+      }
+
+      const next = stack.pop()!;
+      const stamp = composite(next) ? stampOf(next) : null;
+
+      if (stamp) {
+        descendants.push({ id: idOf(next), name: nameOf(next), stamp });
+      }
+
+      for (let child = next.child; child; child = child.sibling) {
+        stack.push(child);
+      }
+    }
 
     try {
       if (builtFiles !== null && typeof builtFiles === 'object') {
         const paths = Object.keys(builtFiles);
+
+        limited ||= paths.length > 5000;
 
         for (const path of paths.slice(0, 5000)) {
           const hash = text(ownValue(builtFiles, path), 80);
@@ -1947,16 +2049,23 @@ export function pageAgent(request: PageRequest = { action: 'capture' }): PageRes
         propNamesLimited = propNames.length < names.length;
       }
     } catch {
+      limited = true;
       propNamesLimited = true;
     }
 
     return {
       ok: true,
       metadata,
+      name: nameOf(fiber),
       self: stampOf(fiber),
       propNames,
       propNamesLimited,
+      ancestors,
+      ancestorsLimited,
+      creators,
+      descendants,
       files,
+      limited,
     };
   }
 

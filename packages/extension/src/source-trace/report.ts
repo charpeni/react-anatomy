@@ -21,13 +21,29 @@ export interface SiteStamp {
 export interface SourceEvidence {
   /** Whether the page was built with call-site metadata at all. */
   metadata: boolean;
+  name: string;
   self: SiteStamp | null;
   /** Names of the props the instance currently holds. Values stay in the page. */
   propNames: string[];
   /** The instance holds more props than `propNames` lists: a name was cut by a bound, or could not be read. */
   propNamesLimited: boolean;
-  /** Hashes recorded by the build plugin, used to check the files an audit relies on. */
+  /** The enclosing component list reached a traversal limit. */
+  ancestorsLimited: boolean;
+  /** Enclosing components, nearest first. */
+  ancestors: { id: string | null; name: string; stamp: SiteStamp | null }[];
+  /** Stamped components below the selection. */
+  descendants: { id: string | null; name: string; stamp: SiteStamp }[];
+  /**
+   * From React's development owner record: the position in `ancestors` of the
+   * component that created this one, then of the one that created that, and so
+   * on. -1 ends the list where the creator is not an enclosing component. Null
+   * when the build keeps no owner record (a production build).
+   */
+  creators: number[] | null;
+  /** The text hash the running build recorded for each instrumented file. */
   files: Record<string, string>;
+  /** A bound was reached while reading neighbors or files; `ancestors`, `descendants` or `files` are incomplete. */
+  limited: boolean;
 }
 
 export interface ReportFile {

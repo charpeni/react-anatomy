@@ -1,9 +1,9 @@
 import type { PageCall } from '../inspector/types.ts';
 import type { ReportSite, SourceEvidence } from './report.ts';
-import type { Association, ReportIndex } from './trace.ts';
+import type { Association, OwnerResolver, ReportIndex } from './trace.ts';
 import { useEffect, useMemo, useState } from 'react';
 import { useSourceReport } from './store.ts';
-import { associate } from './trace.ts';
+import { associate, candidateSites, liveOwners, staticOwners } from './trace.ts';
 
 export interface SourceTraceState {
   index: ReportIndex | null;
@@ -12,9 +12,15 @@ export interface SourceTraceState {
   loading: boolean;
   error: string | null;
   association: Association | null;
-  /** The element this instance is traced from: verified against the running build. */
+  /** The element this instance is traced from: verified, or chosen by the developer. */
   site: ReportSite | null;
-  match: 'verified' | null;
+  /** `verified`: joined by build metadata. `manual`: chosen by the developer, not checked. */
+  match: 'verified' | 'manual' | null;
+  owners: OwnerResolver | null;
+  /** Elements that render a component of this name. Never applied automatically. */
+  candidates: ReportSite[];
+  choose: (siteId: string | null) => void;
+  refresh: () => void;
 }
 
 // One read of the page per selected component, shared by every section that
@@ -30,6 +36,8 @@ export function useSourceTrace(
     evidence: SourceEvidence | null;
     error: string | null;
   } | null>(null);
+  const [chosen, setChosen] = useState<{ id: string; site: string } | null>(null);
+  const [version, setVersion] = useState(0);
   const active = !!index;
 
   useEffect(() => {
@@ -66,12 +74,17 @@ export function useSourceTrace(
     return () => {
       cancelled = true;
     };
-  }, [active, call, node.id, capturedAt]);
+  }, [active, call, node.id, capturedAt, version]);
 
   return useMemo(() => {
     const current = index && result?.id === node.id ? result : null;
     const evidence = current?.evidence ?? null;
     const association = index && evidence ? associate(index, evidence.self) : null;
+    const candidates = index ? candidateSites(index, node.name) : [];
+    const manual =
+      index && chosen?.id === node.id && association?.status !== 'verified'
+        ? (index.sites.get(chosen.site) ?? null)
+        : null;
     const verified = association?.status === 'verified' ? association.site : null;
 
     return {
@@ -80,8 +93,17 @@ export function useSourceTrace(
       loading: !!index && !current,
       error: current?.error ?? null,
       association,
-      site: verified,
-      match: verified ? 'verified' : null,
+      site: verified ?? manual,
+      match: verified ? 'verified' : manual ? 'manual' : null,
+      owners:
+        index && verified && evidence
+          ? liveOwners(index, evidence.ancestors, evidence.creators, evidence.ancestorsLimited)
+          : index && manual
+            ? staticOwners(index)
+            : null,
+      candidates,
+      choose: (siteId) => setChosen(siteId ? { id: node.id, site: siteId } : null),
+      refresh: () => setVersion((value) => value + 1),
     };
-  }, [index, result, node.id]);
+  }, [index, result, chosen, node.id, node.name]);
 }

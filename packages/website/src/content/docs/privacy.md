@@ -37,7 +37,7 @@ In DevTools, Anatomy uses the browser’s inspected-page APIs. Its toolbar entry
 
 Captures and inspected props are held in memory during inspection. The extension does not save them to persistent extension storage, synchronize them across devices, or upload them to a service.
 
-**Unused props** is optional. It reads a source analysis file only when you choose one. The panel keeps the file in memory until you remove it or close the panel. The file stays on your computer. To check a component, the extension reads prop names and the file positions and text hashes that an opt-in development build recorded on the page.
+**Unused props** and **Trace in source** are optional. It reads a source analysis file only when you choose one. The panel keeps the file in memory until you remove it or close the panel. The file stays on your computer. To check a component, the extension reads prop names and the file positions and text hashes that an opt-in development build recorded on the page.
 
 Close DevTools or the Anatomy window to stop inspection, then reload the inspected page to clear any remaining inspection state. Uninstalling the extension removes its ability to inspect pages. Images you export, and any screenshots or recordings you make, remain under your control. An exported image is created locally and leaves your browser only when you paste or attach it somewhere. Check its contents before sharing it.
 

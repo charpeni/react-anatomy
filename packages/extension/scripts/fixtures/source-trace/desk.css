@@ -1,0 +1,142 @@
+body {
+  margin: 0;
+  padding: 32px;
+  background: #f2f3f7;
+  color: #262a36;
+  font:
+    14px/1.45 system-ui,
+    sans-serif;
+}
+
+.desk {
+  display: grid;
+  grid-template-columns: minmax(0, 620px) 260px;
+  gap: 20px;
+  align-items: start;
+}
+
+.desk-header {
+  grid-column: 1 / -1;
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+
+.desk-header h1 {
+  margin: 0 auto 0 0;
+  font-size: 22px;
+}
+
+button {
+  padding: 7px 12px;
+  border: 1px solid #b4b8c6;
+  border-radius: 6px;
+  background: #fff;
+  color: #262a36;
+  font: inherit;
+}
+
+button:disabled {
+  opacity: 0.5;
+}
+
+.queue,
+.insights {
+  padding: 16px;
+  border: 1px solid #d9dbe4;
+  border-radius: 12px;
+  background: #fff;
+}
+
+.queue-header,
+.insights h2 {
+  margin: 0 0 12px;
+  font-size: 15px;
+}
+
+.queue-header span {
+  margin-left: 6px;
+  padding: 1px 8px;
+  border-radius: 10px;
+  background: #e8e9f2;
+  font-size: 12px;
+}
+
+.ticket {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  margin-bottom: 10px;
+  padding: 12px;
+  border: 1px solid #e1e3eb;
+  border-radius: 9px;
+}
+
+.ticket.resolved {
+  background: #f1f7f3;
+  color: #5b6a60;
+}
+
+.ticket-body {
+  flex: 1;
+}
+
+.ticket-body strong,
+.ticket-meta {
+  display: block;
+}
+
+.ticket-meta,
+.queue-footer,
+.audit-footer,
+.summary,
+.note {
+  margin: 0;
+  color: #606678;
+  font-size: 12px;
+}
+
+.priority {
+  width: 62px;
+  padding: 2px 0;
+  border-radius: 5px;
+  background: #e8e9f2;
+  font-size: 11px;
+  text-align: center;
+  text-transform: uppercase;
+}
+
+.priority.urgent {
+  background: #f9dcd8;
+  color: #8f2b1f;
+}
+
+.insights {
+  display: grid;
+  gap: 10px;
+}
+
+.chip {
+  display: inline-block;
+  padding: 3px 9px;
+  border-radius: 12px;
+  background: #e5eefc;
+  color: #234a8c;
+}
+
+.note.strong {
+  font-weight: 600;
+}
+
+.help-link {
+  color: #2456b8;
+}
+
+.frame {
+  grid-column: 1 / -1;
+  padding: 6px 10px;
+  border: 1px dashed #c3c6d2;
+  border-radius: 8px;
+  color: #606678;
+  font-size: 12px;
+}

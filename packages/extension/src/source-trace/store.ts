@@ -11,9 +11,12 @@ interface SourceState {
   index: ReportIndex | null;
   fileName: string | null;
   error: string | null;
+  /** The prop being traced. Set from the Props inspector or from this section. */
+  prop: string | null;
+  open: boolean;
 }
 
-let state: SourceState = { index: null, fileName: null, error: null };
+let state: SourceState = { index: null, fileName: null, error: null, prop: null, open: false };
 const listeners = new Set<() => void>();
 
 function update(next: Partial<SourceState>) {
@@ -69,5 +72,39 @@ export async function loadReport(file: Pick<File, 'name' | 'size' | 'text'>) {
 
 export function clearReport() {
   fileRequest++;
-  update({ index: null, fileName: null, error: null });
+  update({ index: null, fileName: null, error: null, prop: null });
+}
+
+export function setSourceTraceOpen(open: boolean) {
+  if (open !== state.open) {
+    update({ open });
+  }
+}
+
+/** Chooses the prop to trace for the selected component. */
+export function selectTracedProp(key: string | null, reveal = true) {
+  if (key !== state.prop || (reveal && state.index && !state.open)) {
+    update({ prop: key, ...(reveal && state.index && key !== null ? { open: true } : {}) });
+  }
+}
+
+/** The top-level prop a path in the Props inspector belongs to: `props.project.name` is `project`. */
+export function topLevelProp(path: string) {
+  const dotted = /^props\.([A-Za-z_$][\w$]*)/.exec(path);
+
+  if (dotted) {
+    return dotted[1];
+  }
+
+  const quoted = /^props\[("(?:[^"\\]|\\.)*")\]/.exec(path);
+
+  if (quoted) {
+    try {
+      return String(JSON.parse(quoted[1]));
+    } catch {
+      return null;
+    }
+  }
+
+  return /^props\[(\d+)\]/.exec(path)?.[1] ?? null;
 }

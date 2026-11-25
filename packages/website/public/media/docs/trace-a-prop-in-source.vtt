@@ -1,0 +1,41 @@
+WEBVTT
+
+00:00:00.950 --> 00:00:05.590
+This Resolve button closes a support ticket.
+Where is the callback defined?
+
+00:00:05.710 --> 00:00:07.190
+And how does it reach the button?
+
+00:00:07.750 --> 00:00:12.790
+Trace in source follows a prop through your
+code, even when a component gives it a new
+name.
+
+00:00:13.030 --> 00:00:16.310
+With Queue selected and a matching source
+analysis loaded,
+
+00:00:16.390 --> 00:00:18.310
+choose onResolve in Props.
+
+00:00:18.790 --> 00:00:21.910
+Under Supplied by, the callback starts in
+DeskApp.
+
+00:00:22.310 --> 00:00:25.190
+Queue passes it to TicketRow as onDismiss.
+
+00:00:25.670 --> 00:00:27.670
+Follow the link to a mounted ticket row.
+
+00:00:27.990 --> 00:00:31.030
+Its click handler calls onDismiss with the
+ticket ID.
+
+00:00:31.590 --> 00:00:34.310
+Try it on the page. Click Resolve on that
+row.
+
+00:00:34.710 --> 00:00:36.630
+The ticket changes to resolved.

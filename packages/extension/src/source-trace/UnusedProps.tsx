@@ -72,7 +72,15 @@ function SourceLine({ index, label, span }: { index: ReportIndex; label: string;
   );
 }
 
-function Row({ index, row }: { index: ReportIndex; row: AuditRow }) {
+function Row({
+  index,
+  row,
+  onTrace,
+}: {
+  index: ReportIndex;
+  row: AuditRow;
+  onTrace?: (key: string) => void;
+}) {
   const [open, setOpen] = useState(row.tier === 'candidate' || row.tier === 'dead-end');
 
   return (
@@ -96,6 +104,11 @@ function Row({ index, row }: { index: ReportIndex; row: AuditRow }) {
               {caveat}
             </p>
           ))}
+          {onTrace && (
+            <button className="unused-trace" onClick={() => onTrace(row.key)}>
+              Trace {row.key} in source
+            </button>
+          )}
         </div>
       )}
     </li>
@@ -127,7 +140,14 @@ function summarize(audit: Extract<PropAudit, { status: 'ready' }>) {
   return head + rest + (audit.partial ? ' The list is incomplete.' : '');
 }
 
-export function UnusedProps({ source }: { source: UnusedPropsSource }) {
+export function UnusedProps({
+  source,
+  onTrace,
+}: {
+  source: UnusedPropsSource;
+  /** Opens the full trace of one prop. */
+  onTrace?: (key: string) => void;
+}) {
   const { fileName, error: fileError } = useSourceReport();
   const { index, evidence, association, site, match } = source;
   const audit = useMemo(
@@ -213,7 +233,7 @@ export function UnusedProps({ source }: { source: UnusedPropsSource }) {
                   <p className="unused-muted">{group.hint}</p>
                   <ul>
                     {rows.map((row) => (
-                      <Row key={row.key} index={index} row={row} />
+                      <Row key={row.key} index={index} row={row} onTrace={onTrace} />
                     ))}
                   </ul>
                 </details>

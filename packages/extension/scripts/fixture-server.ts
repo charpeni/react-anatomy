@@ -45,7 +45,11 @@ export async function startFixtureServer(port = 0) {
                     ? 'dist/reference-app.html'
                     : path === '/context'
                       ? 'dist/context-app.html'
-                      : null;
+                      : path === '/source-trace'
+                        ? 'dist/source-trace-app.html'
+                        : path === '/source-trace-plain'
+                          ? 'dist/source-trace-plain.html'
+                          : null;
 
     if (!file) {
       res.writeHead(404).end('Not found');

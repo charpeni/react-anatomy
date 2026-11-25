@@ -21,14 +21,26 @@ export interface ReportIndex {
   components: Map<string, ReportComponent>;
   sites: Map<string, ReportSite>;
   files: Map<string, ReportFile>;
+  sitesByTarget: Map<string, ReportSite[]>;
 }
 
 export function indexReport(report: SourceReport): ReportIndex {
+  const sitesByTarget = new Map<string, ReportSite[]>();
+
+  for (const site of report.sites) {
+    if (site.target) {
+      const list = sitesByTarget.get(site.target);
+
+      list ? list.push(site) : sitesByTarget.set(site.target, [site]);
+    }
+  }
+
   return {
     report,
     components: new Map(report.components.map((component) => [component.id, component])),
     sites: new Map(report.sites.map((site) => [site.id, site])),
     files: new Map(report.files.map((file) => [file.path, file])),
+    sitesByTarget,
   };
 }
 
@@ -64,11 +76,155 @@ export function associate(index: ReportIndex, stamp: SiteStamp | null): Associat
   return site ? { status: 'verified', site } : { status: 'mismatch', file: stamp.file };
 }
 
+/**
+ * Call sites that could have produced a component with this name. A name is
+ * not evidence about an instance, so these are only ever offered as choices.
+ */
+export function candidateSites(index: ReportIndex, name: string) {
+  return index.report.sites.filter(
+    (site) =>
+      site.tag === name || (site.target && index.components.get(site.target)?.name === name),
+  );
+}
+
+export function propNames(index: ReportIndex, site: ReportSite) {
+  const names = new Set<string>();
+
+  for (const attribute of site.attributes) {
+    if (attribute.kind === 'attr' && attribute.name !== 'key') {
+      names.add(attribute.name);
+    } else if (attribute.kind === 'spread' && attribute.source.type === 'object') {
+      Object.keys(attribute.source.keys).forEach((name) => names.add(name));
+    }
+  }
+
+  const component = site.target ? index.components.get(site.target) : undefined;
+
+  Object.keys(component?.props ?? {}).forEach((name) => names.add(name));
+
+  return [...names];
+}
+
+// ---- Who supplied the value ------------------------------------------------
+
 export interface PropSupply {
   supplied: 'attribute' | 'props-spread' | 'object-spread' | 'unlisted-spread' | 'absent';
   uncertain: boolean;
   span: Span;
   origin?: Origin;
+}
+
+export interface SupplyStep extends PropSupply {
+  site: ReportSite;
+  /** The prop name at this site. */
+  key: string;
+  owner: ReportComponent | null;
+  /** How this element was identified: from the page, or as the only one in source. */
+  found: 'start' | 'page' | 'only-site';
+  /** The mounted component that received the value at this step, when known. */
+  instance?: string;
+}
+
+export interface Supply {
+  steps: SupplyStep[];
+  end:
+    | { kind: 'origin'; origin: Extract<Origin, { type: 'local' }> }
+    | { kind: 'derived'; keys: string[] }
+    | { kind: 'unknown'; detail: string }
+    | { kind: 'branches'; component: ReportComponent; sites: ReportSite[] };
+}
+
+/**
+ * Finds the element through which a component instance was rendered. `cursor`
+ * is the value returned for the previous step of the same chain, so a resolver
+ * holds no state between traces.
+ */
+export type OwnerResolver = (
+  component: ReportComponent,
+  cursor?: number,
+) =>
+  | { site: ReportSite; found: 'page' | 'only-site'; instance?: string; cursor?: number }
+  | { sites: ReportSite[] }
+  | { unknown: string }
+  | null;
+
+export function staticOwners(index: ReportIndex): OwnerResolver {
+  return (component) => {
+    const sites = index.sitesByTarget.get(component.id) ?? [];
+
+    return sites.length === 1
+      ? { site: sites[0], found: 'only-site' }
+      : sites.length
+        ? { sites }
+        : null;
+  };
+}
+
+/**
+ * Resolves owners among the mounted ancestors of the selected instance,
+ * nearest first. `creators` is React's development record of which ancestor
+ * created which element. Without it, an ancestor is accepted only when it is
+ * the single enclosing instance of the owning component: two nested instances
+ * of the same component cannot be told apart by position.
+ */
+export function liveOwners(
+  index: ReportIndex,
+  ancestors: { id: string | null; stamp: SiteStamp | null }[],
+  creators: number[] | null = null,
+  ancestorsLimited = false,
+): OwnerResolver {
+  const verified = (position: number, component: ReportComponent) => {
+    const association = associate(index, ancestors[position]?.stamp ?? null);
+
+    return association.status === 'verified' && association.site.target === component.id
+      ? association.site
+      : null;
+  };
+
+  return (component, cursor = 0) => {
+    if (creators) {
+      const position = creators[cursor];
+      const site = position >= 0 ? verified(position, component) : null;
+
+      return site
+        ? { site, found: 'page', instance: ancestors[position].id ?? undefined, cursor: cursor + 1 }
+        : null;
+    }
+
+    const matches: number[] = [];
+    let incomplete = ancestorsLimited;
+
+    for (let position = cursor; position < ancestors.length; position++) {
+      const association = associate(index, ancestors[position].stamp);
+      if (association.status !== 'verified' || !association.site.target) {
+        incomplete = true;
+      } else if (association.site.target === component.id) {
+        matches.push(position);
+      }
+    }
+
+    if (matches.length > 1) {
+      return {
+        unknown: `${matches.length} mounted ${component.name} components enclose this element, and this build does not record which one created it.`,
+      };
+    }
+
+    if (incomplete) {
+      return {
+        unknown:
+          'The enclosing instances could not all be verified, and this build does not record which one created the element.',
+      };
+    }
+
+    return matches.length
+      ? {
+          site: verified(matches[0], component)!,
+          found: 'page',
+          instance: ancestors[matches[0]].id ?? undefined,
+          cursor: matches[0] + 1,
+        }
+      : null;
+  };
 }
 
 export function supplyAt(site: ReportSite, key: string): PropSupply {
@@ -112,6 +268,122 @@ export function supplyAt(site: ReportSite, key: string): PropSupply {
 
   return { ...(state ?? { supplied: 'absent' as const, span: site.span }), uncertain };
 }
+
+export function traceSupply(
+  index: ReportIndex,
+  start: ReportSite,
+  key: string,
+  owners: OwnerResolver,
+  instance?: string,
+): Supply {
+  const steps: SupplyStep[] = [];
+  const seen = new Set<string>();
+  let site = start;
+  let name = key;
+  let found: SupplyStep['found'] = 'start';
+  let receiver = instance;
+  let cursor: number | undefined;
+
+  for (;;) {
+    const identity = JSON.stringify([site.id, name, receiver ?? null]);
+    if (seen.has(identity) || steps.length >= 32) {
+      return {
+        steps,
+        end: {
+          kind: 'unknown',
+          detail: seen.has(identity)
+            ? 'The supply chain is recursive and was not followed further.'
+            : 'The supply chain reached the limit of 32 steps.',
+        },
+      };
+    }
+    seen.add(identity);
+    const owner = site.owner ? (index.components.get(site.owner) ?? null) : null;
+    const step: SupplyStep = {
+      site,
+      key: name,
+      ...supplyAt(site, name),
+      owner,
+      found,
+      instance: receiver,
+    };
+
+    steps.push(step);
+
+    if (step.supplied === 'absent') {
+      return {
+        steps,
+        end: { kind: 'unknown', detail: `This element does not pass ${name} in source.` },
+      };
+    }
+
+    if (step.supplied === 'unlisted-spread') {
+      return {
+        steps,
+        end: {
+          kind: 'unknown',
+          detail: `${name} can only come from a spread whose keys cannot be listed from source.`,
+        },
+      };
+    }
+
+    let next: string;
+
+    if (step.supplied === 'props-spread') {
+      next = name;
+    } else if (step.origin?.type === 'prop') {
+      next = step.origin.key;
+    } else if (step.origin?.type === 'derived') {
+      if (step.origin.keys.length !== 1 || step.origin.keys[0] === '*') {
+        return { steps, end: { kind: 'derived', keys: step.origin.keys } };
+      }
+
+      next = step.origin.keys[0];
+    } else {
+      return {
+        steps,
+        end: step.origin
+          ? { kind: 'origin', origin: step.origin }
+          : { kind: 'unknown', detail: 'The supplying expression was not recorded.' },
+      };
+    }
+
+    if (!owner) {
+      return {
+        steps,
+        end: { kind: 'unknown', detail: site.ownerNote ?? 'The supplying component is unknown.' },
+      };
+    }
+
+    const resolved = owners(owner, cursor);
+
+    if (!resolved) {
+      return {
+        steps,
+        end: {
+          kind: 'unknown',
+          detail: `${owner.name} receives it as its ${next} prop, but the element that rendered this ${owner.name} could not be identified.`,
+        },
+      };
+    }
+
+    if ('unknown' in resolved) {
+      return { steps, end: { kind: 'unknown', detail: resolved.unknown } };
+    }
+
+    if ('sites' in resolved) {
+      return { steps, end: { kind: 'branches', component: owner, sites: resolved.sites } };
+    }
+
+    site = resolved.site;
+    found = resolved.found;
+    receiver = resolved.instance;
+    cursor = resolved.cursor;
+    name = next;
+  }
+}
+
+// ---- What the receiver does with it ---------------------------------------
 
 export type Verdict = 'unused' | 'used' | 'derived' | 'used-forwarded' | 'forwarded' | 'unknown';
 
@@ -446,6 +718,70 @@ export function traceFlow(
   return visit(component, key, via, [`${component.id}\n${key}`]);
 }
 
+export interface PropTrace {
+  site: ReportSite;
+  key: string;
+  supply: Supply;
+  /** Null when the element's component was not analyzed. */
+  flow: TraceNode | null;
+  boundary?: Boundary;
+  headline: string;
+  /** A short qualification of the headline, when one is needed. */
+  caveat?: string;
+}
+
+export function traceProp(
+  index: ReportIndex,
+  site: ReportSite,
+  key: string,
+  owners: OwnerResolver,
+  instance?: string,
+): PropTrace {
+  const supply = traceSupply(index, site, key, owners, instance);
+  const component = site.target ? index.components.get(site.target) : undefined;
+
+  if (!component) {
+    const boundary: Boundary = {
+      reason: site.unresolved?.reason ?? 'no-source',
+      detail: site.unresolved?.detail ?? `${site.tag} is not part of the analysis.`,
+      span: site.span,
+    };
+
+    return { site, key, supply, flow: null, boundary, headline: 'Unknown beyond this point' };
+  }
+
+  const flow = traceFlow(index, component, key, site);
+  const first = supply.steps[0];
+  const closed = flow.verdict === 'unused' || flow.consumer === 'none';
+
+  // "Unused" is a claim about a value that was really delivered.
+  if (closed && (first.supplied === 'absent' || first.supplied === 'unlisted-spread')) {
+    return {
+      site,
+      key,
+      supply,
+      flow,
+      headline: 'No use found in this receiver',
+      caveat: `Source does not show this element passing ${key}, so delivery is not confirmed.`,
+    };
+  }
+
+  return {
+    site,
+    key,
+    supply,
+    flow,
+    headline: flow.headline,
+    ...(first.uncertain
+      ? { caveat: 'A later spread on this element may replace the value shown here.' }
+      : flow.boundaries.length && flow.verdict !== 'unknown'
+        ? { caveat: 'Some paths from here could not be analyzed.' }
+        : {}),
+  };
+}
+
+// ---- Is the running build the analyzed text? --------------------------------
+
 export interface BuildMismatch {
   path: string;
   /** `changed`: built from other text. `missing`: the build recorded no hash for the file. */
@@ -460,7 +796,7 @@ export interface BuildMismatch {
  */
 export function checkBuild(
   index: ReportIndex,
-  trace: { site: ReportSite; flow: TraceNode | null },
+  trace: { site: ReportSite; flow: TraceNode | null; supply?: Supply },
   built: Record<string, string>,
 ): BuildMismatch[] {
   const files = new Set<number>();
@@ -496,6 +832,15 @@ export function checkBuild(
       visit(edge.node);
     }
   };
+
+  for (const step of trace.supply?.steps ?? []) {
+    element(step.site);
+    files.add(step.span.file);
+  }
+
+  if (trace.supply?.end.kind === 'origin' && trace.supply.end.origin.span) {
+    files.add(trace.supply.end.origin.span.file);
+  }
 
   // The element's own receiver may be unresolved; its resolution path still counts.
   element(trace.site);

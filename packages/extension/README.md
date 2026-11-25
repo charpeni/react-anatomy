@@ -68,6 +68,14 @@ Use **Copy component context** in component details to copy the selected instanc
 
 Select a component and open **Unused props** to load a local source analysis. Expand a candidate to see the JSX that passes the prop and the source lines the analyzer checked in the receiving component. The [setup guide](../website/src/content/docs/docs/unused-props.mdx) covers the analyzer and the esbuild plugin that identifies the selected call site.
 
+## Trace a prop in source
+
+**Trace in source** in the details pane follows one prop through your source: who supplied it, where it is used, and where the chain stops. It is opt-in. Create an analysis with `pnpm trace:source --root <dir> --out trace.json <files or directories>` and load the file in the section. The analyzer ([`scripts/source-trace/analyze.ts`](scripts/source-trace/analyze.ts)) records an unknown boundary for anything it cannot resolve.
+
+To connect the trace to a mounted instance, build the app with [`anatomySourcePlugin`](scripts/source-trace/esbuild-plugin.ts). It records each component element’s file, hash, and position outside the props. Without that metadata, you can choose an element by hand and trace its source. Anatomy flags files that differ from the running build. See the [setup guide](../website/src/content/docs/docs/trace-a-prop.md).
+
+`pnpm dev:extension` serves a fixture for this at `http://localhost:4174/source-trace` (with metadata) and `/source-trace-plain` (without). Its analysis is written to `dist/source-trace-report.json`.
+
 ## Run and verify locally
 
 ```sh

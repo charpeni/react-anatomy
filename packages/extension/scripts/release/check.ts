@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import { sourceFiles } from './source.ts';
 import { test } from 'node:test';
 import { mkdtemp, rm, writeFile, readFile, mkdir } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
@@ -416,5 +417,12 @@ test('Archives reproduce deterministically; unsafe inputs and modified packages 
     await assert.rejects(collect(join(directory, 'secret-input')), /Unexpected/);
   } finally {
     await rm(directory, { recursive: true, force: true });
+  }
+});
+
+test('the release source includes the development fixture builder used by both browser builds', async () => {
+  const files = await sourceFiles('test');
+  for (const name of ['build-fixture', 'analyze', 'esbuild-plugin', 'instrument', 'shared']) {
+    assert.ok(files[`packages/extension/scripts/source-trace/${name}.ts`], name);
   }
 });
