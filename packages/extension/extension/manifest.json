@@ -19,7 +19,7 @@
     }
   },
   "content_security_policy": {
-    "extension_pages": "script-src 'self'; object-src 'none'; base-uri 'none'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https: http:; font-src 'self' data: https: http:"
+    "extension_pages": "script-src 'self'; object-src 'none'; base-uri 'none'; style-src 'self' 'unsafe-inline'; img-src 'self' blob: data: https: http:; font-src 'self' data: https: http:"
   },
   "icons": {
     "16": "icons/icon-16.png",

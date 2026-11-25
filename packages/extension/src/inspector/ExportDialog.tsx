@@ -3,6 +3,7 @@ import type {
   Frame,
   ImageProps,
   ImagePropsByComponent,
+  ImageRow,
   PageCall,
   PropEntry,
   PropPage,
@@ -10,7 +11,7 @@ import type {
   SceneLayer,
   Snapshot,
 } from './types.ts';
-import { useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { Scene } from './SceneStage.tsx';
 import { fitScene } from './scene.ts';
@@ -22,7 +23,14 @@ import {
   loadImages,
   rasterize,
 } from './export-image.ts';
-import { propertyPath, reviewRows, sameRows, type LoadedPage } from './image-props.ts';
+import {
+  exportRows,
+  propertyPath,
+  reviewRows,
+  sameRows,
+  type LoadedPage,
+  type PropDisplay,
+} from './image-props.ts';
 import { Glyph } from './Glyph.tsx';
 
 // Sized for a pull request: GitHub shows images up to about the width of its
@@ -31,7 +39,6 @@ import { Glyph } from './Glyph.tsx';
 // proportions within limits.
 const STAGE_WIDTH = 960;
 const MAX_TAGS = 24;
-const MAX_LINES = 40;
 // Distinct from each other and readable on the always-light image.
 const COLORS = ['#1a73e8', '#9334e6', '#e8710a', '#188038', '#d93025', '#007b83'];
 
@@ -65,7 +72,15 @@ interface Callout {
   plane: string | null;
 }
 
-// Everything the image shows is decided once, when the dialog opens.
+interface ExportAssets {
+  fonts: Awaited<ReturnType<typeof embedFonts>>;
+  images: Map<string, string>;
+}
+
+type PreviewImage = Awaited<ReturnType<typeof rasterize>> & { url: string; notes: string[] };
+type PreviewResult = { display: PropDisplay } & ({ image: PreviewImage } | { error: string });
+
+// Freeze the scene and the reviewed props when the dialog opens.
 function planImage(view: ExportView, imageProps: ImagePropsByComponent) {
   const height = (STAGE_WIDTH * view.size.height) / Math.max(1, view.size.width);
   const stage = { width: STAGE_WIDTH, height: Math.round(Math.min(720, Math.max(480, height))) };
@@ -116,7 +131,7 @@ function planImage(view: ExportView, imageProps: ImagePropsByComponent) {
  * Reads a component's props again, as many entries as the author saw, only to
  * tell whether they changed. The image keeps drawing what the author reviewed.
  */
-async function changedSinceReview(call: PageCall, id: string, image: ImageProps) {
+async function readCurrentRows(call: PageCall, id: string, image: ImageProps) {
   const result = await call({ action: 'props', id });
 
   if (!result?.ok) {
@@ -164,9 +179,7 @@ async function changedSinceReview(call: PageCall, id: string, image: ImageProps)
     call({ action: 'props-release', token }).catch(() => {});
   }
 
-  const live = reviewRows(pages, image);
-
-  return live && sameRows(live.rows, image.rows) ? null : 'changed';
+  return reviewRows(pages, image)?.rows ?? 'The reviewed props are unavailable.';
 }
 
 function fileName(snapshot: Snapshot) {
@@ -208,22 +221,38 @@ export function ExportDialog({
   const [plan] = useState(() => planImage(view, imageProps));
   const [tags, setTags] = useState<PlacedTag[] | null>(null);
   const [leaks, setLeaks] = useState<number[]>([]);
-  const [drift, setDrift] = useState<Record<string, string>>({});
-  const [image, setImage] = useState<{
-    blob: Blob;
-    url: string;
-    width: number;
-    height: number;
-    cssWidth: number;
-    notes: string[];
-  } | null>(null);
-  const [error, setError] = useState<string | null>(null);
-  const [status, setStatus] = useState('');
+  const [currentRows, setCurrentRows] = useState<Record<string, ImageRow[] | string>>({});
+  const [display, setDisplay] = useState<PropDisplay>({ collapsed: false, typesOnly: false });
+  const [assets, setAssets] = useState<ExportAssets | string | null>(null);
+  const [rendered, setRendered] = useState<PreviewResult | null>(null);
+  // A control change invalidates the previous PNG immediately, including on a rapid switch back.
+  const current = rendered?.display === display ? rendered : null;
+  const image = current && 'image' in current ? current.image : null;
+  const error =
+    typeof assets === 'string' ? assets : current && 'error' in current && current.error;
+  const [status, setStatus] = useState<{ url: string; text: string } | null>(null);
   const [actualSize, setActualSize] = useState(false);
   const { snapshot } = view;
   const canCopy = typeof ClipboardItem === 'function' && !!navigator.clipboard?.write;
   const path = snapshot.scope ? snapshot.scope.path.map((n) => n.name).join(' / ') : 'Whole page';
   const reviewedAt = Math.max(0, ...plan.callouts.map((c) => c.props.reviewedAt));
+  const cards = useMemo(
+    () =>
+      plan.callouts.map((c) => {
+        const rows = exportRows(c.props.rows, display);
+        const live = currentRows[c.id];
+        const error = typeof live === 'string' ? live : undefined;
+        const drift = Array.isArray(live) && !sameRows(rows, exportRows(live, display));
+        return {
+          ...c,
+          rows,
+          error,
+          drift,
+          masked: rows.filter((row) => row.type === 'stale').length,
+        };
+      }),
+    [plan, currentRows, display],
+  );
 
   useEffect(() => {
     dialog.current?.showModal();
@@ -236,13 +265,14 @@ export function ExportDialog({
 
     (async () => {
       for (const callout of plan.callouts) {
-        const reason = await changedSinceReview(call, callout.id, callout.props).catch((e) =>
+        const live = await readCurrentRows(call, callout.id, callout.props).catch((e) =>
           e instanceof Error ? e.message : String(e),
         );
 
-        if (reason && !cancelled) {
-          setDrift((previous) => ({ ...previous, [callout.id]: reason }));
+        if (cancelled) {
+          return;
         }
+        setCurrentRows((previous) => ({ ...previous, [callout.id]: live }));
       }
     })();
 
@@ -305,12 +335,7 @@ export function ExportDialog({
   /* oxlint-enable react/set-state-in-effect */
 
   useEffect(() => {
-    if (!tags) {
-      return;
-    }
-
     const controller = new AbortController();
-    let url: string | undefined;
 
     (async () => {
       try {
@@ -318,22 +343,40 @@ export function ExportDialog({
         const budget = assetBudget(controller.signal);
 
         await document.fonts.ready;
+        if (controller.signal.aborted) {
+          return;
+        }
 
         const [fonts, images] = await Promise.all([
           embedFonts(snapshot.fonts, root, budget),
           loadImages(collectImageUrls(root), call, budget),
         ]);
 
-        if (controller.signal.aborted) {
+        if (!controller.signal.aborted) {
+          setAssets({ fonts, images });
+        }
+      } catch (e) {
+        if (!controller.signal.aborted) {
+          setAssets(e instanceof Error ? e.message : String(e));
+        }
+      }
+    })();
+
+    return () => controller.abort();
+  }, [call, snapshot.fonts]);
+
+  useEffect(() => {
+    if (!tags || !assets || typeof assets === 'string') {
+      return;
+    }
+    let cancelled = false;
+    let url: string | undefined;
+    const { fonts, images } = assets;
+    rasterize(composition.current!, { fonts: fonts.css, images })
+      .then((result) => {
+        if (cancelled) {
           return;
         }
-
-        const result = await rasterize(root, { fonts: fonts.css, images });
-
-        if (controller.signal.aborted) {
-          return;
-        }
-
         const notes = [];
 
         if (result.missingImages) {
@@ -347,25 +390,21 @@ export function ExportDialog({
         }
 
         url = URL.createObjectURL(result.blob);
-        setImage({ ...result, url, notes });
-      } catch (e) {
-        if (!controller.signal.aborted) {
-          setError(
-            'The image could not be rendered. ' + (e instanceof Error ? e.message : String(e)),
-          );
+        setRendered({ display, image: { ...result, url, notes } });
+      })
+      .catch((e) => {
+        if (!cancelled) {
+          setRendered({ display, error: e instanceof Error ? e.message : String(e) });
         }
-      }
-    })();
+      });
 
-    // Closing the dialog stops pending downloads.
     return () => {
-      controller.abort();
-
+      cancelled = true;
       if (url) {
         URL.revokeObjectURL(url);
       }
     };
-  }, [tags, call, snapshot.fonts]);
+  }, [tags, assets, display]);
 
   // Move focus to Copy when the image is ready, unless the author moved it.
   useEffect(() => {
@@ -375,30 +414,39 @@ export function ExportDialog({
   }, [image]);
 
   async function copy() {
+    if (!image) {
+      return;
+    }
     try {
-      await navigator.clipboard.write([new ClipboardItem({ 'image/png': image!.blob })]);
-      setStatus('Copied. Paste it into your pull request or issue.');
+      await navigator.clipboard.write([new ClipboardItem({ 'image/png': image.blob })]);
+      setStatus({ url: image.url, text: 'Copied. Paste it into your pull request or issue.' });
     } catch {
-      setStatus('The browser did not allow copying. Download the image instead.');
+      setStatus({
+        url: image.url,
+        text: 'The browser did not allow copying. Download the image instead.',
+      });
     }
   }
 
   function download() {
+    if (!image) {
+      return;
+    }
     const name = fileName(snapshot);
-    const link = Object.assign(document.createElement('a'), { href: image!.url, download: name });
+    const link = Object.assign(document.createElement('a'), { href: image.url, download: name });
 
     document.body.append(link);
     link.click();
     link.remove();
-    setStatus(`Downloaded ${name}.`);
+    setStatus({ url: image.url, text: `Downloaded ${name}.` });
   }
 
   const placed = new Map(tags?.map((tag) => [tag.id, tag]));
   const tagged = tags ? plan.tagged.filter((plane) => placed.has(plane.id)) : plan.tagged;
   const label = (c: Callout) => `${c.number} ${c.name}`;
-  const summary = plan.callouts.map((c) => {
-    const hidden = c.props.rows.filter((row) => row.hidden).length;
-    const masked = c.props.stale.length;
+  const summary = cards.map((c) => {
+    const hidden = c.rows.filter((row) => row.hidden).length;
+    const { masked } = c;
 
     return (
       label(c) +
@@ -446,6 +494,30 @@ export function ExportDialog({
             <Glyph type="close" size={14} />
           </button>
         </div>
+        {cards.length > 0 && (
+          <div className="export-prop-controls">
+            <label>
+              Nested props
+              <select
+                value={display.collapsed ? 'collapsed' : 'inspected'}
+                onChange={(e) =>
+                  setDisplay({ ...display, collapsed: e.target.value === 'collapsed' })
+                }
+              >
+                <option value="inspected">As inspected</option>
+                <option value="collapsed">Collapsed</option>
+              </select>
+            </label>
+            <label>
+              <input
+                type="checkbox"
+                checked={display.typesOnly}
+                onChange={(e) => setDisplay({ ...display, typesOnly: e.target.checked })}
+              />
+              Show types instead of prop values
+            </label>
+          </div>
+        )}
         <div
           className={'export-preview' + (actualSize ? ' actual-size' : '')}
           aria-busy={!image && !error}
@@ -463,7 +535,7 @@ export function ExportDialog({
               style={actualSize ? { width: image.cssWidth } : undefined}
             />
           ) : error ? (
-            <p role="alert">{error}</p>
+            <p role="alert">The image could not be rendered. {error}</p>
           ) : (
             <p role="status">Rendering image…</p>
           )}
@@ -474,14 +546,14 @@ export function ExportDialog({
               ? `Props cards: ${summary.join(', ')}.`
               : 'No props cards. To add one, select a component and choose Include in image in its Props section.'}
           </p>
-          {plan.callouts.map(
+          {cards.map(
             (c) =>
-              drift[c.id] && (
+              (c.drift || c.error) && (
                 <p key={c.id} className="export-warning">
                   {label(c)}:{' '}
-                  {drift[c.id] === 'changed'
+                  {c.drift
                     ? `props changed after you reviewed them at ${time(c.props.reviewedAt)}.`
-                    : `current props could not be read (${drift[c.id]}).`}{' '}
+                    : `current props could not be read (${c.error}).`}{' '}
                   The image shows what you reviewed. Select the component to review it again.
                 </p>
               ),
@@ -495,9 +567,9 @@ export function ExportDialog({
                 </p>
               ),
           )}
-          {plan.callouts.map(
+          {cards.map(
             (c) =>
-              c.props.stale.length > 0 && (
+              c.masked > 0 && (
                 <p key={c.id} className="export-warning">
                   {label(c)}: a collection changed after you hid a value in it, so the image masks
                   it. Select the component to check its hidden values.
@@ -518,11 +590,12 @@ export function ExportDialog({
           {image?.notes.map((note) => (
             <p key={note}>{note}</p>
           ))}
-          <p>Check the whole image before sharing: page text in the layers is never hidden.</p>
+          <p>Check the whole image before sharing. Page text and component keys remain visible.</p>
         </div>
         <div className="export-actions">
           <span className="export-status" role="status">
-            {status || (image ? `${image.width} × ${image.height} PNG` : '')}
+            {image &&
+              (status?.url === image.url ? status.text : `${image.width} × ${image.height} PNG`)}
           </span>
           {canCopy && (
             <button
@@ -624,8 +697,8 @@ export function ExportDialog({
           </div>
           {plan.callouts.length > 0 && (
             <div className="export-props">
-              {plan.callouts.map((callout) => {
-                const { rows } = callout.props;
+              {cards.map((callout) => {
+                const { rows } = callout;
 
                 return (
                   <section
@@ -645,7 +718,7 @@ export function ExportDialog({
                       <p className="export-card-note">Props not loaded</p>
                     ) : (
                       <ul>
-                        {rows.slice(0, MAX_LINES).map((row, index) => (
+                        {rows.map((row, index) => (
                           <li key={index} style={{ marginLeft: row.depth * 14 }}>
                             {row.name && (
                               <>
@@ -664,11 +737,6 @@ export function ExportDialog({
                             )}
                           </li>
                         ))}
-                        {rows.length > MAX_LINES && (
-                          <li className="export-hidden">
-                            {rows.length - MAX_LINES} more lines not shown
-                          </li>
-                        )}
                       </ul>
                     )}
                   </section>

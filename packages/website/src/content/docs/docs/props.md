@@ -49,7 +49,7 @@ To try the same card in the [interactive example](/#demo), choose **Inspect prop
 
 ## Props in exported images
 
-Choose **Include in image** in the **Props** section to show a component’s props in [exported images](/docs/explain-a-change/). The image lists its top-level props and the branches you expanded, as the inspector last showed them; it does not read the page again when you export. Hover a value and use its eye button, **Hide in props card**, to hide it; its name stays. Page text on the layers is not affected.
+Choose **Include in image** in the **Props** section to show a component’s props in [exported images](/docs/explain-a-change/). By default the card shows its top-level props and the branches you expanded, as you last reviewed them. In **Export image**, choose **Collapsed** for top-level props only, or **Show types instead of prop values** to label each visible prop with its runtime type. Hover a value in the inspector and use **Hide in props card** to hide it in either format. The card keeps the prop name. Page text and component keys remain visible. See the [prop detail demo](/docs/explain-a-change/#choose-prop-detail) for an example.
 
 A hidden entry of a list, Map, or Set, or a value inside one, such as an email in a list of users, is tracked by its position. If another value takes that position, the inspector flags the collection and the image masks all of it, until you check it and choose **Keep hidden values**.
 

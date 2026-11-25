@@ -1,0 +1,22 @@
+WEBVTT
+
+00:00:00.000 --> 00:00:03.360
+With the props cards included, open Export image.
+
+00:00:03.390 --> 00:00:05.400
+Choose 100%, then scroll to the cards.
+
+00:00:05.430 --> 00:00:08.000
+As inspected shows the nested values.
+
+00:00:08.030 --> 00:00:11.940
+Show types changes progress from 72 to number.
+
+00:00:11.970 --> 00:00:15.590
+Collapsed reduces project to one Object row.
+
+00:00:15.620 --> 00:00:19.130
+Turn types off. Progress returns to 72 while project stays collapsed.
+
+00:00:19.160 --> 00:00:21.920
+Download PNG saves the image in the preview.

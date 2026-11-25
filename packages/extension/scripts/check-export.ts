@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import { createHash } from 'node:crypto';
 import { copyFile, mkdir, mkdtemp, readFile, readdir, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -101,6 +102,19 @@ try {
       notes:document.querySelector('.export-notes').textContent,
       footer:document.querySelector('.export-footer').textContent,
     })`);
+
+  const setNesting = (value: 'collapsed' | 'inspected') =>
+    run(`(()=>{
+    const select = document.querySelector('.export-prop-controls select');
+    select.value = ${JSON.stringify(value)};
+    select.dispatchEvent(new Event('change', { bubbles: true }));
+  })()`);
+  const toggleTypes = () => click('.export-prop-controls input');
+  const waitForPng = () =>
+    h.until(
+      () => run(`!!document.querySelector('.export-preview img')`),
+      'Updated PNG did not render',
+    );
 
   const pressed = (label: string) =>
     run<string | null>(
@@ -226,6 +240,45 @@ try {
   );
   assert(png.red > 200, `The page's same-origin image is missing (${png.red} pixels)`);
 
+  await toggleTypes();
+  let cards = await exported();
+  assert(cards.cards[0].includes('name: string') && cards.cards[0].includes('people: Array'));
+  assert(cards.cards[0].includes('description: •••••• hidden'));
+  assert(cards.cards[1].includes('progress: number'));
+  await setNesting('collapsed');
+  cards = await exported();
+  assert(cards.cards[0].endsWith('project: Object'));
+  assert(cards.cards[1].includes('progress: number'));
+  assert(!cards.notes.includes('(1 hidden)'));
+  assert(cards.notes.includes('also appears in the page text'));
+  await toggleTypes();
+  cards = await exported();
+  assert(cards.cards[0].endsWith('project: Object'));
+  assert(cards.cards[1].includes('progress: 72'));
+  await setNesting('inspected');
+  assert.deepEqual((await exported()).cards, composition.cards);
+
+  // Change settings again while the previous PNG may still be rendering.
+  await setNesting('collapsed');
+  assert(
+    await run(`(async () => {
+    document.querySelector('.export-prop-controls input').click();
+    await Promise.resolve();
+    return !document.querySelector('.export-preview img') &&
+      [...document.querySelectorAll('.export-actions button')].every(button => button.disabled);
+  })()`),
+    'The old PNG could still be exported',
+  );
+  await waitForPng();
+  const previewHash = await run<string>(`(async () => {
+    const img = document.querySelector('.export-preview img');
+    await img.decode();
+    if (img.naturalHeight >= ${png.height}) throw Error('Collapsed PNG did not shrink');
+    const data = await (await fetch(img.src)).arrayBuffer();
+    return [...new Uint8Array(await crypto.subtle.digest('SHA-256', data))]
+      .map(byte => byte.toString(16).padStart(2, '0')).join('');
+  })()`);
+
   // Copying needs a focused document and a user gesture, as in a real click.
   await h.send('Emulation.setFocusEmulationEnabled', { enabled: true }, session);
   await h.send('Emulation.setFocusEmulationEnabled', { enabled: true }, panelSession);
@@ -266,6 +319,12 @@ try {
   );
   await h.until(async () => (await readFile(file)).length > 1000, 'Download did not finish');
   assert.deepEqual([...(await readFile(file)).subarray(0, 4)], [0x89, 0x50, 0x4e, 0x47]);
+  assert.equal(
+    createHash('sha256')
+      .update(await readFile(file))
+      .digest('hex'),
+    previewHash,
+  );
   await copyFile(file, 'artifacts/export.png');
 
   await closeExport();
@@ -315,6 +374,21 @@ try {
     state.cards.join('\n'),
   );
   assert(state.notes.includes('props changed after you reviewed them'), state.notes);
+  await setNesting('collapsed');
+  assert(
+    (await exported()).notes.includes('props changed after you reviewed them'),
+    'Array size changed',
+  );
+  await toggleTypes();
+  assert(
+    !(await exported()).notes.includes('props changed after you reviewed them'),
+    'A change outside the displayed rows was reported',
+  );
+  await setNesting('inspected');
+  assert(
+    (await exported()).notes.includes('props changed after you reviewed them'),
+    'The visible mask changed',
+  );
   await closeExport();
 
   // Reading them again finds another value at the hidden position: the whole
@@ -329,6 +403,8 @@ try {
   );
   assert(!state.cards.some((card) => card.includes('0: Object')), 'A masked collection leaked');
   assert(state.notes.includes('a collection changed after you hid a value'), state.notes);
+  await setNesting('collapsed');
+  assert(!(await exported()).notes.includes('a collection changed after you hid a value'));
   await closeExport();
   await run(
     `Array.from(document.querySelectorAll('.props-stale button')).find(b=>b.textContent==='Keep hidden values').click()`,
@@ -353,6 +429,7 @@ try {
   assert.equal(await pressed('Include in image'), 'false');
   await openExport();
   assert((await exported()).notes.includes('No props cards'), 'Old choices reached the image');
+  assert(!(await run(`!!document.querySelector('.export-prop-controls')`)));
   await closeExport();
 
   console.log(

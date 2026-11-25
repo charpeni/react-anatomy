@@ -32,13 +32,27 @@ _The image uses the camera angle, separation, and layers you see in the panel._
 
 Repeat for other components. They are numbered in the order you include them; each number appears on the component’s layer and on its props in the image. Your choices stay while you focus other parts of the page or capture again, and turning **Include in image** off and on keeps the values you hid. Reloading the page clears them, because its components are new.
 
-The image never reads props again when you export. If you hid an entry of a list, Map, or Set, or a value inside one, and another value later takes its place, the props inspector flags the collection, and the image masks all of it until you check its hidden values and choose **Keep hidden values**.
+If you hid an entry of a list, Map, or Set, or a value inside one, and another value later takes its place, the props inspector flags the collection. Its entries stay masked until you check the hidden values and choose **Keep hidden values**.
 
 ## 4. Export the image
 
-Choose **Export image** above the scene, or press **E**. The preview is the exact image you will share: the layers with readable component names on their edges, as in the panel, the props you chose below them, the component’s path in the page, and when the page was captured and its props reviewed. Use **100%** to proofread it at the size a pull request shows it. Exported images are sized to fit a pull request description, always use the light theme, and have twice as many pixels as their layout size for sharp text.
+Choose **Export image** above the scene, or press **E**. The preview is the exact image you will share: the layers with readable component names on their edges, as in the panel, the props you chose below them, the component’s path in the page, and when the page was captured and its props reviewed. Exported images are sized to fit a pull request description, always use the light theme, and have twice as many pixels as their layout size for sharp text.
 
-The dialog lists the props cards and how many values each hides. It also tells you when props changed after you reviewed them, when a hidden value also appears in page text, and when images or fonts could not be included.
+### Choose prop detail
+
+When you include a props card, two controls appear above the preview. They apply to all cards in this export.
+
+- **Nested props** starts at **As inspected** and shows the branches you opened in the inspector. Choose **Collapsed** to reduce each top-level object to one line, such as `project: Object`. Switch back to restore the reviewed fields.
+- **Show types instead of prop values** works with either nesting setting. With `project` expanded, its `progress: 72` row becomes `progress: number`. With `project` collapsed, the separate `ProgressBar` card still shows its own `progress` prop.
+
+<video controls playsinline preload="metadata" width="1440" height="900" aria-label="Choose nesting and runtime types for props in an exported PNG" poster="/media/docs/export-props-poster.jpg" src="/media/docs/export-props.mp4">
+  <track kind="captions" srclang="en" label="English" src="/media/docs/export-props.en.vtt" default />
+  <a href="/media/docs/export-props.mp4">Watch the 22-second prop detail demo.</a>
+</video>
+
+Scroll down in the **100%** preview to read the cards. A value you hid stays marked as hidden wherever its row is visible. Component keys and text drawn on the page can still contain values.
+
+The dialog lists the props cards and how many visible rows each marks as hidden. It also tells you when a prop would look different in the selected format, when a hidden value appears in page text, and when images or fonts could not be included.
 
 - **Copy image**, then paste it into the pull request description.
 - **Download PNG** to attach the file or keep it.
@@ -71,4 +85,4 @@ Useful details to mention:
 
 The image is one capture of one state. It does not show other routes, empty or error states, or components that are imported but not rendered. It also doesn’t show source files: point reviewers to the files in the diff for that.
 
-Props in the image are the ones you last reviewed in the inspector; exporting does not read them again. If the page changed after the capture, or props changed after you reviewed them, the export dialog says so: capture again, and select each included component to review its props.
+The PNG uses the props you last reviewed in the inspector. When you open the export dialog, it checks current props so it can warn you if the displayed rows would differ. To update the scene, capture again. To update a props card, select its component and review its props.
