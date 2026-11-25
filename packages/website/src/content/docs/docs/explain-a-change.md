@@ -52,7 +52,7 @@ When you include a props card, two controls appear above the preview. They apply
 
 Scroll down in the **100%** preview to read the cards. A value you hid stays marked as hidden wherever its row is visible. Component keys and text drawn on the page can still contain values.
 
-The dialog lists the props cards and how many visible rows each marks as hidden. It also tells you when a prop would look different in the selected format, when a hidden value appears in page text, and when images or fonts could not be included.
+The dialog warns you if a prop has changed since you reviewed it and the change is visible in the selected format. It also lists how many rows each card marks as hidden and reports any hidden values that appear in page text, along with any images or fonts it could not include.
 
 - **Copy image**, then paste it into the pull request description.
 - **Download PNG** to attach the file or keep it.
