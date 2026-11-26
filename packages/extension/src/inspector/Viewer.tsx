@@ -50,6 +50,7 @@ export function Viewer({
   onCapture,
   onPick,
   onScope,
+  onReload,
   busy,
   initialSelection,
   changed,
@@ -64,6 +65,7 @@ export function Viewer({
   onCapture: () => void;
   onPick: () => void;
   onScope: (id: string | null) => void;
+  onReload?: (injectedScript: string) => void;
   busy: boolean;
   initialSelection?: string;
   /** The page changed after this capture. */
@@ -485,9 +487,11 @@ export function Viewer({
         canInspect={canInspect}
         image={imageProps.get(selectedNode.id)}
         onImage={(image) => onImageProps(selectedNode.id, image)}
+        isCaptured={(id) => !!byId[id]}
         onFocus={isolate}
         onAction={onAction}
         onSelect={select}
+        onReload={onReload}
         onClose={() => setDetails(false)}
         scopeId={focus}
         captured={byId}

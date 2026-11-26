@@ -43,6 +43,7 @@ export default defineConfig({
             { label: 'Explain a change', slug: 'docs/explain-a-change' },
             { label: 'Read generated code', slug: 'docs/generated-code' },
             { label: 'Find the same reference', slug: 'docs/find-the-same-reference' },
+            { label: 'See who reads a context', slug: 'docs/context' },
           ],
         },
         {

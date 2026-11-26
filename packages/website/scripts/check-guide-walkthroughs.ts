@@ -62,7 +62,7 @@ async function openGuide(page: Page, base: string, slug: string) {
   return page.frameLocator('#anatomy-panel');
 }
 
-export async function checkGuideWalkthroughs(browser: Browser, base: string, shots: string) {
+async function checkReference(browser: Browser, base: string, shots: string) {
   const page = await browser.newPage({ viewport: { width: 390, height: 844 } });
   try {
     // Keep the desktop reader navigation usable while the inspector uses the extra width.
@@ -163,4 +163,37 @@ export async function checkGuideWalkthroughs(browser: Browser, base: string, sho
   } finally {
     await page.close();
   }
+}
+
+async function checkContext(browser: Browser, base: string, shots: string) {
+  const page = await browser.newPage({ viewport: { width: 1280, height: 850 } });
+  try {
+    const panel = await openGuide(page, base, 'context');
+    const readers = panel.locator('[aria-labelledby="context-readers-heading"] .context-row-name');
+    await step(page, 'Find the theme readers');
+    assert.deepEqual(await readers.allTextContents(), [
+      'ThemedHeading',
+      'ThemedBadge',
+      'ThemedToast',
+    ]);
+    await page.getByRole('button', { name: 'Next step' }).click();
+    await step(page, 'Follow the toast');
+    assert.equal(await panel.locator('.tree-row.selected .node-name').textContent(), 'ThemedToast');
+    await page.getByRole('button', { name: 'Next step' }).click();
+    await step(page, 'Inspect the outer accent provider');
+    assert.equal(await readers.count(), 5);
+    await page.getByRole('button', { name: 'Next step' }).click();
+    await step(page, 'Switch to the nested provider');
+    assert.deepEqual(await readers.allTextContents(), ['InnerAccent']);
+    await page.locator('.guide-player').screenshot({ path: shots + 'guide-context.png' });
+    await page.getByRole('button', { name: 'Back', exact: true }).click();
+    await step(page, 'Inspect the outer accent provider');
+    assert.equal(await readers.count(), 5);
+  } finally {
+    await page.close();
+  }
+}
+export async function checkGuideWalkthroughs(browser: Browser, base: string, shots: string) {
+  await checkReference(browser, base, shots);
+  await checkContext(browser, base, shots);
 }

@@ -1,4 +1,5 @@
 import type { ReferenceRequest, ReferenceSearch } from './reference-types.ts';
+import type { ContextRequests, ContextResponses } from './context-types.ts';
 
 export interface Frame {
   x: number;
@@ -166,7 +167,15 @@ export interface ImageProps {
 /** Components and their image props, in the order they were included. */
 export type ImagePropsByComponent = ReadonlyMap<string, ImageProps>;
 
-export interface PageRequests {
+export type {
+  ContextOverview,
+  ContextProviderSummary,
+  ContextReader,
+  ContextReaders,
+  ContextRecording,
+} from './context-types.ts';
+
+export interface PageRequests extends ContextRequests {
   capture: CaptureBudget;
   'capture-start': CaptureBudget;
   'capture-step': { token: string };
@@ -187,7 +196,7 @@ export interface PageRequests {
   images: { urls: string[]; sizes?: number[] };
 }
 
-export interface PageResponses {
+export interface PageResponses extends ContextResponses {
   capture: Snapshot;
   'capture-start': { token: string };
   'capture-step': CaptureStep;
@@ -224,6 +233,8 @@ export interface Transport {
   mode: 'devtools' | 'window';
   call: PageCall;
   inspect?: (id: string) => Promise<Result>;
+  /** Reloads the inspected page, running a script before any of the page's own. */
+  reload?: (injectedScript: string) => void;
   onNavigate: (callback: () => void) => () => void;
 }
 

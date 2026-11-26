@@ -1,0 +1,135 @@
+.context-toolbar select {
+  flex: 1;
+  min-width: 0;
+  height: 22px;
+  padding: 0 2px;
+  border: 1px solid transparent;
+  border-radius: 2px;
+  background: var(--surface);
+  color: var(--text);
+  font-size: 11px;
+  text-overflow: ellipsis;
+}
+.context-toolbar select:hover {
+  border-color: var(--border);
+}
+.context-toolbar select:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -1px;
+}
+.context-body {
+  font-size: 11px;
+}
+.context-body h3 {
+  margin: 8px 0 2px;
+  font-size: 11px;
+  font-weight: 600;
+}
+.inspector .context-provider {
+  gap: 2px 12px;
+}
+.inspector .context-provider dd {
+  text-align: left;
+}
+.context-list {
+  margin: 0 -5px;
+  padding: 0;
+  list-style: none;
+}
+.context-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: flex-start;
+  gap: 1px 6px;
+  width: 100%;
+  padding: 2px 5px;
+  border-radius: 2px;
+  text-align: left;
+}
+.context-row:hover:not(:disabled) {
+  background: var(--hover);
+}
+.context-row[aria-current] {
+  background: var(--selection);
+}
+.context-row-name {
+  font: 11px/1.5 var(--mono);
+  color: var(--component);
+  overflow-wrap: anywhere;
+}
+.context-row:disabled .context-row-name {
+  color: var(--muted);
+}
+.context-row-name small {
+  margin-left: 5px;
+  color: var(--muted);
+  font-size: 10px;
+}
+.context-tag {
+  padding: 0 4px;
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  color: var(--muted);
+  font-size: 9px;
+  line-height: 13px;
+}
+.context-row-evidence {
+  margin-left: auto;
+  color: var(--text);
+  font-size: 10px;
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+.context-note {
+  margin: 4px 0;
+  color: var(--muted);
+  font-size: 10px;
+  line-height: 1.5;
+}
+.context-link {
+  display: inline;
+  padding: 0;
+  color: var(--accent);
+  font: inherit;
+  text-decoration: underline;
+}
+.context-link:disabled {
+  color: inherit;
+  text-decoration: none;
+}
+.context-bystanders {
+  margin-top: 6px;
+}
+.context-bystanders > summary {
+  font-weight: 600;
+  cursor: default;
+}
+.context-bystanders > summary::marker {
+  color: var(--muted);
+  font-size: 9px;
+}
+.context-evidence {
+  margin: 8px 0 6px;
+  padding: 5px 7px;
+  border-left: 2px solid var(--border);
+  background: var(--toolbar);
+  color: var(--muted);
+  font-size: 10px;
+  line-height: 1.5;
+}
+.context-evidence strong {
+  color: var(--text);
+  font-weight: 600;
+}
+.context-evidence[data-evidence='sampled'] {
+  border-left-color: var(--component);
+}
+.context-evidence[data-evidence='measured'] {
+  border-left-color: var(--accent);
+}
+.context-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+}

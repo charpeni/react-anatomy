@@ -1,0 +1,91 @@
+---
+title: See who reads a context
+description: Find the components that read one context provider and count their renders during a recording.
+---
+
+import GuideBrowser from '../../../components/GuideBrowser.astro';
+
+<video
+  controls
+  playsinline
+  preload="none"
+  width="1600"
+  height="900"
+  poster="/media/docs/inspect-context-readers.jpg"
+  aria-label="Find theme subscribers and measure a theme change"
+>
+  <source src="/media/docs/inspect-context-readers.webm" type="video/webm" />
+  <source src="/media/docs/inspect-context-readers.mp4" type="video/mp4" />
+  <track
+    kind="captions"
+    srclang="en"
+    label="English"
+    src="/media/docs/inspect-context-readers.vtt"
+  />
+  <a href="/media/docs/inspect-context-readers.mp4">Watch the video</a>
+</video>
+
+<details>
+  <summary>Video transcript</summary>
+
+Switch the theme on this page and even the caption changes color. Which components actually read the theme, and which render when it changes?
+
+Context readers shows who reads the value from one provider. A render recording answers the second question.
+
+With the heading selected, open Context readers. Three components read this provider, including the toast rendered in a portal.
+
+With render measurement enabled, choose Record renders. Switch the theme once, then stop recording.
+
+The heading, badge, and toast each rendered once. Under Not readers, the caption recorded zero renders. Its color came from CSS.
+
+</details>
+
+Select a component and open **Context readers** in the inspector. Anatomy reads the page when you open the section. It starts with a provider the component reads, or the nearest provider above it. To inspect another provider, choose it from the menu. Providers the selected component reads appear first.
+
+Select a reader to see that instance in the tree and 3D view. You can move between readers without losing your place in the provider’s list.
+
+<GuideBrowser />
+
+## How providers and readers are matched
+
+Readers come from the list of contexts React keeps for each component’s latest render. Each reader belongs to the nearest provider of that context above it.
+
+- Anatomy matches the context object itself. An alias or re-export refers to the same context. The menu numbers distinct contexts that share a display name, and contexts with no name.
+- With **nested providers** of the same context, components under the inner provider read its value. The outer provider links to the inner one and shows its reader count.
+- **Portals** keep their place in the React tree, so a reader inside one still belongs to the provider above it.
+- **Separate roots** do not share providers. A reader with no provider above it in its own root is listed under the context’s **default value**.
+- **Memoized components** are readers like any other and are tagged `memo`. A `<Context.Consumer>` is attributed to the component that renders it and tagged `Consumer`.
+
+**Not readers** lists the other components below the provider. A change to the provider’s value does not, by itself, render them.
+
+If a component reads context conditionally, it appears in the list only when its latest render took that branch.
+
+## Three kinds of evidence
+
+| Evidence             | What it shows                                                                                                                                                                         | What it cannot show                                                                                          |
+| -------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------ |
+| **Dependencies**     | Who subscribed to the context in their latest render. Always available.                                                                                                               | Whether anything re-rendered.                                                                                |
+| **Sampled values**   | Whether the provider holds a different value than at the baseline, and which readers have read a new value since. Use **Refresh** to sample again and **Set baseline** to start over. | How many times anything rendered. Nothing about components that are not readers.                             |
+| **Measured renders** | For readers and non-readers: the number of commits in which React rendered the component while you recorded, and how many of a reader’s renders came with a new provider value.       | Why a component rendered. A render with a new value can have other causes too, such as its parent rendering. |
+
+Sampled values compare identity, the way React does. A provider that receives a new object with equal contents holds a different value.
+
+## Measuring renders
+
+Anatomy counts a render when React reports a commit that rendered the component. A DOM change or a new prop alone cannot establish that count.
+
+React sends those reports to a DevTools hook that exists before React loads. If the page already has one, for example from React DevTools or a development server’s Fast Refresh, **Record renders** is available immediately.
+
+Otherwise the DevTools panel offers **Reload page to measure renders**. The reload installs a minimal hook before the page’s scripts run. It resets the page’s state and applies to that page load only. React DevTools, when installed, still installs its own hook and takes precedence. The toolbar window cannot reload a page this way; open the DevTools panel instead.
+
+Choose **Record renders**, interact with the page, and watch the counts update. **Stop recording** or closing the section stops the recording. If you close the panel, Anatomy removes the recorder within two minutes.
+
+This is the same signal the React DevTools Profiler uses. Strict Mode’s extra development calls, discarded renders, and updates that bail out without a committed render add nothing to the count. Components that unmount during a recording leave the list.
+
+## Bounded and local
+
+Each scan checks up to 50,000 Fibers in the committed tree and has a time budget of about 50 ms. It covers up to 300 providers and lists up to 300 readers. A recording stops after 10,000 commits and checks up to 20,000 Fibers per commit. For each component, Anatomy follows up to 5,000 context reads or 200 distinct contexts.
+
+When a scan stops early, the panel shows lower bounds such as “at least 3” or “≥ 2 renders.” If Anatomy stops partway through a component’s dependencies before it finds the context, it leaves that component out of both the reader and non-reader lists.
+
+Values stay in the inspected page. The panel receives a short preview of the provider’s value and opaque identity tokens. Nothing is uploaded.

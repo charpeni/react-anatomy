@@ -28,6 +28,7 @@ export function createTransport(): Transport {
         evaluate(
           `(()=>{const element=(${pageAgent.toString()})(${JSON.stringify({ action: 'element', id })});if(!element)return {ok:false,message:'This component has no current DOM output. Capture the page again.'};inspect(element);return {ok:true};})()`,
         ),
+      reload: (injectedScript) => chrome.devtools.inspectedWindow.reload({ injectedScript }),
       onNavigate: (callback: () => void) => {
         chrome.devtools.network.onNavigated.addListener(callback);
 
