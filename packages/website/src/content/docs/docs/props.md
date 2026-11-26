@@ -70,3 +70,7 @@ Choose **Find same reference** beside a top-level object, array, or function pro
 Each request returns at most 50 entries or 10,000 string characters. The inspector caps collections at 10,000 entries, strings at 1,000,000 characters, and retained value handles at 5,000 per session. It shows when these limits are reached.
 
 Props stay in the inspected page until requested and are not uploaded to a service.
+
+## Investigate unused props
+
+Open [Unused props](/docs/unused-props/) to check whether the code reads or forwards a prop passed to the selected instance.

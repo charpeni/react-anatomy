@@ -1,0 +1,97 @@
+body {
+  margin: 0;
+  font:
+    14px/1.4 system-ui,
+    sans-serif;
+  background: #f6f7f9;
+  color: #1c2430;
+}
+.billing {
+  max-width: 720px;
+  margin: 24px auto;
+  display: grid;
+  gap: 14px;
+}
+.toolbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.toolbar h1 {
+  margin: 0;
+  font-size: 22px;
+}
+.plans {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+.plan-card {
+  margin: 0;
+  padding: 14px;
+  border: 1px solid #d5dae2;
+  border-radius: 10px;
+  background: #fff;
+}
+.plan-card.selected {
+  border-color: #3b6cf6;
+  box-shadow: 0 0 0 2px #3b6cf633;
+}
+.plan-card h2 {
+  margin: 0 0 4px;
+  font-size: 16px;
+}
+.price {
+  margin: 0 0 10px;
+  color: #55606f;
+}
+.field {
+  display: grid;
+  gap: 4px;
+}
+.field input {
+  padding: 6px 8px;
+  border: 1px solid #c7ced8;
+  border-radius: 6px;
+}
+.save-bar {
+  padding: 8px;
+  border-radius: 8px;
+  background: #fff;
+  border: 1px solid #d5dae2;
+  transition: background 0.4s;
+}
+.save-bar.flash {
+  background: #e8f0ff;
+}
+.seats {
+  width: 100%;
+}
+.empty,
+.notice,
+.invoice {
+  margin: 0;
+  padding: 10px;
+  border-radius: 8px;
+  background: #fff;
+  border: 1px dashed #c7ced8;
+}
+.chip {
+  display: inline-block;
+  margin-right: 6px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: #e6e9ee;
+}
+.footer,
+.hint,
+.plan-link {
+  color: #55606f;
+}
+button {
+  padding: 5px 10px;
+  border-radius: 6px;
+  border: 1px solid #c7ced8;
+  background: #fff;
+  cursor: pointer;
+}

@@ -62,6 +62,7 @@ React Anatomy is an inspector. It helps you read and explain structure. It does 
 - [Read generated code](/docs/generated-code/): look at what an AI agent actually rendered before you take ownership of it.
 - [Find the same reference](/docs/find-the-same-reference/) to see which mounted instances received the same callback.
 - [See who reads a context](/docs/context/) to find the mounted components that subscribe to a particular provider.
+- [Investigate unused props](/docs/unused-props/) to check whether the receiver or its children read a prop supplied by one JSX element.
 
 For details on the controls, see [Layers, focus, and controls](/docs/explore/) and [Props inspector](/docs/props/).
 

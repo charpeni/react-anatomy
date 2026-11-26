@@ -1,0 +1,157 @@
+.unused-props > summary > .unused-count.found {
+  color: var(--text);
+  font-weight: 600;
+}
+.unused-body {
+  font-size: 11px;
+  line-height: 1.45;
+}
+.unused-body p {
+  margin: 0 0 6px;
+}
+.unused-body ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.unused-muted,
+.unused-caveat {
+  color: var(--muted);
+}
+.unused-caveat {
+  padding-left: 7px;
+  border-left: 2px solid var(--border);
+}
+.unused-scope {
+  margin-top: 8px;
+  font-size: 10px;
+}
+.unused-summary {
+  font-weight: 600;
+}
+.unused-group {
+  margin: 0 -9px;
+  border-top: 1px solid var(--border);
+}
+.unused-group > summary {
+  padding: 4px 9px;
+  font-weight: 600;
+  cursor: default;
+}
+.unused-group > summary > span {
+  color: var(--muted);
+  font-weight: 400;
+}
+.unused-group > summary::marker {
+  font-size: 9px;
+  color: var(--muted);
+}
+.unused-group > p {
+  padding: 0 9px;
+}
+.unused-row-head {
+  display: flex;
+  gap: 8px;
+  align-items: baseline;
+  width: 100%;
+  padding: 3px 9px;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+}
+.unused-row-head:hover {
+  background: var(--hover);
+}
+.unused-name {
+  font-family: var(--mono);
+  color: var(--component);
+}
+.unused-row-head::before {
+  content: '';
+  flex: none;
+  align-self: center;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  border: 1.5px solid var(--muted);
+  box-sizing: border-box;
+}
+.unused-row[data-tier='candidate'] > .unused-row-head::before,
+.unused-row[data-tier='dead-end'] > .unused-row-head::before {
+  border-color: var(--string);
+  background: var(--string);
+}
+.unused-row[data-tier='this-render'] > .unused-row-head::before,
+.unused-row[data-tier='unknown'] > .unused-row-head::before {
+  border-color: var(--muted);
+  border-style: dashed;
+  border-radius: 0;
+}
+.unused-row[data-tier='indirect'] > .unused-row-head::before {
+  border-color: var(--accent);
+}
+.unused-row[data-tier='used'] > .unused-row-head::before,
+.unused-row[data-tier='reserved'] > .unused-row-head::before {
+  border-color: var(--accent);
+  background: var(--accent);
+}
+.unused-label {
+  margin-left: auto;
+  color: var(--muted);
+  text-align: right;
+}
+.unused-row[data-tier='candidate'] .unused-label,
+.unused-row[data-tier='dead-end'] .unused-label {
+  color: var(--string);
+}
+.unused-row-body {
+  padding: 2px 9px 8px 24px;
+}
+.unused-evidence {
+  margin-bottom: 5px;
+}
+.unused-evidence-label {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  color: var(--muted);
+}
+.unused-location {
+  flex: none;
+  font-family: var(--mono);
+  font-size: 10px;
+}
+.unused-evidence code {
+  display: block;
+  padding: 2px 5px;
+  border-radius: 3px;
+  background: var(--toolbar);
+  font: 10.5px/1.5 var(--mono);
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.unused-evidence mark {
+  background: var(--selection);
+  color: inherit;
+  border-radius: 2px;
+}
+.unused-unavailable strong {
+  display: block;
+  margin: 3px 0;
+}
+.unused-tag {
+  display: inline-block;
+  padding: 0 5px;
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  color: var(--muted);
+  font-size: 10px;
+}
+
+.unused-file-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
