@@ -3,7 +3,7 @@ import { createHash } from 'node:crypto';
 import { copyFile, mkdir, mkdtemp, readFile, readdir, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { launchExtension, openDevtoolsPanel } from './chrome-harness.ts';
+import { focusDevtoolsPanel, launchExtension, openDevtoolsPanel } from './chrome-harness.ts';
 import { startFixtureServer } from './fixture-server.ts';
 
 // Exports a focused subtree with chosen props from the real DevTools panel, and
@@ -280,15 +280,7 @@ try {
   })()`);
 
   // Copying needs a focused document and a user gesture, as in a real click.
-  await h.send('Emulation.setFocusEmulationEnabled', { enabled: true }, session);
-  await h.send('Emulation.setFocusEmulationEnabled', { enabled: true }, panelSession);
-  await h.evaluate(
-    `(()=>{
-      const find=(root)=>{for(const el of root.querySelectorAll('*')){if(el.tagName==='IFRAME'&&/panel\\.html/.test(el.src))return el;if(el.shadowRoot){const found=find(el.shadowRoot);if(found)return found;}}return null;};
-      find(document)?.focus();
-    })()`,
-    session,
-  );
+  await focusDevtoolsPanel(h, session, panelSession);
   await h.send(
     'Runtime.evaluate',
     {
@@ -373,7 +365,11 @@ try {
     state.cards.some((card) => card.includes('0: •••••• hidden')),
     state.cards.join('\n'),
   );
-  assert(state.notes.includes('props changed after you reviewed them'), state.notes);
+  // The preview and the live-prop comparison finish independently.
+  await h.until(
+    async () => (await exported()).notes.includes('props changed after you reviewed them'),
+    'The export did not report the updated props',
+  );
   await setNesting('collapsed');
   assert(
     (await exported()).notes.includes('props changed after you reviewed them'),

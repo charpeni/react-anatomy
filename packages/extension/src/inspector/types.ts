@@ -1,3 +1,5 @@
+import type { ReferenceRequest, ReferenceSearch } from './reference-types.ts';
+
 export interface Frame {
   x: number;
   y: number;
@@ -175,6 +177,7 @@ export interface PageRequests {
   'prop-preview': { id: string; document?: string; path: string[] };
   'props-read': { token: string; handle: string; offset: number; filter?: string };
   'props-release': { token: string };
+  'same-reference': ReferenceRequest;
   highlight: { id: string };
   element: { id: string };
   clear: object;
@@ -203,6 +206,7 @@ export interface PageResponses {
   'prop-preview': Result<Pick<PropValue, 'type' | 'preview'>>;
   'props-read': Result<PropPage>;
   'props-release': Result;
+  'same-reference': Result<ReferenceSearch>;
   highlight: Result;
   element: Element | null;
   clear: Result;

@@ -19,6 +19,7 @@ import type {
   PropValue,
   Result,
 } from './types.ts';
+import type { ReferenceCoverage, ReferenceMatch } from './reference-types.ts';
 
 // This function is the entire inspected-page interface. Keep its dependencies
 // inside the function: Chrome executes it in the page's MAIN world.
@@ -753,6 +754,366 @@ export function pageAgent(request: PageRequest = { action: 'capture' }): PageRes
       request.offset,
       typeof request.filter === 'string' ? request.filter.slice(0, 200) : '',
     );
+  }
+
+  // Find same reference: which mounted components currently hold the selected
+  // prop's value by identity. One synchronous, bounded pass keeps the answer
+  // coherent, because React cannot commit halfway through it. Only own data
+  // properties are compared, so no getter or callback runs, and equal
+  // primitives never match. The compared values stay in the page.
+  if (request.action === 'same-reference') {
+    state.epoch ||= `e${Date.now().toString(36)}${Math.random().toString(36).slice(2, 8)}`;
+
+    if (request.epoch && request.epoch !== state.epoch) {
+      return {
+        ok: false,
+        message: 'The page was reloaded since this search. Select the prop and search again.',
+      };
+    }
+
+    const source = currentFiber(request.id);
+    const sourceName = source && componentName(source);
+
+    if (!source || !sourceName) {
+      return { ok: false, message: 'This component is no longer mounted. Capture the page again.' };
+    }
+
+    const prop = String(request.name).slice(0, 100);
+    let target: unknown;
+
+    try {
+      const props = source.memoizedProps;
+      let key: PropertyKey = String(request.name);
+
+      if (props === null || typeof props !== 'object') {
+        return { ok: false, message: 'This component has no props to match.' };
+      }
+
+      if (request.symbol) {
+        const symbols = Reflect.ownKeys(props).filter(
+          (candidate) => typeof candidate === 'symbol' && String(candidate) === request.name,
+        );
+
+        if (symbols.length !== 1) {
+          return {
+            ok: false,
+            message: `This component no longer receives ${prop}. Refresh props.`,
+          };
+        }
+
+        key = symbols[0];
+      }
+
+      const descriptor = Object.getOwnPropertyDescriptor(props, key);
+
+      if (!descriptor) {
+        return { ok: false, message: `This component no longer receives ${prop}. Refresh props.` };
+      }
+
+      if (!('value' in descriptor)) {
+        return {
+          ok: false,
+          message: 'Accessor props are not evaluated, so they cannot be matched.',
+        };
+      }
+
+      target = descriptor.value;
+    } catch {
+      return { ok: false, message: 'This value cannot be inspected.' };
+    }
+
+    if (target === null || (typeof target !== 'object' && typeof target !== 'function')) {
+      return {
+        ok: false,
+        message: `Only objects, arrays, and functions have an identity to match. ${prop} now holds a primitive value.`,
+      };
+    }
+
+    const scope = request.scopeId ? currentFiber(request.scopeId) : null;
+
+    if (request.scopeId && !scope) {
+      return {
+        ok: false,
+        message:
+          'The focused component is no longer mounted. Return to Whole page and search again.',
+      };
+    }
+
+    const maxComponents =
+      typeof request.maxComponents === 'number' && request.maxComponents >= 1
+        ? Math.min(Math.floor(request.maxComponents), 20000)
+        : 5000;
+    const maxFibers = 50000;
+    const maxMatches = 200;
+    const maxKeys = 500;
+    const started = performance.now();
+    const coverage: ReferenceCoverage = {
+      components: 0,
+      accessors: 0,
+      unreadable: 0,
+      keyLimited: 0,
+      limit: null,
+      ancestors: true,
+      roots: 1,
+    };
+    const matches: ReferenceMatch[] = [];
+    let matched = 0;
+    let gaps = 0;
+    let fibers = 0;
+    let ancestorMatched = false;
+    let sourceSeen = false;
+    let nextClock = 64;
+
+    // A current Fiber's `return` can point at either side of an alternate pair.
+    // Use the chain only to recognize ancestors; read props from the current
+    // tree, walking down from the root.
+    const chain = new Set<Fiber>();
+    let top = source;
+
+    for (let fiber = source.return, steps = 0; fiber && steps++ < 1000; fiber = fiber.return) {
+      chain.add(fiber);
+
+      if (fiber.alternate) {
+        chain.add(fiber.alternate);
+      }
+
+      top = fiber;
+    }
+
+    const sourceRoot =
+      top.tag === 3 ? ((top.stateNode as FiberRoot | null)?.current ?? null) : null;
+
+    const over = () => {
+      if (!coverage.limit) {
+        coverage.limit =
+          coverage.components >= maxComponents
+            ? 'components'
+            : matched >= maxMatches
+              ? 'matches'
+              : fibers >= maxFibers
+                ? 'fibers'
+                : fibers >= nextClock && performance.now() - started > 30
+                  ? 'time'
+                  : null;
+
+        if (fibers >= nextClock) {
+          nextClock = fibers + 64;
+        }
+      }
+
+      return !!coverage.limit;
+    };
+
+    const matching = (fiber: Fiber) => {
+      const names: string[] = [];
+      const props = fiber.memoizedProps;
+
+      coverage.components++;
+
+      if (props === null || typeof props !== 'object') {
+        return names;
+      }
+
+      try {
+        const keys = Reflect.ownKeys(props);
+
+        if (keys.length > maxKeys) {
+          coverage.keyLimited++;
+        }
+
+        for (const key of keys.slice(0, maxKeys)) {
+          const descriptor = Object.getOwnPropertyDescriptor(props, key);
+
+          if (!descriptor?.enumerable) {
+            continue;
+          }
+
+          if (!('value' in descriptor)) {
+            coverage.accessors++;
+          } else if (descriptor.value === target) {
+            names.push(String(key).slice(0, 100));
+          }
+        }
+      } catch {
+        coverage.unreadable++;
+      }
+
+      return names;
+    };
+
+    const record = (
+      fiber: Fiber,
+      name: string,
+      names: string[],
+      relation: ReferenceMatch['relation'],
+      outside: boolean,
+    ) => {
+      const path: string[] = [];
+      let pathTruncated = false;
+
+      for (let parent = fiber.return, steps = 0; parent && steps++ < 1000; parent = parent.return) {
+        const parentName = componentName(parent);
+
+        if (!parentName) {
+          continue;
+        }
+
+        if (path.length === 6) {
+          pathTruncated = true;
+          break;
+        }
+
+        path.unshift(String(parentName).slice(0, 150));
+      }
+
+      matches.push({
+        id: fiberId(fiber),
+        name: String(name).slice(0, 150),
+        key: fiber.key === null ? null : String(fiber.key).slice(0, 100),
+        props: names.slice(0, 8),
+        moreProps: Math.max(0, names.length - 8),
+        path,
+        pathTruncated,
+        relation,
+        outside,
+      });
+    };
+
+    const visit = (fiber: Fiber, inside: boolean, outside: boolean) => {
+      const name = componentName(fiber);
+
+      fibers++;
+
+      if (!name) {
+        return;
+      }
+
+      const relation =
+        fiber === source
+          ? 'source'
+          : chain.has(fiber)
+            ? 'ancestor'
+            : inside
+              ? 'descendant'
+              : 'other';
+      const names = matching(fiber);
+
+      sourceSeen ||= fiber === source;
+
+      if (names.length) {
+        matched++;
+        ancestorMatched ||= relation === 'ancestor';
+        record(fiber, name, names, relation, outside);
+      } else if (relation === 'ancestor' && ancestorMatched && gaps++ < 20) {
+        record(fiber, name, [], 'gap', outside);
+      }
+    };
+
+    const queue: { fiber: Fiber; inside: boolean }[] = [];
+
+    if (scope) {
+      // Ancestors above the focused subtree still show where the reference is
+      // held on the way down to the selected instance.
+      let fiber: Fiber | null = sourceRoot;
+
+      coverage.ancestors = !!fiber;
+
+      while (fiber && fiber !== scope && !over()) {
+        visit(fiber, false, true);
+
+        if (fiber === source) {
+          break;
+        }
+
+        let next: Fiber | null = null;
+
+        for (
+          let child: Fiber | null = fiber.child;
+          child && fibers++ < maxFibers;
+          child = child.sibling
+        ) {
+          if (child === source || child === scope || chain.has(child)) {
+            next = child;
+            break;
+          }
+        }
+
+        coverage.ancestors = !!next;
+        fiber = next;
+      }
+
+      let inside = false;
+      for (let parent = scope.return; parent && !over(); parent = parent.return) {
+        fibers++;
+        if (parent === source || parent === source.alternate) {
+          inside = true;
+          break;
+        }
+      }
+      queue.push({ fiber: scope, inside });
+    } else {
+      const roots = new Set<Fiber>(sourceRoot ? [sourceRoot] : []);
+
+      for (const handle of state.rootHandles) {
+        if (handle.current) {
+          roots.add(handle.current);
+        }
+      }
+
+      coverage.roots = roots.size;
+      queue.push(...Array.from(roots, (fiber) => ({ fiber, inside: false })).reverse());
+    }
+
+    // Depth first, in the order the component tree lists its rows.
+    while (queue.length && !over()) {
+      const { fiber, inside } = queue.pop()!;
+      const children: Fiber[] = [];
+
+      visit(fiber, inside, false);
+
+      for (let child = fiber.child; child; child = child.sibling) {
+        if (queue.length + children.length + fibers >= maxFibers) {
+          coverage.limit ||= 'fibers';
+          break;
+        }
+
+        children.push(child);
+      }
+
+      for (let index = children.length - 1; index >= 0; index--) {
+        queue.push({ fiber: children[index], inside: inside || fiber === source });
+      }
+    }
+
+    if (!sourceSeen) {
+      record(source, sourceName, matching(source), 'source', !!scope);
+    }
+
+    const described = propDescriptor(target, {
+      id: request.id,
+      props: null,
+      values: new Map(),
+      seen: new WeakMap(),
+    });
+
+    return {
+      ok: true,
+      epoch: state.epoch,
+      observedAt: Date.now(),
+      source: {
+        id: request.id,
+        name: String(sourceName).slice(0, 150),
+        key: source.key === null ? null : String(source.key).slice(0, 100),
+        prop,
+        type: described.type,
+        preview: described.preview,
+      },
+      scope: scope
+        ? { id: request.scopeId!, name: String(componentName(scope) || 'Anonymous').slice(0, 150) }
+        : null,
+      matches,
+      coverage,
+    };
   }
 
   if (request.action === 'search') {

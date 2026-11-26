@@ -7,6 +7,7 @@ import { fileURLToPath } from 'node:url';
 import { chromium, type Page, type Locator } from 'playwright';
 import { browserOptions } from '../../extension/scripts/browser-options.ts';
 import { checkNotFound } from './check-not-found.ts';
+import { checkGuideWalkthroughs } from './check-guide-walkthroughs.ts';
 import { checkHero } from './check-hero.ts';
 import { checkDemoIntroduction } from './check-demo-introduction.ts';
 
@@ -108,6 +109,7 @@ async function assertPageScrollsOver(page: Page, target: Locator) {
 try {
   await checkDemoIntroduction(browser, base, shots);
   await checkHero(browser, base, shots);
+  await checkGuideWalkthroughs(browser, base, shots);
 
   const page = await browser.newPage({ viewport: { width: 1440, height: 1050 } });
 

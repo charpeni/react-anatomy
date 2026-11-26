@@ -2,6 +2,7 @@ import type { ComponentNode, ImageProps, PageCall } from './types.ts';
 import { Glyph } from './Glyph.tsx';
 import { CopyComponentContext } from './CopyComponentContext.tsx';
 import { PropsInspector } from './PropsInspector.tsx';
+import { SameReference } from './SameReference.tsx';
 
 // The details pane for the selected component: actions on the page, live
 // props, measured layout, and the chain of components above it.
@@ -21,6 +22,9 @@ export function ComponentDetails({
   onAction,
   onSelect,
   onClose,
+  scopeId,
+  captured,
+  onHover,
 }: {
   node: ComponentNode;
   path: ComponentNode[];
@@ -37,6 +41,9 @@ export function ComponentDetails({
   onAction: (action: 'inspect' | 'highlight', id: string) => void;
   onSelect: (id: string) => void;
   onClose: () => void;
+  scopeId: string | null;
+  captured: Record<string, ComponentNode>;
+  onHover: (id: string | null) => void;
 }) {
   return (
     <aside className="inspector" aria-label="Component details">
@@ -101,6 +108,16 @@ export function ComponentDetails({
           call={call}
           image={image}
           onImage={onImage}
+        />
+        <SameReference
+          call={call}
+          capturedAt={capturedAt}
+          scopeId={scopeId}
+          selectedId={node.id}
+          captured={captured}
+          onSelect={onSelect}
+          onFocus={onFocus}
+          onHover={onHover}
         />
         <details className="inspector-section" open>
           <summary>Layout</summary>

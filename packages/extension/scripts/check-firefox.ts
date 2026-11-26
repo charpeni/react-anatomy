@@ -403,6 +403,43 @@ try {
     `Passed: navigation, empty state, reconnect, native theme and production capture (${production.count} components).`,
   );
 
+  await h.navigate(fixture.url + '/references');
+  await h.until(
+    () => run(`document.body.textContent.includes('PortalAction')`),
+    'Reference fixture did not load',
+  );
+  await select('Form');
+  await h.until(
+    () => run(`Boolean(document.querySelector('[aria-label="Find same reference as handler"]'))`),
+    'Reference action missing',
+  );
+  await click('Find same reference as handler');
+  await h.until(
+    () =>
+      run(
+        `document.querySelector('.reference-summary')?.textContent.startsWith('11 component instances')`,
+      ),
+    'Same reference search failed',
+  );
+  assert.equal(
+    await run(
+      `Array.from(document.querySelectorAll('.reference-list > li'),li=>li.textContent.replace(/c\\d+/g,'')).join('|')`,
+    ),
+    'Toolbar.onSave|Panel.onSubmitancestor|Relayno matching prop|Form.handlersearched from|SubmitButton.onPressdescendant|NoOutput.onSavedescendant|Dialog.handlerdescendant|PortalAction.actiondescendant|Row.onSelect× 3key="alpha"key="beta"key="gamma"|MemoLeaf.onSave',
+  );
+  await run(
+    `Array.from(document.querySelectorAll('.reference-instance')).find(el=>el.textContent.includes('PortalAction')).click()`,
+  );
+  await h.until(
+    () => run(`document.querySelector('.inspector-heading h2').textContent==='PortalAction'`),
+    'Reference match was not selected',
+  );
+  assert.equal(await h.page('window.referenceGetterCalls||0'), 0);
+  assert.equal(await h.page('window.referenceCallbackCalls||0'), 0);
+  console.log(
+    'Passed: same reference across renamed props, a gap, a portal and repeated instances.',
+  );
+
   await h.navigate(fixture.url + '/');
   await h.until(
     () => run(`document.body.textContent.includes('PropsFixture')`),
@@ -422,6 +459,14 @@ try {
     () =>
       popup(`document.querySelector('.props-inspector')?.textContent.includes('project: Object')`),
     'Toolbar props failed',
+  );
+  await popup(`document.querySelector('[aria-label="Find same reference as project"]').click()`);
+  await h.until(
+    () =>
+      popup(
+        `document.querySelector('.reference-summary')?.textContent.startsWith('No other component holds this reference')`,
+      ),
+    'Toolbar same reference search failed',
   );
   assert.equal(await popup(`document.querySelector('[role=alert]')?.textContent||null`), null);
   await writeFile(

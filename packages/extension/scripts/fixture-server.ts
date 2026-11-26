@@ -41,7 +41,9 @@ export async function startFixtureServer(port = 0) {
                 ? 'dist/layout-app.html'
                 : path === '/fidelity'
                   ? 'dist/fidelity-app.html'
-                  : null;
+                  : path === '/references'
+                    ? 'dist/reference-app.html'
+                    : null;
 
     if (!file) {
       res.writeHead(404).end('Not found');

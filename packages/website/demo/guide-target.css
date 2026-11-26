@@ -1,0 +1,93 @@
+@import '../src/styles/attention.css';
+
+/*
+ * One ring marks the walkthrough target: a teal stroke that floats a clear gap
+ * off the element and never tints its content. The loop is an echo of that ring,
+ * which leaves it, travels a fixed distance outward, glows, and fades.
+ */
+:root {
+  --guide-gap: 5px;
+  --guide-stroke: 2px;
+  --guide-reach: 6px;
+  --guide-accent: light-dark(#00757e, #68e4e2);
+  --guide-glow: light-dark(#00b7c5, #51dbe5);
+}
+
+/* Leave room for the ring, and part of its echo, on rows that span the details pane. */
+[data-guide-panel] .inspector-scroll {
+  padding-inline: calc(var(--guide-gap) + var(--guide-stroke) + 4px);
+}
+
+/*
+ * Preserve positioned targets such as the link button at the end of a prop row.
+ * Text rows have square corners, so give them the radius the panel's buttons use.
+ */
+:where([data-guide-target]) {
+  position: relative;
+  border-radius: 2px;
+}
+
+/* An outline follows the target's corners and is never clipped by the target. */
+html [data-guide-target] {
+  outline: var(--guide-stroke) solid var(--guide-accent);
+  outline-offset: var(--guide-gap);
+}
+
+/* Rows in the pane sit a few pixels apart, so move their neighbors clear of the ring. */
+[data-guide-panel] [data-guide-target]:not([data-guide-target='advance']) {
+  margin-block: calc(var(--guide-gap) + var(--guide-stroke) + 2px);
+}
+
+/* Reserve the padded hit area between adjacent prop buttons. */
+.prop-entry:has(> [data-guide-target='advance']) {
+  margin-block: calc(var(--guide-gap) + var(--guide-stroke));
+}
+
+/* The props list scrolls on its own, which would cut the echo beside a prop's action. */
+[data-guide-panel] .property-list:has([data-guide-target]) {
+  overflow: visible;
+  max-height: none;
+}
+
+/* The step's own action reads as the primary button, and hovering keeps that fill. */
+html button[data-guide-target='advance']:enabled {
+  border-radius: 3px;
+  background: var(--guide-accent);
+  color: var(--surface, white);
+  opacity: 1;
+  cursor: pointer;
+}
+
+/* Include the space inside the ring in the button's hit area. */
+button[data-guide-target='advance']::before {
+  content: '';
+  position: absolute;
+  inset: calc(0px - var(--guide-gap) - var(--guide-stroke));
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  /*
+   * The echo is an outline on a box the size of the target. Moving it by its
+   * offset grows every side by the same distance on an icon, a row, or a card,
+   * and an outline adds nothing to the scrollable area of the pane.
+   */
+  [data-guide-target]::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    outline: var(--guide-stroke) solid var(--guide-accent);
+    outline-offset: var(--guide-gap);
+    filter: drop-shadow(0 0 2px var(--guide-glow)) drop-shadow(0 0 5px var(--guide-glow));
+    pointer-events: none;
+    animation: anatomy-guide-echo var(--anatomy-attention-timing) infinite;
+  }
+}
+
+@keyframes anatomy-guide-echo {
+  75%,
+  to {
+    outline-offset: calc(var(--guide-gap) + var(--guide-reach));
+    outline-color: transparent;
+  }
+}

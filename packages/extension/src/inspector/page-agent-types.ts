@@ -65,6 +65,8 @@ export interface AgentState {
   rootHandles: FiberRoot[];
   propSessions: Map<string, PropSession>;
   propSequence: number;
+  /** Identifies this document's instance IDs to a repeated reference search. */
+  epoch?: string;
   jobSequence?: number;
   captureJob?: { token: string; iterator: Generator<void, Snapshot> };
   searchJob?: {

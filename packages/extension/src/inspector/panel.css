@@ -1410,3 +1410,124 @@ kbd {
 .component-context-form [role='status']:empty {
   display: none;
 }
+
+/* Find same reference */
+.prop-entry:has(> .reference-action) > .property-row,
+.prop-entry:has(> .reference-action) > .property-object > summary {
+  padding-right: 22px;
+}
+.prop-entry > .reference-action {
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 20px;
+  height: 19px;
+  padding: 3px;
+  opacity: 0.55;
+}
+.prop-entry:has(> .prop-hide) > .reference-action {
+  right: 20px;
+}
+.prop-entry:has(> .reference-action):has(> .prop-hide) > .property-row,
+.prop-entry:has(> .reference-action):has(> .prop-hide) > .property-object > summary {
+  padding-right: 42px;
+}
+.prop-entry:hover > .reference-action,
+.reference-action:focus-visible,
+.reference-action.active {
+  opacity: 1;
+}
+.reference-action.active {
+  color: var(--accent);
+}
+.reference-toolbar {
+  display: flex;
+  align-items: flex-start;
+  gap: 1px;
+  border-bottom: 1px solid var(--border);
+  padding: 1px 4px 1px 9px;
+}
+.reference-toolbar .icon-button {
+  width: 22px;
+  height: 22px;
+}
+.reference-source {
+  flex: 1;
+  min-width: 0;
+  padding: 2px 0;
+  overflow-wrap: anywhere;
+  font: 11px/1.5 var(--mono);
+}
+.reference-source > * + * {
+  margin-left: 5px;
+}
+.reference-source .property-name {
+  margin-left: 0;
+}
+.same-reference .node-name {
+  color: var(--component);
+}
+.same-reference small {
+  color: var(--muted);
+  font-size: 10px;
+}
+.same-reference .section-body {
+  padding: 5px 4px 6px;
+}
+.same-reference .props-loading,
+.same-reference .props-error,
+.reference-summary,
+.reference-note {
+  margin: 1px 5px 4px;
+  font-size: 11px;
+  line-height: 1.5;
+}
+.reference-note {
+  color: var(--muted);
+}
+.reference-list,
+.reference-list ul {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font: 11px/1.5 var(--mono);
+}
+.reference-group-title {
+  padding: 2px 5px;
+}
+.reference-count {
+  margin-left: 6px;
+  color: var(--muted);
+}
+.reference-group ul {
+  margin-left: 8px;
+  border-left: 1px solid var(--border);
+}
+.reference-instance {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-start;
+  align-items: baseline;
+  gap: 0 6px;
+  width: 100%;
+  padding: 2px 5px;
+  font: inherit;
+  text-align: left;
+  overflow-wrap: anywhere;
+}
+.reference-instance .property-name {
+  margin-left: -6px;
+}
+.reference-instance.selected {
+  background: var(--selection);
+}
+.reference-instance.gap .node-name,
+.reference-key {
+  color: var(--muted);
+}
+.reference-instance.selected .reference-key {
+  color: var(--text);
+}
+.reference-id {
+  margin-left: auto;
+}

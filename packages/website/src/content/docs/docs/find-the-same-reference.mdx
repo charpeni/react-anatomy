@@ -1,0 +1,61 @@
+---
+title: Find the same reference
+description: Find the mounted components that received the same object or callback in props.
+---
+
+import GuideBrowser from '../../../components/GuideBrowser.astro';
+
+<video
+  controls
+  playsinline
+  preload="none"
+  width="1600"
+  height="900"
+  poster="/media/docs/find-the-same-reference.jpg"
+  aria-label="Find components that share a callback"
+>
+  <source src="/media/docs/find-the-same-reference.webm" type="video/webm" />
+  <source src="/media/docs/find-the-same-reference.mp4" type="video/mp4" />
+  <track
+    kind="captions"
+    srclang="en"
+    label="English"
+    src="/media/docs/find-the-same-reference.vtt"
+  />
+  <a href="/media/docs/find-the-same-reference.mp4">Watch the video</a>
+</video>
+
+<details>
+  <summary>Video transcript</summary>
+
+Each project card in Orbit has a Complete task button. Do the cards share one callback, or does each get its own?
+
+Two functions can have identical code and still be different objects. Find same reference shows which mounted components hold the exact same function in their props.
+
+Select the Customer portal card in the tree. In Props, choose Find same reference beside `onCompleteTask`.
+
+Five instances hold this function: the three project cards, the list, and its parent.
+
+Select Mobile app in the results. To see which card it represents, choose Highlight on page.
+
+</details>
+
+## Find a shared prop in your app
+
+1. In the tab running your React app, select **Anatomy** in DevTools. The first capture runs automatically.
+2. Select a component in the tree. In **Props**, choose **Find same reference** beside a top-level object, array, or function.
+3. Select a match to inspect that component. Choose **Highlight on page** to see where it renders.
+
+In the [Orbit sample app](https://orbit.react-anatomy.com/), try the `onCompleteTask` prop on the **Customer portal** card. Three project cards, their list, and its parent all hold the same callback. The walkthrough below takes you to one of those matches, the **Mobile app** card.
+
+<GuideBrowser />
+
+## Read the results
+
+The results follow tree order, with ancestors first. Repeated instances share a row that lists their keys. An ancestor with no matching prop is labeled **no matching prop**. Select an instance to see it in the tree and 3D view. If it falls outside the current capture, Anatomy focuses it first.
+
+When you focus a subtree, Anatomy searches it and the selected instance’s ancestors. **Search the whole page** includes all the React roots Anatomy found. A capture can miss a root if it hits a limit. Each new capture runs the search again.
+
+Two components can import the same object independently. A match tells you they held the same object when you searched. Equal strings, numbers, and booleans have no object identity to compare.
+
+Anatomy compares props in the inspected page and sends the matches and a short preview to the local panel. A `Date` preview includes its timestamp. Anatomy counts any getters it skips and never calls a callback. Each search checks up to 5,000 components and lists up to 200 matches. The panel tells you if it hits a limit, can’t read a component’s props, or can’t repeat a search because the component unmounted, the prop disappeared, or the page reloaded.

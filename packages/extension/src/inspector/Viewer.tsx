@@ -489,6 +489,9 @@ export function Viewer({
         onAction={onAction}
         onSelect={select}
         onClose={() => setDetails(false)}
+        scopeId={focus}
+        captured={byId}
+        onHover={setHovered}
       />
       {exporting && (
         <ExportDialog

@@ -1,4 +1,4 @@
-import type { ImageProps, PageCall, PropInspection, PropValue } from './types.ts';
+import type { ImageProps, PageCall, PropEntry, PropInspection, PropValue } from './types.ts';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Glyph } from './Glyph.tsx';
 import {
@@ -9,6 +9,7 @@ import {
   sameRows,
   type LoadedPage,
 } from './image-props.ts';
+import { FindReferenceButton } from './SameReference.tsx';
 
 interface HideChange {
   path: string;
@@ -33,6 +34,7 @@ function PropChildren({
   hidden,
   stale,
   onHide,
+  action,
 }: {
   call: PageCall;
   token: string;
@@ -50,6 +52,8 @@ function PropChildren({
   /** Collections masked in the image because a hidden value in them may have moved. */
   stale?: Set<string>;
   onHide?: (change: HideChange) => void;
+  /** An extra control for each entry of this branch, shown beside its row. */
+  action?: (entry: PropEntry) => React.ReactNode;
 }) {
   const [page, setPage] = useState<LoadedPage | null>(null);
   const [loading, setLoading] = useState(false);
@@ -187,23 +191,31 @@ function PropChildren({
         // The hide button sits beside the entry, not inside its summary, so it
         // never toggles the value or nests one control inside another. Its
         // label stays fixed; aria-pressed carries whether the value is hidden.
-        return hidden ? (
+        return hidden || action ? (
           <div className="prop-entry" key={entry.key}>
             {item}
-            <button
-              className="prop-hide"
-              aria-label={`Hide ${entry.name} in props card`}
-              aria-pressed={isHidden}
-              title={
-                (isHidden ? 'Hidden' : 'Hide this value') +
-                ' in the exported props card. Page text in the layers stays visible.'
-              }
-              onClick={() =>
-                onHide?.({ path: childPath, container: path, value: entry.value, hide: !isHidden })
-              }
-            >
-              <Glyph type="eyeOff" size={12} />
-            </button>
+            {action?.(entry)}
+            {hidden && (
+              <button
+                className="prop-hide"
+                aria-label={`Hide ${entry.name} in props card`}
+                aria-pressed={isHidden}
+                title={
+                  (isHidden ? 'Hidden' : 'Hide this value') +
+                  ' in the exported props card. Page text in the layers stays visible.'
+                }
+                onClick={() =>
+                  onHide?.({
+                    path: childPath,
+                    container: path,
+                    value: entry.value,
+                    hide: !isHidden,
+                  })
+                }
+              >
+                <Glyph type="eyeOff" size={12} />
+              </button>
+            )}
           </div>
         ) : (
           item
@@ -473,6 +485,7 @@ export function PropsInspector({
             hidden={hidden}
             stale={stale}
             onHide={hide}
+            action={(entry) => <FindReferenceButton componentId={componentId} entry={entry} />}
           />
         ) : (
           <span className={'property-value ' + inspection.root.type}>

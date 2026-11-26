@@ -129,7 +129,9 @@ try {
     'Page picker did not select the component',
   );
   await click('Highlight on page');
-  assert.equal(await page.locator('[data-anatomy-overlay]').count(), 1);
+  const overlay = page.locator('[data-anatomy-overlay]');
+  await overlay.first().waitFor({ state: 'attached' });
+  assert.equal(await overlay.count(), 1);
   console.log('Passed: real page picking and highlighting.');
 
   const beforePortal = await captureCount();

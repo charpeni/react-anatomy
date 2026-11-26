@@ -1,0 +1,16 @@
+:root {
+  --anatomy-attention-timing: 1800ms cubic-bezier(0.23, 1, 0.32, 1);
+  --anatomy-attention: anatomy-attention var(--anatomy-attention-timing);
+}
+
+@keyframes anatomy-attention {
+  from {
+    transform: scale(1);
+    opacity: 1;
+  }
+  75%,
+  to {
+    transform: scale(1.12, 1.2);
+    opacity: 0;
+  }
+}
