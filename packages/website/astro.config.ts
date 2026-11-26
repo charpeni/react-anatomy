@@ -45,6 +45,7 @@ export default defineConfig({
             { label: 'Find the same reference', slug: 'docs/find-the-same-reference' },
             { label: 'See who reads a context', slug: 'docs/context' },
             { label: 'Investigate unused props', slug: 'docs/unused-props' },
+            { label: 'Trace a prop in source', slug: 'docs/trace-a-prop' },
           ],
         },
         {

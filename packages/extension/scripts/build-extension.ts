@@ -2,6 +2,7 @@ import { build } from 'esbuild';
 import { mkdir, copyFile, readFile, writeFile } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
 import { extensionTarget } from './extension-target.ts';
+import { buildSourceTraceFixture } from './source-trace/build-fixture.ts';
 
 const target = extensionTarget();
 const outdir = target.directory;
@@ -153,3 +154,4 @@ await writeFile(
   'dist/context-app.html',
   `<!doctype html><html lang="en"><head><meta charset="utf-8"><title>Context readers</title></head><body><div id="app"></div><div id="context-portal"></div><div id="context-other-root"></div><script>${contextFixture.outputFiles[0].text.replace(/<\/script/gi, '<\\/script')}</script></body></html>`,
 );
+await buildSourceTraceFixture();

@@ -272,6 +272,7 @@ export function PropsInspector({
   call,
   image,
   onImage,
+  onSelectPath,
 }: {
   componentId: string;
   capturedAt: number;
@@ -279,6 +280,7 @@ export function PropsInspector({
   /** This component's choices for exported images, whether or not it is included now. */
   image?: ImageProps;
   onImage?: (image: ImageProps) => void;
+  onSelectPath?: (path: string) => void;
 }) {
   const [inspection, setInspection] = useState<PropInspection | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -480,7 +482,10 @@ export function PropsInspector({
             expanded={expanded}
             toggle={toggle}
             filter={query}
-            selectPath={setPath}
+            selectPath={(selected) => {
+              setPath(selected);
+              onSelectPath?.(selected);
+            }}
             onPage={onPage}
             hidden={hidden}
             stale={stale}

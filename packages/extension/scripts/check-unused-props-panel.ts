@@ -145,6 +145,13 @@ try {
 
   await writeFile('artifacts/unused-props-panel.png', Buffer.from(shot.data, 'base64'));
 
+  // A row hands over to "Trace in source" for the full path of that prop.
+  await run(`${section}.querySelector('[data-prop="legacyTheme"] .unused-trace').click()`);
+  await h.until(
+    () => run(`document.querySelector('[aria-label="Prop to trace"]')?.value==='legacyTheme'`),
+    'Trace in source did not open legacyTheme',
+  );
+
   // The Business plan is not on trial: trialDays is not on this instance.
   await select('PlanCard', 1);
   await h.until(
